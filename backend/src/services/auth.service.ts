@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import User from '../models/User';
+import User, { IUser } from '../models/User';
 import { AuthUser } from '../types/mongodb';
 import logger from '../utils/logger';
 
@@ -17,7 +17,7 @@ export class AuthService {
         email,
         password: hashedPassword,
         name,
-      });
+      }) as IUser;
 
       logger.info('User registered successfully', { userId: user._id, email });
 
@@ -35,7 +35,7 @@ export class AuthService {
 
   async login(email: string, password: string): Promise<{ user: AuthUser; token: string }> {
     try {
-      const user = await User.findOne({ email });
+      const user = await User.findOne({ email }) as IUser | null;
       if (!user) {
         throw new Error('Invalid credentials');
       }
@@ -70,7 +70,7 @@ export class AuthService {
 
   async getUserById(id: string): Promise<AuthUser | null> {
     try {
-      const user = await User.findById(id);
+      const user = await User.findById(id) as IUser | null;
       if (!user) return null;
 
       return {
