@@ -14,6 +14,7 @@ import reportRoutes from './routes/report.routes';
 
 import logger from './utils/logger';
 import { WhatsAppService } from './services/whatsapp.service';
+import connectDB from './config/database';
 
 // Load environment variables
 dotenv.config();
@@ -172,11 +173,23 @@ process.on('SIGINT', () => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  logger.info(`🚀 Server running on port ${PORT}`);
-  logger.info(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
-  logger.info(`🔗 API: http://localhost:${PORT}/api`);
-  logger.info(`📊 Health: http://localhost:${PORT}/api/health`);
-});
+const startServer = async () => {
+  try {
+    // Connect to MongoDB
+    await connectDB();
+    
+    app.listen(PORT, () => {
+      logger.info(`🚀 Server running on port ${PORT}`);
+      logger.info(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
+      logger.info(`🔗 API: http://localhost:${PORT}/api`);
+      logger.info(`📊 Health: http://localhost:${PORT}/api/health`);
+    });
+  } catch (error) {
+    logger.error('Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+startServer();
 
 export default app;

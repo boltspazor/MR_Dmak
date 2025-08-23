@@ -1,30 +1,28 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import prisma from '../config/database';
-import { AuthUser } from '../types';
+import User from '../models/User';
+import { AuthUser } from '../types/mongodb';
 import logger from '../utils/logger';
 
 export class AuthService {
   async register(email: string, password: string, name: string): Promise<AuthUser> {
     try {
-      const existingUser = await prisma.user.findUnique({ where: { email } });
+      const existingUser = await User.findOne({ email });
       if (existingUser) {
         throw new Error('User already exists');
       }
 
       const hashedPassword = await bcrypt.hash(password, 12);
-      const user = await prisma.user.create({
-        data: {
-          email,
-          password: hashedPassword,
-          name,
-        },
+      const user = await User.create({
+        email,
+        password: hashedPassword,
+        name,
       });
 
-      logger.info('User registered successfully', { userId: user.id, email });
+      logger.info('User registered successfully', { userId: user._id, email });
 
       return {
-        id: user.id,
+        id: user._id.toString(),
         email: user.email,
         name: user.name,
         role: user.role,
@@ -37,7 +35,7 @@ export class AuthService {
 
   async login(email: string, password: string): Promise<{ user: AuthUser; token: string }> {
     try {
-      const user = await prisma.user.findUnique({ where: { email } });
+      const user = await User.findOne({ email });
       if (!user) {
         throw new Error('Invalid credentials');
       }
@@ -48,16 +46,16 @@ export class AuthService {
       }
 
       const token = jwt.sign(
-        { userId: user.id, email: user.email, role: user.role },
+        { userId: user._id.toString(), email: user.email, role: user.role },
         process.env.JWT_SECRET!,
         { expiresIn: process.env.JWT_EXPIRES_IN || '7d' } as jwt.SignOptions
       );
 
-      logger.info('User logged in successfully', { userId: user.id, email });
+      logger.info('User logged in successfully', { userId: user._id, email });
 
       return {
         user: {
-          id: user.id,
+          id: user._id.toString(),
           email: user.email,
           name: user.name,
           role: user.role,
@@ -72,11 +70,11 @@ export class AuthService {
 
   async getUserById(id: string): Promise<AuthUser | null> {
     try {
-      const user = await prisma.user.findUnique({ where: { id } });
+      const user = await User.findById(id);
       if (!user) return null;
 
       return {
-        id: user.id,
+        id: user._id.toString(),
         email: user.email,
         name: user.name,
         role: user.role,
