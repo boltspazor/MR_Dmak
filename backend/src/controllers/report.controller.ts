@@ -35,10 +35,10 @@ export class ReportController {
         }
       };
 
-      res.json(dashboardStats);
+      return res.json(dashboardStats);
     } catch (error: any) {
       logger.error('Failed to get dashboard stats', { error: error.message });
-      res.status(500).json({ error: error.message });
+      return res.status(500).json({ error: error.message });
     }
   }
 
@@ -60,7 +60,7 @@ export class ReportController {
         return acc;
       }, {});
 
-      res.json({
+      return res.json({
         ...report,
         groupStats,
         timeline: report.campaign.messageLogs.map((log: any) => ({
@@ -72,7 +72,7 @@ export class ReportController {
       });
     } catch (error: any) {
       logger.error('Failed to get detailed report', { error: error.message });
-      res.status(500).json({ error: error.message });
+      return res.status(500).json({ error: error.message });
     }
   }
 
@@ -100,13 +100,13 @@ export class ReportController {
         
         res.setHeader('Content-Type', 'text/csv');
         res.setHeader('Content-Disposition', `attachment; filename=campaign-${campaignId}-report.csv`);
-        res.send(csvHeaders + csvData);
+        return res.send(csvHeaders + csvData);
       } else {
-        res.json(report);
+        return res.json(report);
       }
     } catch (error: any) {
       logger.error('Failed to export report', { error: error.message });
-      res.status(500).json({ error: error.message });
+      return res.status(500).json({ error: error.message });
     }
   }
 }

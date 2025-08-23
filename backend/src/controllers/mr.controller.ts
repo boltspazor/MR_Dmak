@@ -79,10 +79,10 @@ export class MRController {
         parseInt(limit), 
         parseInt(offset)
       );
-      res.json(result);
+      return res.json(result);
     } catch (error: any) {
       logger.error('Failed to get MRs', { error: error.message, query: req.query });
-      res.status(500).json({ error: error.message });
+      return res.status(500).json({ error: error.message });
     }
   }
 
@@ -109,20 +109,20 @@ export class MRController {
     try {
       const { id } = req.params;
       await mrService.deleteMR(id, req.user.userId);
-      res.json({ message: 'MR deleted successfully' });
+      return res.json({ message: 'MR deleted successfully' });
     } catch (error: any) {
       logger.error('Failed to delete MR', { error: error.message, mrId: req.params.id });
-      res.status(500).json({ error: error.message });
+      return res.status(500).json({ error: error.message });
     }
   }
 
   async getGroups(req: any, res: Response) {
     try {
       const groups = await mrService.getGroups(req.user.userId);
-      res.json({ groups });
+      return res.json({ groups });
     } catch (error: any) {
       logger.error('Failed to get groups', { error: error.message });
-      res.status(500).json({ error: error.message });
+      return res.status(500).json({ error: error.message });
     }
   }
 
@@ -170,10 +170,10 @@ export class MRController {
     try {
       const { id } = req.params;
       await mrService.deleteGroup(id, req.user.userId);
-      res.json({ message: 'Group deleted successfully' });
+      return res.json({ message: 'Group deleted successfully' });
     } catch (error: any) {
       logger.error('Failed to delete group', { error: error.message, groupId: req.params.id });
-      res.status(500).json({ error: error.message });
+      return res.status(500).json({ error: error.message });
     }
   }
 
@@ -183,10 +183,10 @@ export class MRController {
       
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', 'attachment; filename=mr-template.xlsx');
-      res.send(templateBuffer);
+      return res.send(templateBuffer);
     } catch (error: any) {
       logger.error('Failed to generate template', { error: error.message });
-      res.status(500).json({ error: 'Failed to generate template' });
+      return res.status(500).json({ error: 'Failed to generate template' });
     }
   }
 }

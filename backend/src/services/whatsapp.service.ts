@@ -83,7 +83,7 @@ export class WhatsAppService {
   }
 
   async verifyWebhook(mode: string, token: string, challenge: string): Promise<string | null> {
-    const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN;
+    const verifyToken = whatsappConfig.verifyToken;
     
     if (mode === 'subscribe' && token === verifyToken) {
       logger.info('Webhook verified successfully');
