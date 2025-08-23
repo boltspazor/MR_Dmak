@@ -5,15 +5,17 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
-import { LoginCredentials } from '../types';
+import { RegisterCredentials } from '../types';
 
 const schema = yup.object({
+  name: yup.string().min(2, 'Name must be at least 2 characters').required('Name is required'),
   email: yup.string().email('Invalid email address').required('Email is required'),
-  password: yup.string().required('Password is required'),
+  password: yup.string().min(6, 'Password must be at least 6 characters').required('Password is required'),
+  confirmPassword: yup.string().oneOf([yup.ref('password')], 'Passwords must match').required('Please confirm your password'),
 }).required();
 
-const Login: React.FC = () => {
-  const { login } = useAuth();
+const Register: React.FC = () => {
+  const { register: registerUser } = useAuth();
   const { addNotification } = useNotifications();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
@@ -22,25 +24,25 @@ const Login: React.FC = () => {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginCredentials>({
+  } = useForm<RegisterCredentials & { confirmPassword: string }>({
     resolver: yupResolver(schema),
   });
 
-  const onSubmit = async (data: LoginCredentials) => {
+  const onSubmit = async (data: RegisterCredentials & { confirmPassword: string }) => {
     setIsLoading(true);
     try {
-      await login(data.email, data.password);
+      await registerUser(data.email, data.password, data.name);
       addNotification({
         type: 'success',
-        title: 'Login Successful',
-        message: 'Welcome back!',
+        title: 'Registration Successful',
+        message: 'Account created successfully! Please sign in.',
       });
-      navigate('/dashboard');
+      navigate('/login');
     } catch (error: any) {
       addNotification({
         type: 'error',
-        title: 'Login Failed',
-        message: error.response?.data?.error || 'Invalid credentials',
+        title: 'Registration Failed',
+        message: error.response?.data?.error || 'Failed to create account',
       });
     } finally {
       setIsLoading(false);
@@ -52,20 +54,35 @@ const Login: React.FC = () => {
       <div className="max-w-md w-full space-y-8">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Sign in to your account
+            Create your account
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             Or{' '}
             <Link
-              to="/register"
+              to="/login"
               className="font-medium text-primary-600 hover:text-primary-500"
             >
-              create a new account
+              sign in to your existing account
             </Link>
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4">
+            <div>
+              <label htmlFor="name" className="form-label">
+                Full Name
+              </label>
+              <input
+                {...register('name')}
+                type="text"
+                id="name"
+                className={`input ${errors.name ? 'input-error' : ''}`}
+                placeholder="Enter your full name"
+              />
+              {errors.name && (
+                <p className="form-error">{errors.name.message}</p>
+              )}
+            </div>
             <div>
               <label htmlFor="email" className="form-label">
                 Email address
@@ -96,6 +113,21 @@ const Login: React.FC = () => {
                 <p className="form-error">{errors.password.message}</p>
               )}
             </div>
+            <div>
+              <label htmlFor="confirmPassword" className="form-label">
+                Confirm Password
+              </label>
+              <input
+                {...register('confirmPassword')}
+                type="password"
+                id="confirmPassword"
+                className={`input ${errors.confirmPassword ? 'input-error' : ''}`}
+                placeholder="Confirm your password"
+              />
+              {errors.confirmPassword && (
+                <p className="form-error">{errors.confirmPassword.message}</p>
+              )}
+            </div>
           </div>
 
           <div>
@@ -107,10 +139,10 @@ const Login: React.FC = () => {
               {isLoading ? (
                 <div className="flex items-center">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Signing in...
+                  Creating account...
                 </div>
               ) : (
-                'Sign in'
+                'Create account'
               )}
             </button>
           </div>
@@ -120,4 +152,4 @@ const Login: React.FC = () => {
   );
 };
 
-export default Login;
+export default Register;
