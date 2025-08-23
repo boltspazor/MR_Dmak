@@ -7,6 +7,7 @@ import {
   PencilIcon,
   TrashIcon,
   UserGroupIcon,
+  UsersIcon,
   ChartBarIcon,
   ArrowDownTrayIcon,
 } from '@heroicons/react/24/outline';
@@ -32,7 +33,7 @@ const Groups: React.FC = () => {
     try {
       setLoading(true);
       const response = await groupsService.getGroups({ search: searchTerm });
-      setGroups(response.groups || []);
+      setGroups(response.data || []);
     } catch (error: any) {
       addNotification({
         type: 'error',
@@ -257,7 +258,9 @@ const Groups: React.FC = () => {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onSubmit={handleCreateGroup}
-      />
+      >
+        <div></div>
+      </CreateGroupModal>
 
       <EditGroupModal
         isOpen={showEditModal}
@@ -267,7 +270,9 @@ const Groups: React.FC = () => {
         }}
         group={selectedGroup}
         onSubmit={handleEditGroup}
-      />
+      >
+        <div></div>
+      </EditGroupModal>
 
       <GroupStatsModal
         isOpen={showStatsModal}
@@ -276,7 +281,9 @@ const Groups: React.FC = () => {
           setSelectedGroup(null);
         }}
         groupId={selectedGroup?.id}
-      />
+      >
+        <div></div>
+      </GroupStatsModal>
     </div>
   );
 };

@@ -10,121 +10,241 @@
   }
   
   body {
-    @apply bg-gray-50 text-gray-900;
+    background-color: rgb(249 250 251);
+    color: rgb(17 24 39);
   }
 }
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1rem;
+    border: 1px solid transparent;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: 0.375rem;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 200ms;
+  }
+  
+  .btn:focus {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+    --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+    box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
   }
   
   .btn-primary {
-    @apply btn bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500;
+    background-color: rgb(37 99 235);
+    color: white;
+  }
+  
+  .btn-primary:hover {
+    background-color: rgb(29 78 216);
+  }
+  
+  .btn-primary:focus {
+    --tw-ring-color: rgb(59 130 246);
   }
   
   .btn-secondary {
-    @apply btn bg-white text-gray-700 border-gray-300 hover:bg-gray-50 focus:ring-primary-500;
+    background-color: white;
+    color: rgb(55 65 81);
+    border-color: rgb(209 213 219);
+  }
+  
+  .btn-secondary:hover {
+    background-color: rgb(249 250 251);
+  }
+  
+  .btn-secondary:focus {
+    --tw-ring-color: rgb(59 130 246);
   }
   
   .btn-success {
-    @apply btn bg-success-600 text-white hover:bg-success-700 focus:ring-success-500;
+    background-color: rgb(22 197 94);
+    color: white;
+  }
+  
+  .btn-success:hover {
+    background-color: rgb(21 128 61);
+  }
+  
+  .btn-success:focus {
+    --tw-ring-color: rgb(34 197 94);
   }
   
   .btn-warning {
-    @apply btn bg-warning-600 text-white hover:bg-warning-700 focus:ring-warning-500;
+    background-color: rgb(245 158 11);
+    color: white;
+  }
+  
+  .btn-warning:hover {
+    background-color: rgb(217 119 6);
+  }
+  
+  .btn-warning:focus {
+    --tw-ring-color: rgb(245 158 11);
   }
   
   .btn-danger {
-    @apply btn bg-danger-600 text-white hover:bg-danger-700 focus:ring-danger-500;
+    background-color: rgb(239 68 68);
+    color: white;
+  }
+  
+  .btn-danger:hover {
+    background-color: rgb(220 38 38);
+  }
+  
+  .btn-danger:focus {
+    --tw-ring-color: rgb(239 68 68);
   }
   
   .btn-sm {
-    @apply px-3 py-1.5 text-xs;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
   }
   
   .btn-lg {
-    @apply px-6 py-3 text-base;
+    padding: 1.5rem 1.5rem;
+    font-size: 1rem;
   }
   
   .input {
-    @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm;
+    display: block;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid rgb(209 213 219);
+    border-radius: 0.375rem;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    font-size: 0.875rem;
+  }
+  
+  .input:focus {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+    --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+    box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+    border-color: rgb(59 130 246);
   }
   
   .input-error {
-    @apply border-danger-300 text-danger-900 placeholder-danger-300 focus:ring-danger-500 focus:border-danger-500;
+    border-color: rgb(252 165 165);
+    color: rgb(127 29 29);
+  }
+  
+  .input-error:focus {
+    --tw-ring-color: rgb(239 68 68);
+    border-color: rgb(239 68 68);
   }
   
   .card {
-    @apply bg-white shadow-sm border border-gray-200 rounded-lg;
+    background-color: white;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    border: 1px solid rgb(229 231 235);
+    border-radius: 0.5rem;
   }
   
   .card-header {
-    @apply px-6 py-4 border-b border-gray-200;
+    padding: 1.5rem;
+    border-bottom: 1px solid rgb(229 231 235);
   }
   
   .card-body {
-    @apply px-6 py-4;
+    padding: 1.5rem;
   }
   
   .card-footer {
-    @apply px-6 py-4 border-t border-gray-200 bg-gray-50;
+    padding: 1.5rem;
+    border-top: 1px solid rgb(229 231 235);
+    background-color: rgb(249 250 251);
   }
   
   .form-group {
-    @apply space-y-1;
+    margin-top: 0.25rem;
+    margin-bottom: 0.25rem;
   }
   
   .form-label {
-    @apply block text-sm font-medium text-gray-700;
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: rgb(55 65 81);
   }
   
   .form-error {
-    @apply text-sm text-danger-600;
+    font-size: 0.875rem;
+    color: rgb(220 38 38);
   }
   
   .table {
-    @apply min-w-full divide-y divide-gray-200;
+    min-width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
   }
   
   .table-header {
-    @apply bg-gray-50;
+    background-color: rgb(249 250 251);
   }
   
   .table-header-cell {
-    @apply px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider;
+    padding: 0.75rem 1.5rem;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: rgb(107 114 128);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
   
   .table-body {
-    @apply bg-white divide-y divide-gray-200;
+    background-color: white;
   }
   
   .table-row {
-    @apply hover:bg-gray-50;
+    border-bottom: 1px solid rgb(229 231 235);
   }
   
   .table-cell {
-    @apply px-6 py-4 whitespace-nowrap text-sm text-gray-900;
+    padding: 0.75rem 1.5rem;
+    text-align: left;
+    font-size: 0.875rem;
+    color: rgb(17 24 39);
   }
   
   .badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 0.375rem;
   }
   
   .badge-success {
-    @apply badge bg-success-100 text-success-800;
+    background-color: rgb(34 197 94);
+    color: white;
   }
   
   .badge-warning {
-    @apply badge bg-warning-100 text-warning-800;
+    background-color: rgb(245 158 11);
+    color: white;
   }
   
   .badge-danger {
-    @apply badge bg-danger-100 text-danger-800;
+    background-color: rgb(239 68 68);
+    color: white;
   }
   
   .badge-info {
-    @apply badge bg-primary-100 text-primary-800;
+    background-color: rgb(59 130 246);
+    color: white;
   }
 }
 

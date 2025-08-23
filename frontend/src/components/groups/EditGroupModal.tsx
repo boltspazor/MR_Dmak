@@ -7,7 +7,7 @@ import { XMarkIcon } from '@heroicons/react/24/outline';
 
 const schema = yup.object({
   groupName: yup.string().min(2, 'Group name must be at least 2 characters').required('Group name is required'),
-  description: yup.string().optional(),
+  description: yup.string().required('Description is required'),
 }).required();
 
 interface EditGroupModalProps extends ModalProps {

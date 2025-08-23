@@ -88,7 +88,7 @@ const Dashboard: React.FC = () => {
     {
       name: 'Success Rate',
       value: `${stats.successRate}%`,
-      icon: TrendingUpIcon,
+      icon: ArrowTrendingUpIcon,
       color: 'bg-success-500',
       change: '+2%',
       changeType: 'increase',

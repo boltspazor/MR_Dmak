@@ -8,9 +8,9 @@ import messagesService from '../../services/messages.service';
 
 const schema = yup.object({
   content: yup.string().min(1, 'Message content is required').required('Message content is required'),
-  targetGroups: yup.array().min(1, 'Select at least one group').required('Target groups are required'),
+  targetGroups: yup.array().of(yup.string()).min(1, 'Select at least one group').required('Target groups are required'),
   imageUrl: yup.string().url('Invalid URL').optional(),
-  scheduledAt: yup.date().min(new Date(), 'Scheduled time must be in the future').optional(),
+  scheduledAt: yup.string().optional(),
 }).required();
 
 interface SendMessageModalProps extends ModalProps {
@@ -27,7 +27,7 @@ const SendMessageModal: React.FC<SendMessageModalProps> = ({ isOpen, onClose, on
     setValue,
     watch,
   } = useForm<SendMessageRequest>({
-    resolver: yupResolver(schema),
+    resolver: yupResolver(schema) as any,
     defaultValues: {
       targetGroups: [],
       imageUrl: '',

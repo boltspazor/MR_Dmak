@@ -37,7 +37,7 @@ const Reports: React.FC = () => {
         dateFrom: dateFrom || undefined,
         dateTo: dateTo || undefined
       });
-      setCampaigns(response.campaigns || []);
+      setCampaigns(response.data || []);
     } catch (error: any) {
       addNotification({
         type: 'error',
@@ -247,7 +247,9 @@ const Reports: React.FC = () => {
           setSelectedCampaign(null);
         }}
         campaignId={selectedCampaign?.id}
-      />
+      >
+        <div></div>
+      </CampaignReportModal>
     </div>
   );
 };

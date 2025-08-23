@@ -37,7 +37,7 @@ const Messages: React.FC = () => {
         search: searchTerm,
         status: statusFilter || undefined
       });
-      setCampaigns(response.campaigns || []);
+      setCampaigns(response.data || []);
     } catch (error: any) {
       addNotification({
         type: 'error',
@@ -52,7 +52,7 @@ const Messages: React.FC = () => {
   const fetchGroups = async () => {
     try {
       const response = await groupsService.getGroups();
-      setGroups(response.groups || []);
+      setGroups(response.data || []);
     } catch (error: any) {
       console.error('Failed to load groups:', error);
     }
@@ -268,7 +268,9 @@ const Messages: React.FC = () => {
         onClose={() => setShowSendModal(false)}
         onSubmit={handleSendMessage}
         groups={groups}
-      />
+      >
+        <div></div>
+      </SendMessageModal>
 
       <CampaignReportModal
         isOpen={showReportModal}
@@ -277,7 +279,9 @@ const Messages: React.FC = () => {
           setSelectedCampaign(null);
         }}
         campaignId={selectedCampaign?.id}
-      />
+      >
+        <div></div>
+      </CampaignReportModal>
     </div>
   );
 };

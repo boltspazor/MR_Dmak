@@ -29,7 +29,7 @@ const EditMRModal: React.FC<EditMRModalProps> = ({ isOpen, onClose, mr, onSubmit
     reset,
     setValue,
   } = useForm<Partial<CreateMRForm>>({
-    resolver: yupResolver(schema),
+    resolver: yupResolver(schema) as any,
   });
 
   useEffect(() => {

@@ -39,7 +39,7 @@ const MRs: React.FC = () => {
         search: searchTerm,
         groupId: selectedGroupId || undefined
       });
-      setMRs(response.mrs || []);
+      setMRs(response.data || []);
     } catch (error: any) {
       addNotification({
         type: 'error',
@@ -54,7 +54,7 @@ const MRs: React.FC = () => {
   const fetchGroups = async () => {
     try {
       const response = await groupsService.getGroups();
-      setGroups(response.groups || []);
+      setGroups(response.data || []);
     } catch (error: any) {
       console.error('Failed to load groups:', error);
     }
@@ -304,7 +304,9 @@ const MRs: React.FC = () => {
         onClose={() => setShowCreateModal(false)}
         onSubmit={handleCreateMR}
         groups={groups}
-      />
+      >
+        <div></div>
+      </CreateMRModal>
 
       <EditMRModal
         isOpen={showEditModal}
@@ -315,7 +317,9 @@ const MRs: React.FC = () => {
         mr={selectedMR}
         onSubmit={handleEditMR}
         groups={groups}
-      />
+      >
+        <div></div>
+      </EditMRModal>
 
       <BulkUploadModal
         isOpen={showBulkUploadModal}
@@ -324,7 +328,9 @@ const MRs: React.FC = () => {
           setShowBulkUploadModal(false);
           fetchMRs();
         }}
-      />
+      >
+        <div></div>
+      </BulkUploadModal>
     </div>
   );
 };

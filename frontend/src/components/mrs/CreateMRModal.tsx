@@ -27,7 +27,7 @@ const CreateMRModal: React.FC<CreateMRModalProps> = ({ isOpen, onClose, onSubmit
     formState: { errors, isSubmitting },
     reset,
   } = useForm<CreateMRForm>({
-    resolver: yupResolver(schema),
+    resolver: yupResolver(schema) as any,
   });
 
   const handleFormSubmit = async (data: CreateMRForm) => {
