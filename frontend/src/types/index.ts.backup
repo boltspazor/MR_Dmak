@@ -177,7 +177,7 @@ export interface ApiResponse<T> {
 }
 
 export interface PaginatedResponse<T> {
-  data: T[];
+  [key: string]: T[];
   pagination: {
     page: number;
     limit: number;
