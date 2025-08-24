@@ -21,7 +21,7 @@ export class GroupController {
       
       res.json({ 
         message: 'Groups retrieved successfully',
-        groups,
+        data: groups,
         total: groups.length
       });
     } catch (error: any) {
@@ -131,7 +131,7 @@ export class GroupController {
 
       const result = await mrService.updateGroup(id, groupName, description, userId);
       
-      if (result.count === 0) {
+      if (result.matchedCount === 0) {
         return res.status(404).json({ error: 'Group not found or access denied' });
       }
 
@@ -143,7 +143,7 @@ export class GroupController {
 
       return res.json({ 
         message: 'Group updated successfully',
-        updatedCount: result.count
+        updatedCount: result.matchedCount
       });
     } catch (error: any) {
       logger.error('Failed to update group', { 
@@ -171,7 +171,7 @@ export class GroupController {
 
       const result = await mrService.deleteGroup(id, userId);
       
-      if (result.count === 0) {
+      if (result.deletedCount === 0) {
         return res.status(404).json({ error: 'Group not found or access denied' });
       }
 
@@ -182,7 +182,7 @@ export class GroupController {
 
       return res.json({ 
         message: 'Group deleted successfully',
-        deletedCount: result.count
+        deletedCount: result.deletedCount
       });
     } catch (error: any) {
       logger.error('Failed to delete group', { 
@@ -239,7 +239,7 @@ export class GroupController {
 
       return res.json({
         message: 'Groups retrieved successfully',
-        groups: result.groups,
+        data: result.groups,
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),
@@ -359,7 +359,7 @@ export class GroupController {
 
       return res.json({
         message: 'Group Medical Representatives retrieved successfully',
-        mrs: result.mrs,
+        data: result.mrs,
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),
@@ -502,7 +502,7 @@ export class GroupController {
 
       return res.json({
         message: 'Group activity retrieved successfully',
-        activity: activity.activities,
+        data: activity.activities,
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),

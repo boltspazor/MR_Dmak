@@ -1,6 +1,9 @@
 
-import prisma from '../config/database';
-import { MessagePayload, CampaignReport } from '../types';
+import Message from '../models/Message';
+import MessageCampaign from '../models/MessageCampaign';
+import MessageLog from '../models/MessageLog';
+import MedicalRepresentative from '../models/MedicalRepresentative';
+import { MessagePayload, CampaignReport } from '../types/mongodb';
 // Queue service will be imported dynamically to avoid circular dependency
 import logger from '../utils/logger';
 
@@ -8,44 +11,34 @@ export class MessageService {
   async sendBulkMessage(payload: MessagePayload, userId: string) {
     try {
       // Create message record
-      const message = await prisma.message.create({
-        data: {
-          content: payload.content,
-          imageUrl: payload.imageUrl,
-          type: payload.imageUrl ? 'image' : 'text',
-          createdBy: userId,
-        },
+      const message = await Message.create({
+        content: payload.content,
+        imageUrl: payload.imageUrl,
+        type: payload.imageUrl ? 'image' : 'text',
+        createdBy: userId,
       });
 
       // Create campaign record
-      const campaign = await prisma.messageCampaign.create({
-        data: {
-          messageId: message.id,
-          scheduledAt: payload.scheduledAt || new Date(),
-          createdBy: userId,
-          status: 'processing',
-        },
+      const campaign = await MessageCampaign.create({
+        messageId: message._id,
+        scheduledAt: payload.scheduledAt || new Date(),
+        createdBy: userId,
+        status: 'processing',
       });
 
       // Get all MRs in target groups
-      const medicalReps = await prisma.medicalRepresentative.findMany({
-        where: {
-          groupId: {
-            in: payload.targetGroups,
-          },
-        },
+      const medicalReps = await MedicalRepresentative.find({
+        groupId: { $in: payload.targetGroups }
       });
 
       // Create message logs for each MR
       const messageLogs = await Promise.all(
         medicalReps.map((mr: any) =>
-          prisma.messageLog.create({
-            data: {
-              campaignId: campaign.id,
-              mrId: mr.id,
-              phoneNumber: mr.phone,
-              status: 'queued',
-            },
+          MessageLog.create({
+            campaignId: campaign._id,
+            mrId: mr._id,
+            phoneNumber: mr.phone,
+            status: 'queued',
           })
         )
       );
@@ -59,8 +52,8 @@ export class MessageService {
       
       for (const mr of medicalReps) {
         await addMessageToQueue({
-          campaignId: campaign.id,
-          mrId: mr.id,
+          campaignId: (campaign as any)._id.toString(),
+          mrId: (mr as any)._id.toString(),
           phoneNumber: mr.phone,
           content: payload.content,
           imageUrl: payload.imageUrl,
@@ -68,14 +61,14 @@ export class MessageService {
       }
 
       logger.info('Bulk message campaign created', {
-        campaignId: campaign.id,
+        campaignId: (campaign as any)._id,
         totalRecipients: medicalReps.length,
         targetGroups: payload.targetGroups
       });
 
       return {
-        campaignId: campaign.id,
-        messageId: message.id,
+        campaignId: (campaign as any)._id.toString(),
+        messageId: (message as any)._id.toString(),
         totalRecipients: medicalReps.length,
         status: 'queued',
       };
@@ -87,53 +80,66 @@ export class MessageService {
 
   async updateMessageLog(campaignId: string, mrId: string, updates: any) {
     try {
-      return await prisma.messageLog.updateMany({
-        where: {
-          campaignId,
-          mrId,
-        },
-        data: updates,
-      });
+      return await MessageLog.updateMany(
+        { campaignId, mrId },
+        updates
+      );
     } catch (error) {
       logger.error('Failed to update message log', { campaignId, mrId, error });
       throw error;
     }
   }
 
-  async getCampaignReport(campaignId: string): Promise<CampaignReport> {
+  async getCampaignStats(userId: string) {
     try {
-      const campaign = await prisma.messageCampaign.findUnique({
-        where: { id: campaignId },
-        include: {
-          message: true,
-          messageLogs: {
-            include: {
-              medicalRepresentative: {
-                include: {
-                  group: true,
-                },
-              },
-            },
-          },
-        },
-      });
+      const campaigns = await MessageCampaign.countDocuments({ createdBy: userId });
+      const totalMessages = await MessageLog.countDocuments();
+      const sentMessages = await MessageLog.countDocuments({ status: 'sent' });
+      const successRate = totalMessages > 0 ? ((sentMessages / totalMessages) * 100).toFixed(1) : '0.0';
+
+      return {
+        campaigns,
+        total: totalMessages,
+        sent: sentMessages,
+        successRate,
+      };
+    } catch (error) {
+      logger.error('Failed to get campaign stats', { userId, error });
+      throw error;
+    }
+  }
+
+  async getCampaignReport(campaignId: string) {
+    try {
+      const campaign = await MessageCampaign.findById(campaignId)
+        .populate('messageId')
+        .populate('createdBy', 'name email');
 
       if (!campaign) {
         throw new Error('Campaign not found');
       }
 
+      const messageLogs = await MessageLog.find({ campaignId })
+        .populate('mrId')
+        .populate({
+          path: 'mrId',
+          populate: {
+            path: 'groupId',
+            select: 'groupName'
+          }
+        });
+
       const stats = {
-        total: campaign.messageLogs.length,
-        sent: campaign.messageLogs.filter((log: any) => log.status === 'sent').length,
-        failed: campaign.messageLogs.filter((log: any) => log.status === 'failed').length,
-        pending: campaign.messageLogs.filter((log: any) => 
-          log.status === 'pending' || log.status === 'queued'
-        ).length,
+        total: messageLogs.length,
+        sent: messageLogs.filter(log => log.status === 'sent').length,
+        failed: messageLogs.filter(log => log.status === 'failed').length,
+        pending: messageLogs.filter(log => log.status === 'pending').length,
       };
 
       return {
         campaign,
         stats,
+        messageLogs,
       };
     } catch (error) {
       logger.error('Failed to get campaign report', { campaignId, error });
@@ -141,71 +147,63 @@ export class MessageService {
     }
   }
 
-  async getAllCampaigns(userId: string, limit = 50, offset = 0) {
+  async getAllCampaigns(filters: any = {}) {
     try {
-      const campaigns = await prisma.messageCampaign.findMany({
-        where: { createdBy: userId },
-        include: {
-          message: true,
-          _count: {
-            select: { messageLogs: true }
-          }
-        },
-        orderBy: { createdAt: 'desc' },
-        take: limit,
-        skip: offset,
-      });
+      const query: any = {};
+      
+      if (filters.search) {
+        query.$or = [
+          { 'message.content': { $regex: filters.search, $options: 'i' } },
+          { status: { $regex: filters.search, $options: 'i' } }
+        ];
+      }
 
-      return campaigns;
+      if (filters.status) {
+        query.status = filters.status;
+      }
+
+      if (filters.dateFrom || filters.dateTo) {
+        query.createdAt = {};
+        if (filters.dateFrom) query.createdAt.$gte = new Date(filters.dateFrom);
+        if (filters.dateTo) query.createdAt.$lte = new Date(filters.dateTo);
+      }
+
+      const campaigns = await MessageCampaign.find(query)
+        .populate('messageId')
+        .populate('createdBy', 'name')
+        .sort({ createdAt: -1 })
+        .limit(filters.limit || 50)
+        .skip(filters.offset || 0);
+
+      const total = await MessageCampaign.countDocuments(query);
+
+      return {
+        data: campaigns,
+        pagination: {
+          page: Math.floor((filters.offset || 0) / (filters.limit || 50)) + 1,
+          limit: filters.limit || 50,
+          total,
+          totalPages: Math.ceil(total / (filters.limit || 50)),
+          hasMore: (filters.offset || 0) + campaigns.length < total
+        }
+      };
     } catch (error) {
-      logger.error('Failed to get campaigns', { userId, error });
+      logger.error('Failed to get campaigns', { filters, error });
       throw error;
     }
   }
 
-  async getCampaignStats(userId: string, dateFrom?: Date, dateTo?: Date) {
+  async uploadImage(file: Express.Multer.File) {
     try {
-      const whereClause: any = { createdBy: userId };
+      // In a real implementation, you would upload to cloud storage
+      // For now, we'll return a mock URL
+      const imageUrl = `/uploads/${file.filename}`;
       
-      if (dateFrom || dateTo) {
-        whereClause.createdAt = {};
-        if (dateFrom) whereClause.createdAt.gte = dateFrom;
-        if (dateTo) whereClause.createdAt.lte = dateTo;
-      }
-
-      const campaigns = await prisma.messageCampaign.findMany({
-        where: whereClause,
-        include: {
-          messageLogs: true,
-        },
-      });
-
-      const totalStats = campaigns.reduce((acc: any, campaign: any) => {
-        const campaignStats = {
-          total: campaign.messageLogs.length,
-          sent: campaign.messageLogs.filter((log: any) => log.status === 'sent').length,
-          failed: campaign.messageLogs.filter((log: any) => log.status === 'failed').length,
-          pending: campaign.messageLogs.filter((log: any) => 
-            log.status === 'pending' || log.status === 'queued'
-          ).length,
-        };
-
-        return {
-          total: acc.total + campaignStats.total,
-          sent: acc.sent + campaignStats.sent,
-          failed: acc.failed + campaignStats.failed,
-          pending: acc.pending + campaignStats.pending,
-        };
-      }, { total: 0, sent: 0, failed: 0, pending: 0 });
-
-      return {
-        campaigns: campaigns.length,
-        ...totalStats,
-        successRate: totalStats.total > 0 ? 
-          ((totalStats.sent / totalStats.total) * 100).toFixed(2) : '0',
-      };
+      logger.info('Image uploaded successfully', { filename: file.filename });
+      
+      return { imageUrl };
     } catch (error) {
-      logger.error('Failed to get campaign stats', { userId, error });
+      logger.error('Failed to upload image', { error });
       throw error;
     }
   }

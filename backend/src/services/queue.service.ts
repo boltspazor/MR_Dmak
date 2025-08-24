@@ -1,7 +1,7 @@
 import Bull from 'bull';
 import { WhatsAppService } from './whatsapp.service';
 import logger from '../utils/logger';
-import prisma from '../config/database';
+import MessageLog from '../models/MessageLog';
 
 const whatsappService = new WhatsAppService();
 
@@ -47,14 +47,14 @@ messageQueue.process('send-message', async (job) => {
 
     const result = await whatsappService.sendMessage(whatsappMessage);
     
-    await prisma.messageLog.updateMany({
-      where: { campaignId, mrId },
-      data: {
+    await MessageLog.updateMany(
+      { campaignId, mrId },
+      {
         status: result.success ? 'sent' : 'failed',
         sentAt: new Date(),
         errorMessage: result.error,
-      },
-    });
+      }
+    );
 
     logger.info('Message processed successfully', {
       campaignId,
@@ -64,13 +64,13 @@ messageQueue.process('send-message', async (job) => {
 
     return result;
   } catch (error: any) {
-    await prisma.messageLog.updateMany({
-      where: { campaignId, mrId },
-      data: {
+    await MessageLog.updateMany(
+      { campaignId, mrId },
+      {
         status: 'failed',
         errorMessage: error.message,
-      },
-    });
+      }
+    );
     
     logger.error('Message processing failed', {
       campaignId,

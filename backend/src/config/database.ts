@@ -3,7 +3,8 @@ import logger from '../utils/logger';
 
 const connectDB = async (): Promise<void> => {
   try {
-    const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/mr_communication_tool';
+    // Use the updated connection string
+const mongoURI = process.env.MONGODB_URI || 'mongodb+srv://boltspazorlabs:parthprabhjeet@cluster0.dnbrvwm.mongodb.net/';
     
     await mongoose.connect(mongoURI);
     

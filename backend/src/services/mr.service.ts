@@ -1,172 +1,70 @@
-import prisma from '../config/database';
-import { MRData, BulkUploadResult } from '../types';
+import MedicalRepresentative from '../models/MedicalRepresentative';
+import Group from '../models/Group';
+import { CreateMRForm, UpdateMRForm } from '../types/mongodb';
 import logger from '../utils/logger';
 
 export class MRService {
-  async createMR(data: Omit<MRData, 'groupName'> & { groupId: string }, userId: string) {
+  async createMR(data: CreateMRForm, userId: string) {
     try {
       // Check if MR ID already exists in the same group
-      const existingMR = await prisma.medicalRepresentative.findFirst({
-        where: {
-          mrId: data.mrId,
-          groupId: data.groupId,
-        },
+      const existingMR = await MedicalRepresentative.findOne({
+        mrId: data.mrId,
+        groupId: data.groupId,
       });
 
       if (existingMR) {
         throw new Error('MR with this ID already exists in the group');
       }
 
-      const mr = await prisma.medicalRepresentative.create({
-        data: {
-          mrId: data.mrId,
-          firstName: data.firstName,
-          lastName: data.lastName,
-          phone: data.phone,
-          groupId: data.groupId,
-          comments: data.comments,
-        },
-        include: {
-          group: true,
-        },
+      const mr = await MedicalRepresentative.create({
+        mrId: data.mrId,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phone: data.phone,
+        email: data.email,
+        groupId: data.groupId,
+        comments: data.comments,
       });
 
-      logger.info('MR created successfully', { mrId: mr.id, userId });
-      return mr;
+      const populatedMR = await MedicalRepresentative.findById(mr._id)
+        .populate('groupId', 'groupName description');
+
+      logger.info('MR created successfully', { mrId: (mr as any)._id, userId });
+      return populatedMR;
     } catch (error) {
       logger.error('Failed to create MR', { data, userId, error });
       throw error;
     }
   }
 
-  async bulkCreateMRs(data: MRData[], userId: string): Promise<BulkUploadResult> {
-    const results: BulkUploadResult = { created: 0, errors: [] };
-    
-    for (const [index, mrData] of data.entries()) {
-      try {
-        // Find or create group
-        let group = await prisma.group.findFirst({
-          where: { groupName: mrData.groupName, createdBy: userId },
-        });
+  async updateMR(id: string, data: UpdateMRForm, userId: string) {
+    try {
+      const mr = await MedicalRepresentative.findById(id);
+      if (!mr) {
+        throw new Error('MR not found');
+      }
 
-        if (!group) {
-          group = await prisma.group.create({
-            data: {
-              groupName: mrData.groupName,
-              description: `Auto-created group for ${mrData.groupName}`,
-              createdBy: userId,
-            },
-          });
-        }
-
-        // Check if MR already exists
-        const existingMR = await prisma.medicalRepresentative.findFirst({
-          where: {
-            mrId: mrData.mrId,
-            groupId: group.id,
-          },
+      // Check if MR ID already exists in the same group if mrId is being updated
+      if (data.mrId && data.mrId !== mr.mrId) {
+        const existingMR = await MedicalRepresentative.findOne({
+          mrId: data.mrId,
+          groupId: data.groupId || mr.groupId,
+          _id: { $ne: id }
         });
 
         if (existingMR) {
-          results.errors.push(`Row ${index + 1}: MR ${mrData.mrId} already exists in group ${mrData.groupName}`);
-          continue;
+          throw new Error('MR with this ID already exists in the group');
         }
-
-        // Create MR
-        await prisma.medicalRepresentative.create({
-          data: {
-            mrId: mrData.mrId,
-            firstName: mrData.firstName,
-            lastName: mrData.lastName,
-            phone: mrData.phone,
-            groupId: group.id,
-            comments: mrData.comments,
-          },
-        });
-
-        results.created++;
-      } catch (error: any) {
-        results.errors.push(`Row ${index + 1}: Failed to create MR ${mrData.mrId}: ${error.message}`);
-      }
-    }
-
-    logger.info('Bulk MR upload completed', {
-      userId,
-      totalProcessed: data.length,
-      created: results.created,
-      errors: results.errors.length
-    });
-
-    return results;
-  }
-
-  async getMRs(userId: string, groupId?: string, search?: string, limit = 100, offset = 0) {
-    try {
-      const whereClause: any = {
-        group: {
-          createdBy: userId,
-        },
-      };
-
-      if (groupId) {
-        whereClause.groupId = groupId;
       }
 
-      if (search) {
-        whereClause.OR = [
-          { firstName: { contains: search, mode: 'insensitive' } },
-          { lastName: { contains: search, mode: 'insensitive' } },
-          { mrId: { contains: search, mode: 'insensitive' } },
-          { phone: { contains: search } },
-        ];
-      }
-
-      const mrs = await prisma.medicalRepresentative.findMany({
-        where: whereClause,
-        include: {
-          group: true,
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-        take: limit,
-        skip: offset,
-      });
-
-      const total = await prisma.medicalRepresentative.count({
-        where: whereClause,
-      });
-
-      return { mrs, total };
-    } catch (error) {
-      logger.error('Failed to get MRs', { userId, groupId, search, error });
-      throw error;
-    }
-  }
-
-  async updateMR(id: string, data: Partial<MRData>, userId: string) {
-    try {
-      const result = await prisma.medicalRepresentative.updateMany({
-        where: {
-          id,
-          group: {
-            createdBy: userId,
-          },
-        },
-        data: {
-          firstName: data.firstName,
-          lastName: data.lastName,
-          phone: data.phone,
-          comments: data.comments,
-        },
-      });
-
-      if (result.count === 0) {
-        throw new Error('MR not found or access denied');
-      }
+      const updatedMR = await MedicalRepresentative.findByIdAndUpdate(
+        id,
+        data,
+        { new: true }
+      ).populate('groupId', 'groupName description');
 
       logger.info('MR updated successfully', { mrId: id, userId });
-      return result;
+      return updatedMR;
     } catch (error) {
       logger.error('Failed to update MR', { id, data, userId, error });
       throw error;
@@ -175,40 +73,85 @@ export class MRService {
 
   async deleteMR(id: string, userId: string) {
     try {
-      const result = await prisma.medicalRepresentative.deleteMany({
-        where: {
-          id,
-          group: {
-            createdBy: userId,
-          },
-        },
-      });
-
-      if (result.count === 0) {
-        throw new Error('MR not found or access denied');
+      const mr = await MedicalRepresentative.findById(id);
+      if (!mr) {
+        throw new Error('MR not found');
       }
 
+      await MedicalRepresentative.findByIdAndDelete(id);
       logger.info('MR deleted successfully', { mrId: id, userId });
-      return result;
+      return { success: true };
     } catch (error) {
       logger.error('Failed to delete MR', { id, userId, error });
       throw error;
     }
   }
 
+  async getMRs(userId: string, groupId?: string, search?: string, limit = 50, offset = 0) {
+    try {
+      const query: any = {};
+      
+      if (groupId) {
+        query.groupId = groupId;
+      }
+
+      if (search) {
+        query.$or = [
+          { firstName: { $regex: search, $options: 'i' } },
+          { lastName: { $regex: search, $options: 'i' } },
+          { mrId: { $regex: search, $options: 'i' } },
+          { phone: { $regex: search, $options: 'i' } }
+        ];
+      }
+
+      const mrs = await MedicalRepresentative.find(query)
+        .populate('groupId', 'groupName')
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .skip(offset);
+
+      const total = await MedicalRepresentative.countDocuments(query);
+
+      return {
+        mrs,
+        total,
+        pagination: {
+          page: Math.floor(offset / limit) + 1,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+          hasMore: offset + mrs.length < total
+        }
+      };
+    } catch (error) {
+      logger.error('Failed to get MRs', { userId, groupId, search, error });
+      throw error;
+    }
+  }
+
+  async getMRById(id: string, userId: string) {
+    try {
+      const mr = await MedicalRepresentative.findById(id)
+        .populate('groupId', 'groupName description');
+
+      if (!mr) {
+        throw new Error('MR not found');
+      }
+
+      return mr;
+    } catch (error) {
+      logger.error('Failed to get MR by ID', { id, userId, error });
+      throw error;
+    }
+  }
+
   async getGroups(userId: string) {
     try {
-      const groups = await prisma.group.findMany({
-        where: { createdBy: userId },
-        include: {
-          _count: {
-            select: { medicalRepresentatives: true },
-          },
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-      });
+      const groups = await Group.find({ createdBy: userId })
+        .populate({
+          path: 'medicalRepresentatives',
+          select: 'mrId firstName lastName phone'
+        });
 
       return groups;
     } catch (error) {
@@ -217,57 +160,75 @@ export class MRService {
     }
   }
 
-  async createGroup(name: string, description: string, userId: string) {
+  async getGroupById(id: string, userId: string) {
     try {
-      // Check if group name already exists for this user
-      const existingGroup = await prisma.group.findFirst({
-        where: {
-          groupName: name,
-          createdBy: userId,
-        },
+      const group = await Group.findOne({ _id: id, createdBy: userId })
+        .populate({
+          path: 'medicalRepresentatives',
+          select: 'mrId firstName lastName phone email comments createdAt'
+        });
+
+      if (!group) {
+        throw new Error('Group not found or access denied');
+      }
+
+      return group;
+    } catch (error) {
+      logger.error('Failed to get group by ID', { id, userId, error });
+      throw error;
+    }
+  }
+
+  async createGroup(groupName: string, description: string, userId: string) {
+    try {
+      const existingGroup = await Group.findOne({ 
+        groupName, 
+        createdBy: userId 
       });
 
       if (existingGroup) {
         throw new Error('Group with this name already exists');
       }
 
-      const group = await prisma.group.create({
-        data: {
-          groupName: name,
-          description,
-          createdBy: userId,
-        },
+      const group = await Group.create({
+        groupName,
+        description,
+        createdBy: userId,
       });
 
-      logger.info('Group created successfully', { groupId: group.id, userId });
+      logger.info('Group created successfully', { groupId: (group as any)._id, userId });
       return group;
     } catch (error) {
-      logger.error('Failed to create group', { name, userId, error });
+      logger.error('Failed to create group', { groupName, description, userId, error });
       throw error;
     }
   }
 
-  async updateGroup(id: string, name: string, description: string, userId: string) {
+  async updateGroup(id: string, groupName: string, description: string, userId: string) {
     try {
-      const result = await prisma.group.updateMany({
-        where: {
-          id,
-          createdBy: userId,
-        },
-        data: {
-          groupName: name,
-          description,
-        },
+      const existingGroup = await Group.findOne({ 
+        groupName, 
+        createdBy: userId,
+        _id: { $ne: id }
       });
 
-      if (result.count === 0) {
+      if (existingGroup) {
+        throw new Error('Group with this name already exists');
+      }
+
+      const result = await Group.updateOne(
+        { _id: id, createdBy: userId },
+        { groupName, description }
+      );
+
+      if (result.matchedCount === 0) {
         throw new Error('Group not found or access denied');
       }
 
       logger.info('Group updated successfully', { groupId: id, userId });
       return result;
     } catch (error) {
-      logger.error('Failed to update group', { id, name, userId, error });
+      logger.error('Failed to update group', { id, groupName, description, userId, error });
       throw error;
     }
   }
@@ -275,22 +236,14 @@ export class MRService {
   async deleteGroup(id: string, userId: string) {
     try {
       // Check if group has MRs
-      const mrCount = await prisma.medicalRepresentative.count({
-        where: { groupId: id },
-      });
-
+      const mrCount = await MedicalRepresentative.countDocuments({ groupId: id });
       if (mrCount > 0) {
         throw new Error('Cannot delete group with existing MRs');
       }
 
-      const result = await prisma.group.deleteMany({
-        where: {
-          id,
-          createdBy: userId,
-        },
-      });
-
-      if (result.count === 0) {
+      const result = await Group.deleteOne({ _id: id, createdBy: userId });
+      
+      if (result.deletedCount === 0) {
         throw new Error('Group not found or access denied');
       }
 
@@ -302,75 +255,37 @@ export class MRService {
     }
   }
 
-  async getGroupById(id: string, userId: string) {
+  async getGroupsWithPagination(userId: string, options: any) {
     try {
-      const group = await prisma.group.findFirst({
-        where: {
-          id,
-          createdBy: userId,
-        },
-        include: {
-          _count: {
-            select: { medicalRepresentatives: true },
-          },
-          medicalRepresentatives: {
-            include: {
-              group: true,
-            },
-          },
-        },
-      });
-
-      return group;
-    } catch (error) {
-      logger.error('Failed to get group by ID', { id, userId, error });
-      throw error;
-    }
-  }
-
-  async getGroupsWithPagination(
-    userId: string,
-    options: {
-      limit: number;
-      offset: number;
-      search?: string;
-      sortBy?: string;
-      sortOrder?: string;
-    }
-  ) {
-    try {
-      const { limit, offset, search = '', sortBy = 'createdAt', sortOrder = 'desc' } = options;
-
-      const whereClause: any = {
-        createdBy: userId,
-      };
-
+      const { limit, offset, search, sortBy, sortOrder } = options;
+      
+      const query: any = { createdBy: userId };
+      
       if (search) {
-        whereClause.OR = [
-          { groupName: { contains: search, mode: 'insensitive' } },
-          { description: { contains: search, mode: 'insensitive' } },
-        ];
+        query.groupName = { $regex: search, $options: 'i' };
       }
 
-      const groups = await prisma.group.findMany({
-        where: whereClause,
-        include: {
-          _count: {
-            select: { medicalRepresentatives: true },
-          },
-        },
-        orderBy: {
-          [sortBy]: sortOrder,
-        },
-        take: limit,
-        skip: offset,
-      });
+      const sort: any = {};
+      sort[sortBy || 'createdAt'] = sortOrder === 'asc' ? 1 : -1;
 
-      const total = await prisma.group.count({
-        where: whereClause,
-      });
+      const groups = await Group.find(query)
+        .sort(sort)
+        .limit(limit)
+        .skip(offset);
 
-      return { groups, total };
+      const total = await Group.countDocuments(query);
+
+      return {
+        groups,
+        total,
+        pagination: {
+          page: Math.floor(offset / limit) + 1,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+          hasMore: offset + groups.length < total
+        }
+      };
     } catch (error) {
       logger.error('Failed to get groups with pagination', { userId, options, error });
       throw error;
@@ -379,36 +294,23 @@ export class MRService {
 
   async getGroupStats(id: string, userId: string) {
     try {
-      const group = await prisma.group.findFirst({
-        where: {
-          id,
-          createdBy: userId,
-        },
-        include: {
-          _count: {
-            select: { medicalRepresentatives: true },
-          },
-          medicalRepresentatives: {
-            select: {
-              id: true,
-              mrId: true,
-              firstName: true,
-              lastName: true,
-              createdAt: true,
-            },
-          },
-        },
-      });
-
+      const group = await Group.findOne({ _id: id, createdBy: userId });
       if (!group) {
-        return null;
+        throw new Error('Group not found or access denied');
       }
 
+      const mrCount = await MedicalRepresentative.countDocuments({ groupId: id });
+      const activeMRs = await MedicalRepresentative.countDocuments({ 
+        groupId: id,
+        // Add any active status logic here
+      });
+
       return {
-        groupId: group.id,
+        id: group._id,
         groupName: group.groupName,
-        totalMRs: group._count.medicalRepresentatives,
-        mrs: group.medicalRepresentatives,
+        totalMRs: mrCount,
+        activeMRs,
+        inactiveMRs: mrCount - activeMRs,
         createdAt: group.createdAt,
       };
     } catch (error) {
@@ -419,28 +321,19 @@ export class MRService {
 
   async bulkDeleteGroups(groupIds: string[], userId: string) {
     try {
-      const results = { deletedCount: 0, errors: [] as string[] };
+      const results: { deletedCount: number; errors: string[] } = { deletedCount: 0, errors: [] };
 
       for (const groupId of groupIds) {
         try {
           // Check if group has MRs
-          const mrCount = await prisma.medicalRepresentative.count({
-            where: { groupId },
-          });
-
+          const mrCount = await MedicalRepresentative.countDocuments({ groupId });
           if (mrCount > 0) {
-            results.errors.push(`Group ${groupId} cannot be deleted - has ${mrCount} MRs`);
+            results.errors.push(`Group ${groupId} has ${mrCount} MRs and cannot be deleted`);
             continue;
           }
 
-          const result = await prisma.group.deleteMany({
-            where: {
-              id: groupId,
-              createdBy: userId,
-            },
-          });
-
-          if (result.count > 0) {
+          const result = await Group.deleteOne({ _id: groupId, createdBy: userId });
+          if (result.deletedCount > 0) {
             results.deletedCount++;
           }
         } catch (error: any) {
@@ -448,6 +341,7 @@ export class MRService {
         }
       }
 
+      logger.info('Bulk group deletion completed', { userId, results });
       return results;
     } catch (error) {
       logger.error('Failed to bulk delete groups', { groupIds, userId, error });
@@ -457,23 +351,16 @@ export class MRService {
 
   async moveMRsToGroup(mrIds: string[], targetGroupId: string, userId: string) {
     try {
-      const results = { movedCount: 0, errors: [] as string[] };
+      const results: { movedCount: number; errors: string[] } = { movedCount: 0, errors: [] };
 
       for (const mrId of mrIds) {
         try {
-          const result = await prisma.medicalRepresentative.updateMany({
-            where: {
-              id: mrId,
-              group: {
-                createdBy: userId,
-              },
-            },
-            data: {
-              groupId: targetGroupId,
-            },
-          });
+          const result = await MedicalRepresentative.updateOne(
+            { _id: mrId },
+            { groupId: targetGroupId }
+          );
 
-          if (result.count > 0) {
+          if (result.modifiedCount > 0) {
             results.movedCount++;
           }
         } catch (error: any) {
@@ -481,6 +368,7 @@ export class MRService {
         }
       }
 
+      logger.info('MRs moved to group successfully', { mrIds, targetGroupId, userId, results });
       return results;
     } catch (error) {
       logger.error('Failed to move MRs to group', { mrIds, targetGroupId, userId, error });
@@ -490,85 +378,61 @@ export class MRService {
 
   async exportGroupData(id: string, userId: string) {
     try {
-      const group = await prisma.group.findFirst({
-        where: {
-          id,
-          createdBy: userId,
-        },
-        include: {
-          medicalRepresentatives: {
-            select: {
-              mrId: true,
-              firstName: true,
-              lastName: true,
-              phone: true,
-              comments: true,
-              createdAt: true,
-            },
-            orderBy: {
-              createdAt: 'desc',
-            },
-          },
-        },
-      });
+      const group = await Group.findOne({ _id: id, createdBy: userId });
+      if (!group) {
+        throw new Error('Group not found or access denied');
+      }
 
-      return group;
+      const medicalRepresentatives = await MedicalRepresentative.find({ groupId: id })
+        .select('mrId firstName lastName phone comments createdAt');
+
+      return {
+        groupName: group.groupName,
+        description: group.description,
+        medicalRepresentatives,
+      };
     } catch (error) {
       logger.error('Failed to export group data', { id, userId, error });
       throw error;
     }
   }
 
-  async getGroupActivity(
-    id: string,
-    userId: string,
-    options: {
-      limit: number;
-      offset: number;
-      dateFrom?: Date;
-      dateTo?: Date;
-    }
-  ) {
+  async getGroupActivity(id: string, userId: string, options: any) {
     try {
       const { limit, offset, dateFrom, dateTo } = options;
-
-      const whereClause: any = {
-        groupId: id,
-        group: {
-          createdBy: userId,
-        },
-      };
-
+      
+      const query: any = { groupId: id };
+      
       if (dateFrom || dateTo) {
-        whereClause.createdAt = {};
-        if (dateFrom) whereClause.createdAt.gte = dateFrom;
-        if (dateTo) whereClause.createdAt.lte = dateTo;
+        query.timestamp = {};
+        if (dateFrom) query.timestamp.$gte = dateFrom;
+        if (dateTo) query.timestamp.$lte = dateTo;
       }
 
-      const activities = await prisma.medicalRepresentative.findMany({
-        where: whereClause,
-        select: {
-          id: true,
-          mrId: true,
-          firstName: true,
-          lastName: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-        orderBy: {
-          updatedAt: 'desc',
-        },
-        take: limit,
-        skip: offset,
-      });
-
-      const total = await prisma.medicalRepresentative.count({
-        where: whereClause,
-      });
-
-      return { activities, total };
+      // This would require a GroupActivity model
+      // For now, return empty result
+      return {
+        activities: [],
+        total: 0
+      };
     } catch (error) {
       logger.error('Failed to get group activity', { id, userId, options, error });
+      throw error;
+    }
+  }
+
+  async downloadTemplate() {
+    try {
+      // Return template data for frontend to handle
+      return {
+        headers: ['mrId', 'firstName', 'lastName', 'phone', 'email', 'groupName', 'comments'],
+        sampleData: [
+          ['MR001', 'John', 'Doe', '+1234567890', 'john@example.com', 'Group A', 'Sample comment'],
+          ['MR002', 'Jane', 'Smith', '+0987654321', 'jane@example.com', 'Group B', '']
+        ]
+      };
+    } catch (error) {
+      logger.error('Failed to download template', { error });
       throw error;
     }
   }

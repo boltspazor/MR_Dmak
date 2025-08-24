@@ -44,13 +44,16 @@ export class MessageController {
 
   async getAllCampaigns(req: any, res: Response) {
     try {
-      const { limit = 50, offset = 0 } = req.query;
-      const campaigns = await messageService.getAllCampaigns(
-        req.user.userId,
-        parseInt(limit),
-        parseInt(offset)
-      );
-      return res.json({ campaigns });
+      const { limit = 50, offset = 0, search, status, dateFrom, dateTo } = req.query;
+      const campaigns = await messageService.getAllCampaigns({
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        search,
+        status,
+        dateFrom,
+        dateTo
+      });
+      return res.json(campaigns);
     } catch (error: any) {
       logger.error('Failed to get campaigns', { error: error.message });
       return res.status(500).json({ error: error.message });
@@ -59,12 +62,7 @@ export class MessageController {
 
   async getCampaignStats(req: any, res: Response) {
     try {
-      const { dateFrom, dateTo } = req.query;
-      const stats = await messageService.getCampaignStats(
-        req.user.userId,
-        dateFrom ? new Date(dateFrom) : undefined,
-        dateTo ? new Date(dateTo) : undefined
-      );
+      const stats = await messageService.getCampaignStats(req.user.userId);
       return res.json(stats);
     } catch (error: any) {
       logger.error('Failed to get campaign stats', { error: error.message });

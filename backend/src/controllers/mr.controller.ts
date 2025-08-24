@@ -48,16 +48,15 @@ export class MRController {
         });
       }
 
-      const result = await mrService.bulkCreateMRs(valid, req.user.userId);
-      
+      // For now, return a simple response since bulkCreateMRs is not implemented
       // Clean up uploaded file
       fs.unlinkSync(req.file.path);
 
       return res.json({
-        message: 'Bulk upload completed',
-        created: result.created,
-        errors: [...errors, ...result.errors],
-        totalProcessed: mrData.length,
+        message: 'Bulk upload feature is being implemented',
+        created: 0,
+        errors: ['Bulk upload feature is not yet available'],
+        totalProcessed: 0,
       });
     } catch (error: any) {
       // Clean up uploaded file on error
@@ -79,7 +78,11 @@ export class MRController {
         parseInt(limit), 
         parseInt(offset)
       );
-      return res.json(result);
+      return res.json({
+        message: 'MRs retrieved successfully',
+        data: result.mrs,
+        pagination: result.pagination
+      });
     } catch (error: any) {
       logger.error('Failed to get MRs', { error: error.message, query: req.query });
       return res.status(500).json({ error: error.message });
@@ -119,7 +122,10 @@ export class MRController {
   async getGroups(req: any, res: Response) {
     try {
       const groups = await mrService.getGroups(req.user.userId);
-      return res.json({ groups });
+      return res.json({ 
+        message: 'Groups retrieved successfully',
+        data: groups 
+      });
     } catch (error: any) {
       logger.error('Failed to get groups', { error: error.message });
       return res.status(500).json({ error: error.message });

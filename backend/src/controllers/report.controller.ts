@@ -19,7 +19,7 @@ export class ReportController {
         getQueueStats(),
       ]);
 
-      const totalMRs = groups.reduce((acc: number, group: any) => acc + (group._count?.medicalRepresentatives || 0), 0);
+      const totalMRs = groups.reduce((acc: number, group: any) => acc + (group.medicalRepresentatives?.length || 0), 0);
 
       const dashboardStats = {
         totalMRs,
@@ -48,8 +48,8 @@ export class ReportController {
       const report = await messageService.getCampaignReport(campaignId);
       
       // Add additional analytics
-      const groupStats = report.campaign.messageLogs.reduce((acc: any, log: any) => {
-        const groupName = log.medicalRepresentative.group.groupName;
+      const groupStats = report.messageLogs.reduce((acc: any, log: any) => {
+        const groupName = log.mrId.groupId.groupName;
         if (!acc[groupName]) {
           acc[groupName] = { total: 0, sent: 0, failed: 0, pending: 0 };
         }
@@ -63,11 +63,11 @@ export class ReportController {
       return res.json({
         ...report,
         groupStats,
-        timeline: report.campaign.messageLogs.map((log: any) => ({
+        timeline: report.messageLogs.map((log: any) => ({
           time: log.sentAt || log.createdAt,
           status: log.status,
-          mrName: `${log.medicalRepresentative.firstName} ${log.medicalRepresentative.lastName}`,
-          groupName: log.medicalRepresentative.group.groupName,
+          mrName: `${log.mrId.firstName} ${log.mrId.lastName}`,
+          groupName: log.mrId.groupId.groupName,
         }))
       });
     } catch (error: any) {
@@ -86,12 +86,12 @@ export class ReportController {
       if (format === 'csv') {
         // Generate CSV format
         const csvHeaders = 'MR ID,Name,Phone,Group,Status,Sent At,Error Message\n';
-        const csvData = report.campaign.messageLogs.map((log: any) => {
+        const csvData = report.messageLogs.map((log: any) => {
           return [
-            log.medicalRepresentative.mrId,
-            `${log.medicalRepresentative.firstName} ${log.medicalRepresentative.lastName}`,
+            log.mrId.mrId,
+            `${log.mrId.firstName} ${log.mrId.lastName}`,
             log.phoneNumber,
-            log.medicalRepresentative.group.groupName,
+            log.mrId.groupId.groupName,
             log.status,
             log.sentAt || '',
             log.errorMessage || ''

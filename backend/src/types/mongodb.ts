@@ -49,6 +49,13 @@ export interface SendMessageRequest {
   scheduledAt?: string;
 }
 
+export interface MessagePayload {
+  content: string;
+  targetGroups: string[];
+  imageUrl?: string;
+  scheduledAt?: Date;
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   pagination: {
