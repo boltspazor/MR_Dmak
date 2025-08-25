@@ -1,222 +1,239 @@
-import React, { useEffect, useState } from 'react';
-import { useNotifications } from '../contexts/NotificationContext';
-import reportsService from '../services/reports.service';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { 
+  Users, 
+  UserCircle, 
+  MessageSquare, 
+  TrendingUp,
+  Plus,
+  ArrowRight,
+  Activity
+} from 'lucide-react';
+import Layout from '../components/layout/Layout';
+import Card, { CardHeader, CardContent } from '../components/ui/Card';
+import Button from '../components/ui/Button';
+import { api } from '../lib/api';
 import { DashboardStats } from '../types';
-import {
-  UsersIcon,
-  UserGroupIcon,
-  ChatBubbleLeftRightIcon,
-  CheckCircleIcon,
-  ClockIcon,
-  ArrowTrendingUpIcon,
-  ChartBarIcon,
-} from '@heroicons/react/24/outline';
 
 const Dashboard: React.FC = () => {
-  const { addNotification } = useNotifications();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchDashboardStats = async () => {
-      try {
-        const data = await reportsService.getDashboardStats();
-        setStats(data);
-      } catch (error: any) {
-        addNotification({
-          type: 'error',
-          title: 'Failed to load dashboard',
-          message: error.response?.data?.error || 'Could not load dashboard statistics',
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchDashboardStats();
-  }, [addNotification]);
+  }, []);
+
+  const fetchDashboardStats = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+      
+      const response = await api.get('/reports/dashboard');
+      setStats(response.data.stats);
+    } catch (error: any) {
+      console.error('Error fetching dashboard stats:', error);
+      // Don't show error for unauthorized users
+      if (error.response?.status !== 401) {
+        console.error('Dashboard API error:', error);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-      </div>
-    );
-  }
-
-  if (!stats) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-gray-500">No dashboard data available</p>
-      </div>
+      <Layout>
+        <div className="animate-pulse">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-white rounded-lg h-32 border border-gray-200"></div>
+            ))}
+          </div>
+        </div>
+      </Layout>
     );
   }
 
   const statCards = [
     {
-      name: 'Total Medical Representatives',
-      value: stats.totalMRs,
-      icon: UsersIcon,
-      color: 'bg-primary-500',
-      change: '+12%',
-      changeType: 'increase',
+      title: 'Total Medical Reps',
+      value: stats?.totalMRs || 0,
+      icon: UserCircle,
+      color: 'text-blue-600 bg-blue-50',
+      href: '/mrs'
     },
     {
-      name: 'Total Groups',
-      value: stats.totalGroups,
-      icon: UserGroupIcon,
-      color: 'bg-success-500',
-      change: '+5%',
-      changeType: 'increase',
+      title: 'Total Groups',
+      value: stats?.totalGroups || 0,
+      icon: Users,
+      color: 'text-green-600 bg-green-50',
+      href: '/groups'
     },
     {
-      name: 'Total Campaigns',
-      value: stats.totalCampaigns,
-      icon: ChatBubbleLeftRightIcon,
-      color: 'bg-warning-500',
-      change: '+8%',
-      changeType: 'increase',
+      title: 'Total Campaigns',
+      value: stats?.totalCampaigns || 0,
+      icon: MessageSquare,
+      color: 'text-purple-600 bg-purple-50',
+      href: '/campaigns'
     },
     {
-      name: 'Messages Sent',
-      value: stats.totalMessagesSent,
-      icon: CheckCircleIcon,
-      color: 'bg-success-600',
-      change: '+15%',
-      changeType: 'increase',
-    },
-    {
-      name: 'Success Rate',
-      value: `${stats.successRate}%`,
-      icon: ArrowTrendingUpIcon,
-      color: 'bg-success-500',
-      change: '+2%',
-      changeType: 'increase',
-    },
-    {
-      name: 'Pending Messages',
-      value: stats.pendingMessages,
-      icon: ClockIcon,
-      color: 'bg-warning-500',
-      change: '-3%',
-      changeType: 'decrease',
+      title: 'Growth Rate',
+      value: '12%',
+      icon: TrendingUp,
+      color: 'text-orange-600 bg-orange-50',
+      href: '/reports'
     },
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600">Overview of your MR Communication Tool</p>
-      </div>
+    <Layout>
+      <div className="space-y-8">
+        {/* Welcome Section */}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg p-6 text-white">
+          <h1 className="text-2xl font-bold mb-2">Welcome to MR Manager</h1>
+          <p className="text-blue-100">
+            Manage your medical representatives and messaging campaigns efficiently
+          </p>
+          <div className="flex space-x-4 mt-4">
+            <Link to="/mrs">
+              <Button variant="outline" className="bg-white text-blue-600 hover:bg-gray-50 border-white">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Medical Rep
+              </Button>
+            </Link>
+            <Link to="/campaigns">
+              <Button variant="outline" className="bg-white text-blue-600 hover:bg-gray-50 border-white">
+                <MessageSquare className="mr-2 h-4 w-4" />
+                New Campaign
+              </Button>
+            </Link>
+          </div>
+        </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {statCards.map((stat) => (
-          <div key={stat.name} className="card">
-            <div className="card-body">
-              <div className="flex items-center">
-                <div className={`flex-shrink-0 rounded-md p-3 ${stat.color}`}>
-                  <stat.icon className="h-6 w-6 text-white" />
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">
-                      {stat.name}
-                    </dt>
-                    <dd className="flex items-baseline">
-                      <div className="text-2xl font-semibold text-gray-900">
-                        {stat.value}
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {statCards.map((stat) => (
+            <Link key={stat.title} to={stat.href}>
+              <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">{stat.title}</p>
+                      <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+                    </div>
+                    <div className={`p-3 rounded-lg ${stat.color}`}>
+                      <stat.icon className="h-6 w-6" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Recent Campaigns */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900">Recent Campaigns</h2>
+                <Link to="/campaigns">
+                  <Button variant="outline" size="sm">
+                    View all
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {stats?.recentCampaigns && stats.recentCampaigns.length > 0 ? (
+                <div className="space-y-4">
+                  {stats.recentCampaigns.slice(0, 5).map((campaign) => (
+                    <div key={campaign.id} className="flex items-center justify-between py-2">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">
+                          {campaign.content.slice(0, 50)}...
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(campaign.createdAt).toLocaleDateString()}
+                        </p>
                       </div>
-                      <div className={`ml-2 flex items-baseline text-sm font-semibold ${
-                        stat.changeType === 'increase' ? 'text-success-600' : 'text-danger-600'
-                      }`}>
-                        {stat.change}
+                      <div className="flex items-center space-x-2">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          campaign.status === 'completed' ? 'bg-green-100 text-green-800' :
+                          campaign.status === 'sending' ? 'bg-blue-100 text-blue-800' :
+                          campaign.status === 'failed' ? 'bg-red-100 text-red-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {campaign.status}
+                        </span>
                       </div>
-                    </dd>
-                  </dl>
+                    </div>
+                  ))}
                 </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+              ) : (
+                <div className="text-center py-6">
+                  <Activity className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">No campaigns yet</p>
+                  <Link to="/campaigns">
+                    <Button className="mt-2" size="sm">Create First Campaign</Button>
+                  </Link>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-      {/* Recent Activity */}
-      <div className="card">
-        <div className="card-header">
-          <h3 className="text-lg font-medium text-gray-900">Recent Activity</h3>
-        </div>
-        <div className="card-body">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <ChatBubbleLeftRightIcon className="h-5 w-5 text-primary-500" />
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-900">
-                    New campaign created
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {stats.recentActivity.campaigns} campaigns this month
-                  </p>
-                </div>
+          {/* Group Statistics */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900">Group Statistics</h2>
+                <Link to="/groups">
+                  <Button variant="outline" size="sm">
+                    Manage groups
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
               </div>
-              <div className="text-sm text-gray-500">
-                {stats.recentActivity.messagesSent} messages sent
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <UsersIcon className="h-5 w-5 text-success-500" />
+            </CardHeader>
+            <CardContent>
+              {stats?.groupStats && stats.groupStats.length > 0 ? (
+                <div className="space-y-3">
+                  {stats.groupStats.slice(0, 5).map((group, index) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <span className="text-sm text-gray-900">{group.groupName}</span>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-gray-500">{group.mrCount} MRs</span>
+                        <div className="w-20 bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-blue-600 h-2 rounded-full"
+                            style={{
+                              width: `${Math.min(100, (group.mrCount / (stats?.totalMRs || 1)) * 100)}%`
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-900">
-                    Medical Representatives active
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {stats.totalMRs} total MRs
-                  </p>
+              ) : (
+                <div className="text-center py-6">
+                  <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">No groups yet</p>
+                  <Link to="/groups">
+                    <Button className="mt-2" size="sm">Create First Group</Button>
+                  </Link>
                 </div>
-              </div>
-              <div className="text-sm text-gray-500">
-                {stats.recentActivity.messagesReceived} messages received
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="card">
-        <div className="card-header">
-          <h3 className="text-lg font-medium text-gray-900">Quick Actions</h3>
-        </div>
-        <div className="card-body">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <button className="btn btn-primary">
-              <ChatBubbleLeftRightIcon className="h-5 w-5 mr-2" />
-              Send Message
-            </button>
-            <button className="btn btn-secondary">
-              <UsersIcon className="h-5 w-5 mr-2" />
-              Add MR
-            </button>
-            <button className="btn btn-secondary">
-              <UserGroupIcon className="h-5 w-5 mr-2" />
-              Create Group
-            </button>
-            <button className="btn btn-secondary">
-              <ChartBarIcon className="h-5 w-5 mr-2" />
-              View Reports
-            </button>
-          </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
-    </div>
+    </Layout>
   );
 };
 

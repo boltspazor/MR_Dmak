@@ -1,10 +1,10 @@
 import axios from 'axios';
-import type { AxiosInstance, AxiosResponse } from 'axios';
+import toast from 'react-hot-toast';
 
-// Create axios instance
-const api: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5001/api',
-  timeout: 10000,
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+
+export const api = axios.create({
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -13,7 +13,7 @@ const api: AxiosInstance = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('authToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -24,20 +24,19 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle common errors
+// Response interceptor to handle errors
 api.interceptors.response.use(
-  (response: AxiosResponse) => {
-    return response;
-  },
+  (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid
-      localStorage.removeItem('token');
+      localStorage.removeItem('authToken');
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
+    
+    const message = error.response?.data?.message || 'An error occurred';
+    toast.error(message);
+    
     return Promise.reject(error);
   }
 );
-
-export default api;

@@ -1,73 +1,103 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
-import { NotificationProvider } from './contexts/NotificationContext';
-import { useAuth } from './contexts/AuthContext';
-import Layout from './components/Layout';
+import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
-import Groups from './pages/Groups';
-import MRs from './pages/MRs';
-import Messages from './pages/Messages';
-import Reports from './pages/Reports';
-import NotificationToast from './components/common/NotificationToast';
 
-// Protected Route Component
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, loading } = useAuth();
-  
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
-      </div>
-    );
-  }
-  
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  return <>{children}</>;
-};
-
-// App Routes Component
-const AppRoutes: React.FC = () => {
+function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/" element={
-        <ProtectedRoute>
-          <Layout />
-        </ProtectedRoute>
-      }>
-        <Route index element={<Navigate to="/dashboard" replace />} />
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="groups" element={<Groups />} />
-        <Route path="mrs" element={<MRs />} />
-        <Route path="messages" element={<Messages />} />
-        <Route path="reports" element={<Reports />} />
-      </Route>
-    </Routes>
+    <AuthProvider>
+      <Router>
+        <div className="App">
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/groups"
+              element={
+                <ProtectedRoute>
+                  <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                    <div className="text-center">
+                      <h2 className="text-2xl font-bold text-gray-900 mb-4">Groups Management</h2>
+                      <p className="text-gray-600">Coming soon...</p>
+                    </div>
+                  </div>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/mrs"
+              element={
+                <ProtectedRoute>
+                  <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                    <div className="text-center">
+                      <h2 className="text-2xl font-bold text-gray-900 mb-4">Medical Representatives</h2>
+                      <p className="text-gray-600">Coming soon...</p>
+                    </div>
+                  </div>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/campaigns"
+              element={
+                <ProtectedRoute>
+                  <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                    <div className="text-center">
+                      <h2 className="text-2xl font-bold text-gray-900 mb-4">Message Campaigns</h2>
+                      <p className="text-gray-600">Coming soon...</p>
+                    </div>
+                  </div>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/reports"
+              element={
+                <ProtectedRoute>
+                  <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                    <div className="text-center">
+                      <h2 className="text-2xl font-bold text-gray-900 mb-4">Reports & Analytics</h2>
+                      <p className="text-gray-600">Coming soon...</p>
+                    </div>
+                  </div>
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+          <Toaster 
+            position="top-right"
+            toastOptions={{
+              duration: 4000,
+              style: {
+                background: '#363636',
+                color: '#fff',
+              },
+              success: {
+                duration: 3000,
+                iconTheme: {
+                  primary: '#10B981',
+                  secondary: '#fff',
+                },
+              },
+            }}
+          />
+        </div>
+      </Router>
+    </AuthProvider>
   );
-};
-
-// Main App Component
-const App: React.FC = () => {
-  return (
-    <Router>
-      <AuthProvider>
-        <NotificationProvider>
-          <div className="App">
-            <AppRoutes />
-            <NotificationToast />
-          </div>
-        </NotificationProvider>
-      </AuthProvider>
-    </Router>
-  );
-};
+}
 
 export default App;

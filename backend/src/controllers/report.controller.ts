@@ -35,7 +35,10 @@ export class ReportController {
         }
       };
 
-      return res.json(dashboardStats);
+      return res.json({ 
+        success: true,
+        stats: dashboardStats 
+      });
     } catch (error: any) {
       logger.error('Failed to get dashboard stats', { error: error.message });
       return res.status(500).json({ error: error.message });

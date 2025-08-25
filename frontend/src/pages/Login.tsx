@@ -1,123 +1,29 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useNotifications } from '../contexts/NotificationContext';
-import { LoginCredentials } from '../types';
-
-const schema = yup.object({
-  email: yup.string().email('Invalid email address').required('Email is required'),
-  password: yup.string().required('Password is required'),
-}).required();
+import LoginForm from '../components/auth/LoginForm';
 
 const Login: React.FC = () => {
+  const [loading, setLoading] = useState(false);
   const { login } = useAuth();
-  const { addNotification } = useNotifications();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginCredentials>({
-    resolver: yupResolver(schema),
-  });
-
-  const onSubmit = async (data: LoginCredentials) => {
-    setIsLoading(true);
+  const handleLogin = async (data: { email: string; password: string }) => {
+    setLoading(true);
     try {
+      console.log('Attempting login with:', data.email);
       await login(data.email, data.password);
-      addNotification({
-        type: 'success',
-        title: 'Login Successful',
-        message: 'Welcome back!',
-      });
+      console.log('Login successful, redirecting to dashboard...');
       navigate('/dashboard');
-    } catch (error: any) {
-      addNotification({
-        type: 'error',
-        title: 'Login Failed',
-        message: error.response?.data?.error || 'Invalid credentials',
-      });
+    } catch (error) {
+      console.error('Login error in Login component:', error);
+      // Error is handled by the auth context
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Sign in to your account
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Or{' '}
-            <Link
-              to="/register"
-              className="font-medium text-primary-600 hover:text-primary-500"
-            >
-              create a new account
-            </Link>
-          </p>
-        </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="email" className="form-label">
-                Email address
-              </label>
-              <input
-                {...register('email')}
-                type="email"
-                id="email"
-                className={`input ${errors.email ? 'input-error' : ''}`}
-                placeholder="Enter your email"
-              />
-              {errors.email && (
-                <p className="form-error">{errors.email.message}</p>
-              )}
-            </div>
-            <div>
-              <label htmlFor="password" className="form-label">
-                Password
-              </label>
-              <input
-                {...register('password')}
-                type="password"
-                id="password"
-                className={`input ${errors.password ? 'input-error' : ''}`}
-                placeholder="Enter your password"
-              />
-              {errors.password && (
-                <p className="form-error">{errors.password.message}</p>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="btn-primary w-full btn-lg"
-            >
-              {isLoading ? (
-                <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Signing in...
-                </div>
-              ) : (
-                'Sign in'
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
+  return <LoginForm onSubmit={handleLogin} loading={loading} />;
 };
 
 export default Login;

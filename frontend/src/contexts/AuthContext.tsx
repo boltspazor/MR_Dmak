@@ -1,15 +1,7 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { AuthUser } from '../types';
-import authService from '../services/auth.service';
-
-interface AuthContextType {
-  user: AuthUser | null;
-  loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
-  logout: () => void;
-  refreshUser: () => Promise<void>;
-}
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { User, AuthContextType } from '../types';
+import { api } from '../lib/api';
+import toast from 'react-hot-toast';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -22,40 +14,37 @@ export const useAuth = () => {
 };
 
 interface AuthProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        if (authService.isAuthenticated()) {
-          const storedUser = authService.getStoredUser();
-          if (storedUser) {
-            setUser(storedUser);
-          } else {
-            // Try to get current user from API
-            await refreshUser();
-          }
-        }
-      } catch (error) {
-        console.error('Auth initialization failed:', error);
-        authService.logout();
-      } finally {
-        setLoading(false);
-      }
-    };
+    const savedToken = localStorage.getItem('authToken');
+    const savedUser = localStorage.getItem('user');
 
-    initializeAuth();
+    if (savedToken && savedUser) {
+      setToken(savedToken);
+      setUser(JSON.parse(savedUser));
+    }
+    
+    setLoading(false);
   }, []);
 
   const login = async (email: string, password: string) => {
     try {
-      const { user: loggedInUser } = await authService.login({ email, password });
-      setUser(loggedInUser);
+      const response = await api.post('/auth/login', { email, password });
+      const { user, token } = response.data;
+
+      setUser(user);
+      setToken(token);
+      localStorage.setItem('authToken', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      
+      toast.success('Login successful!');
     } catch (error) {
       throw error;
     }
@@ -63,40 +52,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const register = async (email: string, password: string, name: string) => {
     try {
-      const registeredUser = await authService.register({ email, password, name });
-      setUser(registeredUser);
+      const response = await api.post('/auth/register', { email, password, name });
+      const userData = response.data.user;
+
+      // After registration, automatically log them in
+      await login(email, password);
+      
+      toast.success('Registration successful!');
     } catch (error) {
       throw error;
     }
   };
 
   const logout = () => {
-    authService.logout();
     setUser(null);
+    setToken(null);
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+    toast.success('Logged out successfully');
   };
 
-  const refreshUser = async () => {
-    try {
-      const currentUser = await authService.getCurrentUser();
-      setUser(currentUser);
-    } catch (error) {
-      console.error('Failed to refresh user:', error);
-      logout();
-    }
-  };
-
-  const value: AuthContextType = {
+  const value = {
     user,
-    loading,
+    token,
     login,
     register,
     logout,
-    refreshUser,
+    loading,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
