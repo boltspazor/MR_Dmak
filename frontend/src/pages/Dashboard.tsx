@@ -31,8 +31,39 @@ const Dashboard: React.FC = () => {
         return;
       }
       
-      const response = await api.get('/reports/dashboard');
-      setStats(response.data.stats);
+      // Fetch dashboard stats and recent campaigns
+      const [statsResponse, campaignsResponse, groupsResponse] = await Promise.all([
+        api.get('/reports/dashboard'),
+        api.get('/messages/campaigns'),
+        api.get('/groups')
+      ]);
+
+      const statsData = statsResponse.data.stats || {};
+      const campaigns = campaignsResponse.data.data || [];
+      const groups = groupsResponse.data.data || [];
+
+      // Transform data for dashboard display
+      const dashboardStats: DashboardStats = {
+        totalMRs: statsData.totalMRs || 0,
+        totalGroups: groups.length,
+        totalCampaigns: campaigns.length,
+        recentCampaigns: campaigns.slice(0, 5).map((campaign: any) => ({
+          id: campaign.id,
+          content: campaign.content,
+          status: campaign.status,
+          createdAt: campaign.createdAt,
+          targetGroups: campaign.targetGroups,
+          totalRecipients: campaign.totalRecipients,
+          sentCount: campaign.sentCount,
+          failedCount: campaign.failedCount
+        })),
+        groupStats: groups.map((group: any) => ({
+          groupName: group.groupName,
+          mrCount: group.mrCount || 0
+        }))
+      };
+
+      setStats(dashboardStats);
     } catch (error: any) {
       console.error('Error fetching dashboard stats:', error);
       // Don't show error for unauthorized users

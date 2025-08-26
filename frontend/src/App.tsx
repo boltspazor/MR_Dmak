@@ -7,6 +7,10 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import SimpleMRTool from './pages/SimpleMRTool';
+import Groups from './pages/Groups';
+import MedicalReps from './pages/MedicalReps';
+import Campaigns from './pages/Campaigns';
+import Reports from './pages/Reports';
 
 function App() {
   return (
@@ -28,12 +32,7 @@ function App() {
               path="/groups"
               element={
                 <ProtectedRoute>
-                  <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                    <div className="text-center">
-                      <h2 className="text-2xl font-bold text-gray-900 mb-4">Groups Management</h2>
-                      <p className="text-gray-600">Coming soon...</p>
-                    </div>
-                  </div>
+                  <Groups />
                 </ProtectedRoute>
               }
             />
@@ -41,12 +40,7 @@ function App() {
               path="/mrs"
               element={
                 <ProtectedRoute>
-                  <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                    <div className="text-center">
-                      <h2 className="text-2xl font-bold text-gray-900 mb-4">Medical Representatives</h2>
-                      <p className="text-gray-600">Coming soon...</p>
-                    </div>
-                  </div>
+                  <MedicalReps />
                 </ProtectedRoute>
               }
             />
@@ -54,12 +48,7 @@ function App() {
               path="/campaigns"
               element={
                 <ProtectedRoute>
-                  <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                    <div className="text-center">
-                      <h2 className="text-2xl font-bold text-gray-900 mb-4">Message Campaigns</h2>
-                      <p className="text-gray-600">Coming soon...</p>
-                    </div>
-                  </div>
+                  <Campaigns />
                 </ProtectedRoute>
               }
             />
@@ -67,12 +56,7 @@ function App() {
               path="/reports"
               element={
                 <ProtectedRoute>
-                  <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                    <div className="text-center">
-                      <h2 className="text-2xl font-bold text-gray-900 mb-4">Reports & Analytics</h2>
-                      <p className="text-gray-600">Coming soon...</p>
-                    </div>
-                  </div>
+                  <Reports />
                 </ProtectedRoute>
               }
             />
