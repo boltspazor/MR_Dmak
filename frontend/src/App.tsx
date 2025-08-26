@@ -6,6 +6,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import SimpleMRTool from './pages/SimpleMRTool';
 
 function App() {
   return (
@@ -72,6 +73,14 @@ function App() {
                       <p className="text-gray-600">Coming soon...</p>
                     </div>
                   </div>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/simple-tool"
+              element={
+                <ProtectedRoute>
+                  <SimpleMRTool />
                 </ProtectedRoute>
               }
             />

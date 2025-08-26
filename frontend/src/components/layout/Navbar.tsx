@@ -23,6 +23,7 @@ const Navbar: React.FC = () => {
 
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: BarChart3 },
+    { path: '/simple-tool', label: 'Simple MR Tool', icon: MessageSquare },
     { path: '/groups', label: 'Groups', icon: Users },
     { path: '/mrs', label: 'Medical Reps', icon: UserCircle },
     { path: '/campaigns', label: 'Campaigns', icon: MessageSquare },
