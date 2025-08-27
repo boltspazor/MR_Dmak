@@ -6,8 +6,10 @@ export interface IMedicalRepresentative extends Document {
   lastName: string;
   phone: string;
   email?: string;
+  address?: string;
   comments?: string;
   groupId: mongoose.Types.ObjectId;
+  marketingManagerId: mongoose.Types.ObjectId; // Associate MR with marketing manager
   createdAt: Date;
   updatedAt: Date;
 }
@@ -39,6 +41,10 @@ const medicalRepresentativeSchema = new Schema<IMedicalRepresentative>({
     trim: true,
     lowercase: true
   },
+  address: {
+    type: String,
+    trim: true
+  },
   comments: {
     type: String,
     trim: true
@@ -46,6 +52,11 @@ const medicalRepresentativeSchema = new Schema<IMedicalRepresentative>({
   groupId: {
     type: Schema.Types.ObjectId,
     ref: 'Group',
+    required: true
+  },
+  marketingManagerId: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
     required: true
   }
 }, {

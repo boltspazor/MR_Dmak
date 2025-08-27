@@ -31,8 +31,9 @@ The MR Communication Tool consists of two main components:
 ### **1. User Management & Authentication**
 - User registration and login system
 - JWT-based authentication
-- Role-based access control (User/Admin)
+- Role-based access control (User/Admin/Super Admin)
 - Secure password handling with bcrypt
+- Super admin management of marketing managers
 
 ### **2. Group Management**
 - Create, edit, and delete MR groups
@@ -393,11 +394,24 @@ frontend/
 └── .env                  # Environment variables
 ```
 
-### **4. Access the Application**
+### **4. Super Admin Setup**
+```bash
+# Create super admin user with specified credentials
+cd backend
+npm run create-super-admin
+
+# This will create:
+# Email: sprabhjeet037@gmail.com
+# Password: admin1234
+# Role: super_admin
+```
+
+### **5. Access the Application**
 - **Backend API**: http://localhost:5001
 - **Frontend App**: http://localhost:5173
 - **API Documentation**: http://localhost:5001/api
 - **Health Check**: http://localhost:5001/api/health
+- **Super Admin**: http://localhost:5173/super-admin
 
 ## 📱 **How to Use the Application**
 

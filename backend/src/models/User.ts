@@ -6,6 +6,8 @@ export interface IUser extends Document {
   password: string;
   name: string;
   role: string;
+  marketingManagerId?: mongoose.Types.ObjectId; // For MRs to associate with marketing managers
+  isMarketingManager: boolean; // Flag to identify marketing managers
   createdAt: Date;
   updatedAt: Date;
 }
@@ -30,7 +32,16 @@ const userSchema = new Schema<IUser>({
   role: {
     type: String,
     default: 'user',
-    enum: ['user', 'admin']
+    enum: ['user', 'admin', 'super_admin']
+  },
+  marketingManagerId: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    required: false
+  },
+  isMarketingManager: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true,

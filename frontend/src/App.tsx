@@ -11,6 +11,7 @@ import Groups from './pages/Groups';
 import MedicalReps from './pages/MedicalReps';
 import Campaigns from './pages/Campaigns';
 import Reports from './pages/Reports';
+import SuperAdmin from './pages/SuperAdmin';
 
 function App() {
   return (
@@ -57,6 +58,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Reports />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/super-admin"
+              element={
+                <ProtectedRoute>
+                  <SuperAdmin />
                 </ProtectedRoute>
               }
             />

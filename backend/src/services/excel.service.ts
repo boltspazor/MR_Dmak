@@ -28,7 +28,10 @@ export class ExcelService {
           firstName: normalizedRow.firstname || normalizedRow.fname || '',
           lastName: normalizedRow.lastname || normalizedRow.lname || '',
           groupName: normalizedRow.groupname || normalizedRow.group || '',
+          marketingManager: normalizedRow.marketingmanager || normalizedRow.manager || '',
           phone: formatPhoneNumber(normalizedRow.phone || ''),
+          email: normalizedRow.email || '',
+          address: normalizedRow.address || '',
           comments: normalizedRow.comments || '',
         };
       });
@@ -49,6 +52,7 @@ export class ExcelService {
       if (!row.firstName) rowErrors.push(`Row ${index + 1}: First Name is required`);
       if (!row.lastName) rowErrors.push(`Row ${index + 1}: Last Name is required`);
       if (!row.groupName) rowErrors.push(`Row ${index + 1}: Group Name is required`);
+      if (!row.marketingManager) rowErrors.push(`Row ${index + 1}: Marketing Manager is required`);
       if (!row.phone || !isValidPhoneNumber(row.phone)) {
         rowErrors.push(`Row ${index + 1}: Valid phone number is required`);
       }
@@ -70,7 +74,10 @@ export class ExcelService {
         'First Name': 'John',
         'Last Name': 'Doe',
         'Group Name': 'North Region',
+        'Marketing Manager': 'Manager Name',
         'Phone': '+919876543210',
+        'Email': 'john.doe@example.com',
+        'Address': '123 Main St, City, State',
         'Comments': 'Sample MR data'
       },
       {
@@ -78,7 +85,10 @@ export class ExcelService {
         'First Name': 'Jane',
         'Last Name': 'Smith',
         'Group Name': 'South Region',
+        'Marketing Manager': 'Manager Name',
         'Phone': '+919876543211',
+        'Email': 'jane.smith@example.com',
+        'Address': '456 Oak Ave, City, State',
         'Comments': 'Another sample'
       }
     ];

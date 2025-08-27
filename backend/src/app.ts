@@ -11,6 +11,7 @@ import mrRoutes from './routes/mr.routes';
 import groupRoutes from './routes/group.routes';
 import messageRoutes from './routes/message.routes';
 import reportRoutes from './routes/report.routes';
+import superAdminRoutes from './routes/superAdmin.routes';
 
 import logger from './utils/logger';
 import { WhatsAppService } from './services/whatsapp.service';
@@ -74,6 +75,7 @@ app.use('/api/mrs', mrRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/super-admin', superAdminRoutes);
 
 // WhatsApp Webhook
 const whatsappService = new WhatsAppService();
@@ -122,6 +124,7 @@ app.get('/api', (req, res) => {
       groups: '/api/groups',
       messages: '/api/messages',
       reports: '/api/reports',
+      superAdmin: '/api/super-admin',
       health: '/api/health'
     }
   });

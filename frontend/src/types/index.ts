@@ -2,6 +2,9 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  role: string;
+  isMarketingManager: boolean;
+  marketingManagerId?: string;
   createdAt: string;
 }
 
@@ -21,8 +24,15 @@ export interface MedicalRepresentative {
   lastName: string;
   phone: string;
   email?: string;
+  address?: string;
   groupId: string;
   group?: Group;
+  marketingManagerId: string;
+  marketingManager?: {
+    id: string;
+    name: string;
+    email: string;
+  };
   comments?: string;
   createdAt: string;
   updatedAt: string;

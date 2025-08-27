@@ -3,7 +3,10 @@ export interface MRData {
     firstName: string;
     lastName: string;
     groupName: string;
+    marketingManager: string;
     phone: string;
+    email?: string;
+    address?: string;
     comments?: string;
   }
 
@@ -14,11 +17,18 @@ export interface MedicalRepresentativeResponse {
     lastName: string;
     phone: string;
     email?: string;
+    address?: string;
     comments?: string;
     groupId: string;
     group: {
         id: string;
         groupName: string;
+    };
+    marketingManagerId: string;
+    marketingManager: {
+        id: string;
+        name: string;
+        email: string;
     };
     createdAt: Date;
     updatedAt: Date;
@@ -43,6 +53,8 @@ export interface MedicalRepresentativeResponse {
     email: string;
     name: string;
     role: string;
+    isMarketingManager: boolean;
+    marketingManagerId?: string;
   }
   
   export interface JwtPayload {

@@ -8,7 +8,8 @@ import {
   Users, 
   UserCircle, 
   MessageSquare,
-  Activity
+  Activity,
+  Shield
 } from 'lucide-react';
 
 const Navbar: React.FC = () => {
@@ -23,6 +24,9 @@ const Navbar: React.FC = () => {
 
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: BarChart3 },
+    ...(user?.role === 'super_admin' ? [
+      { path: '/super-admin', label: 'Super Admin', icon: Shield }
+    ] : []),
     { path: '/simple-tool', label: 'Simple MR Tool', icon: MessageSquare },
     { path: '/groups', label: 'Groups', icon: Users },
     { path: '/mrs', label: 'Medical Reps', icon: UserCircle },
