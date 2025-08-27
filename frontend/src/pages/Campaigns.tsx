@@ -13,7 +13,8 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  Image
 } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import Card, { CardHeader, CardContent } from '../components/ui/Card';
@@ -37,6 +38,12 @@ const Campaigns: React.FC = () => {
     imageUrl: '',
     scheduledAt: ''
   });
+
+  // Image upload states
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
 
   useEffect(() => {
     fetchCampaigns();
@@ -87,13 +94,79 @@ const Campaigns: React.FC = () => {
         imageUrl: '',
         scheduledAt: ''
       });
-      setEditingCampaign(null);
-      setShowCreateForm(false);
+                      setImageFile(null);
+                setImagePreview('');
+                setUploadSuccess(false);
+                setEditingCampaign(null);
+                setShowCreateForm(false);
       fetchCampaigns();
     } catch (error: any) {
       console.error('Error saving campaign:', error);
       alert(error.response?.data?.error || 'Failed to save campaign');
     }
+  };
+
+  const handleImageUpload = async (file: File) => {
+    try {
+      setUploadingImage(true);
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      const response = await api.post('/messages/upload-image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      setFormData(prev => ({ ...prev, imageUrl: response.data.imageUrl }));
+      setImagePreview(response.data.imageUrl);
+      setImageFile(null);
+      setUploadSuccess(true);
+      
+      // Hide success message after 3 seconds
+      setTimeout(() => setUploadSuccess(false), 3000);
+    } catch (error: any) {
+      console.error('Error uploading image:', error);
+      alert(error.response?.data?.error || 'Failed to upload image');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        return;
+      }
+      
+      // Validate file size (10MB limit)
+      if (file.size > 10 * 1024 * 1024) {
+        alert('Image size should be less than 10MB');
+        return;
+      }
+
+      setImageFile(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview('');
+    setFormData(prev => ({ ...prev, imageUrl: '' }));
   };
 
   const handleDelete = async (campaignId: string) => {
@@ -119,6 +192,9 @@ const Campaigns: React.FC = () => {
       imageUrl: campaign.imageUrl || '',
       scheduledAt: campaign.scheduledAt || ''
     });
+    setImagePreview(campaign.imageUrl || '');
+    setImageFile(null);
+    setUploadSuccess(false);
     setShowCreateForm(true);
   };
 
@@ -222,6 +298,9 @@ const Campaigns: React.FC = () => {
                   imageUrl: '',
                   scheduledAt: ''
                 });
+                setImageFile(null);
+                setImagePreview('');
+                setUploadSuccess(false);
               }}
               className="flex items-center"
             >
@@ -360,15 +439,149 @@ const Campaigns: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Image URL
+                      Image Upload
                     </label>
-                    <input
-                      type="url"
-                      value={formData.imageUrl}
-                      onChange={(e) => setFormData({...formData, imageUrl: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Enter image URL (optional)"
-                    />
+                    <div className="space-y-3">
+                      {/* Image Upload Input */}
+                      <div className="space-y-2">
+                        {/* Drag & Drop Zone */}
+                        <div 
+                          className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                            imageFile ? 'border-blue-300 bg-blue-50' : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'
+                          }`}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            e.currentTarget.classList.add('border-blue-400', 'bg-blue-50');
+                          }}
+                          onDragLeave={(e) => {
+                            e.preventDefault();
+                            e.currentTarget.classList.remove('border-blue-400', 'bg-blue-50');
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            e.currentTarget.classList.remove('border-blue-400', 'bg-blue-50');
+                            const files = e.dataTransfer.files;
+                            if (files.length > 0) {
+                              const file = files[0];
+                              if (file.type.startsWith('image/')) {
+                                setImageFile(file);
+                                const reader = new FileReader();
+                                reader.onload = (e) => {
+                                  setImagePreview(e.target?.result as string);
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }
+                          }}
+                        >
+                          <div className="space-y-2">
+                            <Image className="h-8 w-8 text-gray-400 mx-auto" />
+                            <p className="text-sm text-gray-600">
+                              {imageFile ? 'Image selected: ' + imageFile.name : 'Drag & drop an image here, or click to browse'}
+                            </p>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageChange}
+                              className="hidden"
+                              id="image-upload"
+                            />
+                            <label 
+                              htmlFor="image-upload"
+                              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer"
+                            >
+                              Browse Files
+                            </label>
+                          </div>
+                        </div>
+                        
+                        {/* Upload Button */}
+                        {imageFile && (
+                          <div className="flex justify-center">
+                            <Button
+                              type="button"
+                              onClick={() => handleImageUpload(imageFile)}
+                              disabled={uploadingImage}
+                              size="sm"
+                              className="flex-shrink-0"
+                            >
+                              {uploadingImage ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                  Uploading...
+                                </>
+                              ) : (
+                                'Upload Image'
+                              )}
+                            </Button>
+                          </div>
+                        )}
+                        
+                        {/* Success Message */}
+                        {uploadSuccess && (
+                          <div className="bg-green-50 border border-green-200 rounded-md p-3 text-center">
+                            <div className="flex items-center justify-center space-x-2">
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                              <span className="text-sm text-green-800 font-medium">
+                                Image uploaded successfully! 🎉
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* File Info */}
+                        {imageFile && (
+                          <div className="text-xs text-gray-500">
+                            <p>File: {imageFile.name}</p>
+                            <p>Size: {(imageFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                            <p>Type: {imageFile.type}</p>
+                          </div>
+                        )}
+                        
+                        {/* Help Text */}
+                        <div className="text-xs text-gray-400 bg-gray-50 p-2 rounded">
+                          <p>📱 Supported formats: JPEG, PNG, GIF, WebP</p>
+                          <p>📏 Maximum size: 10MB</p>
+                          <p>💡 Images will be sent with your message via WhatsApp</p>
+                        </div>
+                      </div>
+
+                      {/* Image Preview */}
+                      {imagePreview && (
+                        <div className="relative">
+                          <img
+                            src={imagePreview}
+                            alt="Preview"
+                            className="w-32 h-32 object-cover rounded-lg border border-gray-300"
+                          />
+                          <button
+                            type="button"
+                            onClick={removeImage}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Current Image URL (for editing) */}
+                      {formData.imageUrl && !imagePreview && (
+                        <div className="relative">
+                          <img
+                            src={formData.imageUrl}
+                            alt="Current"
+                            className="w-32 h-32 object-cover rounded-lg border border-gray-300"
+                          />
+                          <button
+                            type="button"
+                            onClick={removeImage}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -399,6 +612,9 @@ const Campaigns: React.FC = () => {
                         imageUrl: '',
                         scheduledAt: ''
                       });
+                      setImageFile(null);
+                      setImagePreview('');
+                      setUploadSuccess(false);
                     }}
                   >
                     Cancel
@@ -444,9 +660,16 @@ const Campaigns: React.FC = () => {
               <CardContent className="p-6">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                      {campaign.content.slice(0, 50)}{campaign.content.length > 50 ? '...' : ''}
-                    </h3>
+                    <div className="flex items-center space-x-2 mb-2">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {campaign.content.slice(0, 50)}{campaign.content.length > 50 ? '...' : ''}
+                      </h3>
+                      {campaign.imageUrl && (
+                        <div title="Has Image">
+                          <Image className="h-4 w-4 text-blue-500" />
+                        </div>
+                      )}
+                    </div>
                     <div className="space-y-2">
                       <div className="flex items-center space-x-2">
                         <Users className="h-4 w-4 text-gray-400" />
@@ -500,6 +723,18 @@ const Campaigns: React.FC = () => {
                     ))}
                   </div>
                 </div>
+
+                {/* Campaign Image */}
+                {campaign.imageUrl && (
+                  <div className="mb-4">
+                    <p className="text-sm font-medium text-gray-700 mb-2">Image:</p>
+                    <img
+                      src={campaign.imageUrl}
+                      alt="Campaign"
+                      className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                    />
+                  </div>
+                )}
 
                 {/* Status and Progress */}
                 <div className="space-y-3">
