@@ -3,6 +3,10 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface IMessageCampaign extends Document {
   messageId: mongoose.Types.ObjectId;
   createdBy: mongoose.Types.ObjectId;
+  targetGroups: string[];
+  totalRecipients: number;
+  sentCount: number;
+  failedCount: number;
   scheduledAt?: Date;
   status: string;
   createdAt: Date;
@@ -20,13 +24,29 @@ const messageCampaignSchema = new Schema<IMessageCampaign>({
     ref: 'User',
     required: true
   },
+  targetGroups: {
+    type: [String],
+    default: []
+  },
+  totalRecipients: {
+    type: Number,
+    default: 0
+  },
+  sentCount: {
+    type: Number,
+    default: 0
+  },
+  failedCount: {
+    type: Number,
+    default: 0
+  },
   scheduledAt: {
     type: Date
   },
   status: {
     type: String,
-    default: 'draft',
-    enum: ['draft', 'queued', 'processing', 'completed', 'failed']
+    default: 'pending',
+    enum: ['pending', 'sending', 'completed', 'failed']
   }
 }, {
   timestamps: true,
