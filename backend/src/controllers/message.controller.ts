@@ -51,7 +51,8 @@ export class MessageController {
         search,
         status,
         dateFrom,
-        dateTo
+        dateTo,
+        userId: req.user.userId // Filter campaigns by user
       });
       return res.json(campaigns);
     } catch (error: any) {

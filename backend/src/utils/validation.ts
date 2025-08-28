@@ -51,10 +51,10 @@ export const schemas = {
   
   message: {
     send: Joi.object({
-      content: Joi.string().min(1).required(),
+      content: Joi.string().min(1).max(1000).required(),
       targetGroups: Joi.array().items(Joi.string()).min(1).required(),
       imageUrl: Joi.string().uri().allow('', null),
-      scheduledAt: Joi.date().min('now').allow(null),
+      scheduledAt: Joi.date().allow(null),
     })
   }
 };

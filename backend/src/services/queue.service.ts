@@ -56,6 +56,33 @@ messageQueue.process('send-message', async (job) => {
       }
     );
 
+    // Update campaign statistics
+    const MessageCampaign = (await import('../models/MessageCampaign')).default;
+    const campaignStats = await MessageLog.aggregate([
+      { $match: { campaignId } },
+      {
+        $group: {
+          _id: null,
+          totalCount: { $sum: 1 },
+          sentCount: { $sum: { $cond: [{ $eq: ['$status', 'sent'] }, 1, 0] } },
+          failedCount: { $sum: { $cond: [{ $eq: ['$status', 'failed'] }, 1, 0] } },
+          pendingCount: { $sum: { $cond: [{ $in: ['$status', ['queued', 'pending']] }, 1, 0] } }
+        }
+      }
+    ]);
+
+    if (campaignStats.length > 0) {
+      const stats = campaignStats[0];
+      const status = stats.pendingCount > 0 ? 'sending' : 
+                    stats.failedCount === stats.totalCount ? 'failed' : 'completed';
+
+      await MessageCampaign.findByIdAndUpdate(campaignId, {
+        sentCount: stats.sentCount,
+        failedCount: stats.failedCount,
+        status: status
+      });
+    }
+
     logger.info('Message processed successfully', {
       campaignId,
       mrId,

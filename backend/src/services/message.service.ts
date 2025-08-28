@@ -21,15 +21,28 @@ export class MessageService {
       // Create campaign record
       const campaign = await MessageCampaign.create({
         messageId: message._id,
+        targetGroups: payload.targetGroups, // Store group names for reference
         scheduledAt: payload.scheduledAt || new Date(),
         createdBy: userId,
         status: 'processing',
+        totalRecipients: 0, // Will be updated after counting MRs
+        sentCount: 0,
+        failedCount: 0,
       });
 
-      // Get all MRs in target groups
-      const medicalReps = await MedicalRepresentative.find({
-        groupId: { $in: payload.targetGroups }
+      // Get all MRs in target groups (targetGroups contains group names)
+      // First, find the group IDs by group names
+      const Group = (await import('../models/Group')).default;
+      const groups = await Group.find({
+        groupName: { $in: payload.targetGroups },
+        userId: userId
       });
+      
+      const groupIds = groups.map(group => group._id);
+      
+      const medicalReps = await MedicalRepresentative.find({
+        groupId: { $in: groupIds }
+      }).populate('groupId', 'groupName');
 
       // Create message logs for each MR
       const messageLogs = await Promise.all(
@@ -42,6 +55,11 @@ export class MessageService {
           })
         )
       );
+
+      // Update campaign with total recipients count
+      await MessageCampaign.findByIdAndUpdate(campaign._id, {
+        totalRecipients: medicalReps.length
+      });
 
       // Queue messages for processing
       const delay = payload.scheduledAt ? 
@@ -66,11 +84,17 @@ export class MessageService {
         targetGroups: payload.targetGroups
       });
 
+      // Update campaign status to 'pending' after queuing all messages
+      await MessageCampaign.findByIdAndUpdate(campaign._id, {
+        status: medicalReps.length > 0 ? 'pending' : 'completed'
+      });
+
       return {
         campaignId: (campaign as any)._id.toString(),
         messageId: (message as any)._id.toString(),
         totalRecipients: medicalReps.length,
-        status: 'queued',
+        status: medicalReps.length > 0 ? 'pending' : 'completed',
+        targetGroups: payload.targetGroups
       };
     } catch (error) {
       logger.error('Failed to send bulk message', { error, payload });
@@ -151,10 +175,21 @@ export class MessageService {
     try {
       const query: any = {};
       
+      // Add user filter if provided
+      if (filters.userId) {
+        query.createdBy = filters.userId;
+      }
+      
       if (filters.search) {
+        // Search in message content and target groups
+        const messageQuery = await Message.find({
+          content: { $regex: filters.search, $options: 'i' }
+        }).select('_id');
+        
         query.$or = [
-          { 'message.content': { $regex: filters.search, $options: 'i' } },
-          { status: { $regex: filters.search, $options: 'i' } }
+          { messageId: { $in: messageQuery.map(m => m._id) } },
+          { status: { $regex: filters.search, $options: 'i' } },
+          { targetGroups: { $in: [new RegExp(filters.search, 'i')] } }
         ];
       }
 
@@ -175,10 +210,25 @@ export class MessageService {
         .limit(filters.limit || 50)
         .skip(filters.offset || 0);
 
+      // Transform campaigns to include necessary fields
+      const transformedCampaigns = campaigns.map(campaign => ({
+        id: campaign._id.toString(),
+        content: (campaign as any).messageId?.content || '',
+        imageUrl: (campaign as any).messageId?.imageUrl || '',
+        targetGroups: campaign.targetGroups || [],
+        status: campaign.status,
+        totalRecipients: campaign.totalRecipients || 0,
+        sentCount: campaign.sentCount || 0,
+        failedCount: campaign.failedCount || 0,
+        scheduledAt: campaign.scheduledAt,
+        createdAt: campaign.createdAt,
+        updatedAt: campaign.updatedAt
+      }));
+
       const total = await MessageCampaign.countDocuments(query);
 
       return {
-        data: campaigns,
+        data: transformedCampaigns,
         pagination: {
           page: Math.floor((filters.offset || 0) / (filters.limit || 50)) + 1,
           limit: filters.limit || 50,

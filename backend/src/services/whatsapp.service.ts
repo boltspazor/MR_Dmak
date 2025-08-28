@@ -12,6 +12,14 @@ export class WhatsAppService {
     this.apiUrl = whatsappConfig.apiUrl;
     this.accessToken = whatsappConfig.accessToken!;
     this.phoneNumberId = whatsappConfig.phoneNumberId!;
+    
+    // Log configuration status for debugging
+    if (!this.accessToken || !this.phoneNumberId) {
+      logger.warn('WhatsApp configuration incomplete', {
+        hasAccessToken: !!this.accessToken,
+        hasPhoneNumberId: !!this.phoneNumberId
+      });
+    }
   }
 
   async sendMessage(message: WhatsAppMessage): Promise<{ success: boolean; messageId?: string; error?: string }> {
