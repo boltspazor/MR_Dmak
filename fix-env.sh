@@ -1,0 +1,53 @@
+#!/bin/bash
+
+# Fix WhatsApp environment variables in .env file
+echo "🔧 Fixing WhatsApp configuration in .env file..."
+
+# Your WhatsApp credentials (put them on single lines)
+cat > .env << 'EOF'
+# ========================================
+# DATABASE CONFIGURATION
+# ========================================
+MONGODB_URI=mongodb://localhost:27017/mr_communication_tool
+REDIS_URL=redis://localhost:6379
+
+# ========================================
+# JWT CONFIGURATION
+# ========================================
+JWT_SECRET=your-super-secret-jwt-key-here-make-it-very-long-and-random
+JWT_EXPIRES_IN=7d
+
+# ========================================
+# SERVER CONFIGURATION
+# ========================================
+PORT=5001
+NODE_ENV=development
+HOST=0.0.0.0
+
+# ========================================
+# WHATSAPP BUSINESS API
+# ========================================
+WHATSAPP_API_URL=https://graph.facebook.com/v18.0
+WHATSAPP_ACCESS_TOKEN=EAASI3UGkoZAUBPXDZCTKeRbCBITsTJzGZAHRHHRsLH04PN1UTHyIZAy7p40eh5HyU63fnFOm479mzwsJ0f7UWK7VmjjnQzjAV8rsTSodAe51QRIJ9w075WRKmMdEyZBxYZBoh9WXB3TOWUKBLPlMLUspBL2ZAbU5EJJJOlZB5DmRPvJlKSPjp7Ctio9xy7wMgZDZD
+WHATSAPP_PHONE_NUMBER_ID=61579959150279
+WHATSAPP_VERIFY_TOKEN=myverifytoken123
+
+# ========================================
+# FRONTEND CONFIGURATION
+# ========================================
+FRONTEND_URL=http://localhost:5173
+
+# ========================================
+# LOGGING CONFIGURATION
+# ========================================
+LOG_LEVEL=info
+EOF
+
+echo "✅ .env file has been fixed!"
+echo ""
+echo "🔍 Verifying WhatsApp configuration:"
+echo "WHATSAPP_ACCESS_TOKEN: $(grep WHATSAPP_ACCESS_TOKEN .env | cut -d'=' -f2 | cut -c1-50)..."
+echo "WHATSAPP_PHONE_NUMBER_ID: $(grep WHATSAPP_PHONE_NUMBER_ID .env | cut -d'=' -f2)"
+echo ""
+echo "🚀 Please restart your backend server now!"
+
