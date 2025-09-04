@@ -33,10 +33,10 @@ export class MRController {
   async bulkUpload(req: any, res: Response) {
     try {
       if (!req.file) {
-        return res.status(400).json({ error: 'Excel file is required' });
+        return res.status(400).json({ error: 'File is required' });
       }
 
-      const mrData = excelService.parseExcelFile(req.file.path);
+      const mrData = excelService.parseFile(req.file.path);
       const { valid, errors } = excelService.validateMRData(mrData);
 
       if (errors.length > 0 && valid.length === 0) {
@@ -48,15 +48,18 @@ export class MRController {
         });
       }
 
-      // For now, return a simple response since bulkCreateMRs is not implemented
+      // Process bulk upload
+      const results = await mrService.bulkCreateMRs(valid, req.user.userId);
+
       // Clean up uploaded file
       fs.unlinkSync(req.file.path);
 
       return res.json({
-        message: 'Bulk upload feature is being implemented',
-        created: 0,
-        errors: ['Bulk upload feature is not yet available'],
-        totalProcessed: 0,
+        message: 'Bulk upload completed',
+        created: results.created,
+        errors: results.errors,
+        totalProcessed: results.totalProcessed,
+        success: results.created > 0
       });
     } catch (error: any) {
       // Clean up uploaded file on error
@@ -193,6 +196,24 @@ export class MRController {
     } catch (error: any) {
       logger.error('Failed to generate template', { error: error.message });
       return res.status(500).json({ error: 'Failed to generate template' });
+    }
+  }
+
+  async downloadCSVTemplate(req: Request, res: Response) {
+    try {
+      const csvContent = [
+        'mrId,firstName,lastName,phone,email,groupName,marketingManager,comments',
+        'MR001,John,Doe,+919876543210,john.doe@example.com,North Zone,Super Admin,Senior MR with 5 years experience',
+        'MR002,Jane,Smith,+919876543211,jane.smith@example.com,South Zone,Super Admin,New hire',
+        'MR003,Mike,Johnson,+919876543212,mike.johnson@example.com,East Zone,Super Admin,Specialist in cardiology'
+      ].join('\n');
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=mr-template.csv');
+      res.send(csvContent);
+    } catch (error: any) {
+      logger.error('CSV template download failed', { error: error.message });
+      return res.status(500).json({ error: 'Failed to generate CSV template' });
     }
   }
 }

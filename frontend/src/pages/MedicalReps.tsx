@@ -141,36 +141,60 @@ const MedicalReps: React.FC = () => {
       const token = localStorage.getItem('authToken');
       if (!token) return;
 
-      await api.post('/mrs/bulk-upload', formData, {
+      const response = await api.post('/mrs/bulk-upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
 
-      alert('Bulk upload successful!');
-      fetchMRs();
-      setShowUploadForm(false);
+      const { created, errors, totalProcessed, success } = response.data;
+      
+      if (success) {
+        let message = `Bulk upload completed!\n\nCreated: ${created} MRs\nTotal Processed: ${totalProcessed}`;
+        if (errors && errors.length > 0) {
+          message += `\n\nErrors (${errors.length}):\n${errors.slice(0, 5).join('\n')}`;
+          if (errors.length > 5) {
+            message += `\n... and ${errors.length - 5} more errors`;
+          }
+        }
+        alert(message);
+        fetchMRs();
+        setShowUploadForm(false);
+      } else {
+        alert(`Upload failed. Errors:\n${errors.join('\n')}`);
+      }
     } catch (error: any) {
       console.error('Error uploading file:', error);
       alert(error.response?.data?.error || 'Failed to upload file');
     }
   };
 
-  const downloadTemplate = async () => {
+  const downloadTemplate = async (format: 'excel' | 'csv' = 'excel') => {
     try {
       const token = localStorage.getItem('authToken');
       if (!token) return;
 
-      const response = await api.get('/mrs/template', {
-        responseType: 'blob'
+      const endpoint = format === 'csv' ? '/mrs/template/csv' : '/mrs/template';
+      const response = await api.get(endpoint, {
+        responseType: format === 'csv' ? 'text' : 'blob'
       });
 
-      const url = window.URL.createObjectURL(response.data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'mr_template.xlsx';
-      a.click();
-      window.URL.revokeObjectURL(url);
+      if (format === 'csv') {
+        const blob = new Blob([response.data], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'mr_template.csv';
+        a.click();
+        window.URL.revokeObjectURL(url);
+      } else {
+        const url = window.URL.createObjectURL(response.data);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'mr_template.xlsx';
+        a.click();
+        window.URL.revokeObjectURL(url);
+      }
     } catch (error: any) {
       console.error('Error downloading template:', error);
       alert('Failed to download template');
@@ -484,12 +508,20 @@ const MedicalReps: React.FC = () => {
                     className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                   />
                   <Button
-                    onClick={downloadTemplate}
+                    onClick={() => downloadTemplate('excel')}
                     variant="outline"
                     className="flex items-center"
                   >
                     <Download className="h-4 w-4 mr-2" />
-                    Download Template
+                    Download Excel Template
+                  </Button>
+                  <Button
+                    onClick={() => downloadTemplate('csv')}
+                    variant="outline"
+                    className="flex items-center"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download CSV Template
                   </Button>
                 </div>
                 <p className="text-sm text-gray-600">

@@ -1,9 +1,61 @@
 import * as XLSX from 'xlsx';
+import * as fs from 'fs';
 import { MRData } from '../types';
 import { formatPhoneNumber, isValidPhoneNumber } from '../utils/helpers';
 import logger from '../utils/logger';
 
 export class ExcelService {
+  parseFile(filePath: string): MRData[] {
+    const ext = filePath.split('.').pop()?.toLowerCase();
+    
+    if (ext === 'csv') {
+      return this.parseCSVFile(filePath);
+    } else {
+      return this.parseExcelFile(filePath);
+    }
+  }
+
+  parseCSVFile(filePath: string): MRData[] {
+    try {
+      const fileContent = fs.readFileSync(filePath, 'utf-8');
+      const lines = fileContent.split('\n').filter(line => line.trim());
+      
+      if (lines.length < 2) {
+        throw new Error('CSV file must have at least a header and one data row');
+      }
+      
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      const data: MRData[] = [];
+      
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map(v => v.trim());
+        const row: any = {};
+        
+        headers.forEach((header, index) => {
+          row[header] = values[index] || '';
+        });
+        
+        // Map to expected format
+        data.push({
+          mrId: row.mrid || row.id || `MR${i}`,
+          firstName: row.firstname || row.fname || '',
+          lastName: row.lastname || row.lname || '',
+          groupName: row.groupname || row.group || '',
+          marketingManager: row.marketingmanager || row.manager || '',
+          phone: formatPhoneNumber(row.phone || ''),
+          email: row.email || '',
+          address: row.address || '',
+          comments: row.comments || '',
+        });
+      }
+      
+      return data;
+    } catch (error) {
+      logger.error('Failed to parse CSV file', { filePath, error });
+      throw new Error('Failed to parse CSV file');
+    }
+  }
+
   parseExcelFile(filePath: string): MRData[] {
     try {
       const workbook = XLSX.readFile(filePath);

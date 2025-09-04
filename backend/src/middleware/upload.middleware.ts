@@ -22,16 +22,31 @@ const fileFilter = (req: any, file: Express.Multer.File, cb: any) => {
   const allowedTypes = [
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     'application/vnd.ms-excel',
+    'text/csv',
+    'application/csv',
+    'text/plain', // CSV files are often detected as text/plain
     'image/jpeg',
     'image/png',
     'image/gif',
     'image/webp'
   ];
   
-  if (allowedTypes.includes(file.mimetype)) {
+  // Check if it's a CSV file by extension or MIME type
+  const isCSV = file.originalname.toLowerCase().endsWith('.csv') || 
+                file.mimetype === 'text/csv' || 
+                file.mimetype === 'application/csv';
+  
+  const isExcel = file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+                  file.mimetype === 'application/vnd.ms-excel' ||
+                  file.originalname.toLowerCase().endsWith('.xlsx') ||
+                  file.originalname.toLowerCase().endsWith('.xls');
+  
+  const isImage = file.mimetype.startsWith('image/');
+  
+  if (isCSV || isExcel || isImage) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only Excel files and images are allowed.'), false);
+    cb(new Error('Invalid file type. Only Excel files, CSV files, and images are allowed.'), false);
   }
 };
 

@@ -421,6 +421,66 @@ export class MRService {
     }
   }
 
+  async bulkCreateMRs(mrData: any[], userId: string) {
+    try {
+      const results = {
+        created: 0,
+        errors: [] as string[],
+        totalProcessed: mrData.length
+      };
+
+      // Get all groups for the user to map group names to IDs
+      const groups = await Group.find({ createdBy: userId });
+      const groupMap = new Map(groups.map(group => [group.groupName, group._id]));
+
+      for (let i = 0; i < mrData.length; i++) {
+        const data = mrData[i];
+        try {
+          // Find group ID by group name
+          const groupId = groupMap.get(data.groupName);
+          if (!groupId) {
+            results.errors.push(`Row ${i + 1}: Group "${data.groupName}" not found`);
+            continue;
+          }
+
+          // Check if MR ID already exists
+          const existingMR = await MedicalRepresentative.findOne({
+            mrId: data.mrId,
+            groupId: groupId
+          });
+
+          if (existingMR) {
+            results.errors.push(`Row ${i + 1}: MR ID "${data.mrId}" already exists in group "${data.groupName}"`);
+            continue;
+          }
+
+          // Create MR
+          await MedicalRepresentative.create({
+            mrId: data.mrId,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            phone: data.phone,
+            email: data.email,
+            address: data.address,
+            comments: data.comments,
+            groupId: groupId,
+            marketingManagerId: userId
+          });
+
+          results.created++;
+        } catch (error: any) {
+          results.errors.push(`Row ${i + 1}: ${error.message}`);
+        }
+      }
+
+      logger.info('Bulk MR creation completed', { userId, results });
+      return results;
+    } catch (error) {
+      logger.error('Failed to bulk create MRs', { userId, error });
+      throw error;
+    }
+  }
+
   async downloadTemplate() {
     try {
       // Return template data for frontend to handle

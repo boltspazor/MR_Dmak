@@ -11,10 +11,11 @@ const mrController = new MRController();
 router.use(authenticateToken);
 
 router.post('/', validateRequest(schemas.mr.create), mrController.createMR);
-router.post('/bulk-upload', upload.single('excel'), mrController.bulkUpload);
+router.post('/bulk-upload', upload.single('file'), mrController.bulkUpload);
 router.get('/', mrController.getMRs);
 router.put('/:id', validateRequest(schemas.mr.update), mrController.updateMR);
 router.delete('/:id', mrController.deleteMR);
 router.get('/template', mrController.downloadTemplate);
+router.get('/template/csv', mrController.downloadCSVTemplate);
 
 export default router;
