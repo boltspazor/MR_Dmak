@@ -11,7 +11,7 @@ import mrRoutes from './routes/mr.routes';
 import groupRoutes from './routes/group.routes';
 import messageRoutes from './routes/message.routes';
 import reportRoutes from './routes/report.routes';
-import superAdminRoutes from './routes/superAdmin.routes';
+import superAdminRoutes from './routes/super-admin.routes';
 
 import logger from './utils/logger';
 import { WhatsAppService } from './services/whatsapp.service';

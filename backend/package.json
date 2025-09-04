@@ -8,6 +8,7 @@
     "dev": "ts-node-dev --respawn --transpile-only src/app.ts",
     "build": "tsc",
     "create-super-admin": "ts-node src/scripts/createSuperAdmin.ts",
+    "create-permanent-super-admin": "ts-node src/scripts/create-permanent-super-admin.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
