@@ -211,7 +211,7 @@ export class MessageService {
         .skip(filters.offset || 0);
 
       // Transform campaigns to include necessary fields
-      const transformedCampaigns = campaigns.map(campaign => ({
+      const transformedCampaigns = campaigns.map((campaign: any) => ({
         id: campaign._id.toString(),
         content: (campaign as any).messageId?.content || '',
         imageUrl: (campaign as any).messageId?.imageUrl || '',

@@ -147,13 +147,20 @@ export class MRService {
 
   async getGroups(userId: string) {
     try {
-      const groups = await Group.find({ createdBy: userId })
-        .populate({
-          path: 'medicalRepresentatives',
-          select: 'mrId firstName lastName phone'
-        });
+      const groups = await Group.find({ createdBy: userId });
 
-      return groups;
+      // Get MR count for each group
+      const groupsWithCounts = await Promise.all(
+        groups.map(async (group) => {
+          const mrCount = await MedicalRepresentative.countDocuments({ groupId: group._id });
+          return {
+            ...group.toObject(),
+            mrCount
+          };
+        })
+      );
+
+      return groupsWithCounts;
     } catch (error) {
       logger.error('Failed to get groups', { userId, error });
       throw error;
@@ -162,17 +169,20 @@ export class MRService {
 
   async getGroupById(id: string, userId: string) {
     try {
-      const group = await Group.findOne({ _id: id, createdBy: userId })
-        .populate({
-          path: 'medicalRepresentatives',
-          select: 'mrId firstName lastName phone email comments createdAt'
-        });
+      const group = await Group.findOne({ _id: id, createdBy: userId });
 
       if (!group) {
         throw new Error('Group not found or access denied');
       }
 
-      return group;
+      // Get medical representatives for this group
+      const medicalRepresentatives = await MedicalRepresentative.find({ groupId: id })
+        .select('mrId firstName lastName phone email comments createdAt');
+
+      return {
+        ...group.toObject(),
+        medicalRepresentatives
+      };
     } catch (error) {
       logger.error('Failed to get group by ID', { id, userId, error });
       throw error;

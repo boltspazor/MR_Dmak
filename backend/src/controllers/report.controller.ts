@@ -19,7 +19,7 @@ export class ReportController {
         getQueueStats(),
       ]);
 
-      const totalMRs = groups.reduce((acc: number, group: any) => acc + (group.medicalRepresentatives?.length || 0), 0);
+      const totalMRs = groups.reduce((acc: number, group: any) => acc + (group.mrCount || 0), 0);
 
       const dashboardStats = {
         totalMRs,
