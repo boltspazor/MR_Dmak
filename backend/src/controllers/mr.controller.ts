@@ -210,7 +210,7 @@ export class MRController {
       
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', 'attachment; filename=mr-template.csv');
-      res.send(csvContent);
+      return res.send(csvContent);
     } catch (error: any) {
       logger.error('CSV template download failed', { error: error.message });
       return res.status(500).json({ error: 'Failed to generate CSV template' });

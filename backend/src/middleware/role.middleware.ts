@@ -6,7 +6,7 @@ export const isSuperAdmin = (req: any, res: Response, next: NextFunction) => {
       error: 'Access denied. Super admin privileges required.' 
     });
   }
-  next();
+  return next();
 };
 
 export const isAdmin = (req: any, res: Response, next: NextFunction) => {
@@ -15,7 +15,7 @@ export const isAdmin = (req: any, res: Response, next: NextFunction) => {
       error: 'Access denied. Admin privileges required.' 
     });
   }
-  next();
+  return next();
 };
 
 export const isMarketingManager = (req: any, res: Response, next: NextFunction) => {
@@ -24,7 +24,7 @@ export const isMarketingManager = (req: any, res: Response, next: NextFunction) 
       error: 'Access denied. Marketing manager privileges required.' 
     });
   }
-  next();
+  return next();
 };
 
 export const canAccessMR = (req: any, res: Response, next: NextFunction) => {
