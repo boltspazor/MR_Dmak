@@ -359,7 +359,11 @@ const Campaigns: React.FC = () => {
           
           {/* DVK Logo */}
           <div className="mt-4">
-            <div className="text-white text-xs font-bold" style={{ fontFamily: 'Jura' }}>DVK</div>
+            <img 
+              src="/dvk.svg" 
+              alt="DVK" 
+              style={{ width: '68px', height: '57px' }}
+            />
           </div>
         </div>
       </div>
@@ -390,15 +394,11 @@ const Campaigns: React.FC = () => {
             
             {/* Glenmark Logo */}
             <div className="absolute top-0 right-0" style={{ right: '102px' }}>
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">G</span>
-                </div>
-                <div>
-                  <div className="text-black font-bold" style={{ fontFamily: 'Jura' }}>glenmark</div>
-                  <div className="text-xs text-gray-600" style={{ fontFamily: 'Jura' }}>A new way for a new world</div>
-                </div>
-              </div>
+              <img 
+                src="/glenmark.svg" 
+                alt="Glenmark" 
+                style={{ width: '140px', height: '79px' }}
+              />
             </div>
           </div>
           

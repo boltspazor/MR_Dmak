@@ -142,7 +142,12 @@ const Dashboard: React.FC = () => {
         </div>
         
         <div className="absolute bottom-6 right-6">
-          <div className="dmak-dvk-logo">DVK</div>
+          <img 
+            src="/dvk.svg" 
+            alt="DVK" 
+            className="w-22 h-20"
+            style={{ width: '68px', height: '57px' }}
+          />
         </div>
       </div>
 
@@ -174,13 +179,15 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Glenmark Logo */}
-          <div className="absolute top-6 right-8">
-            <div className="dmak-glenmark-logo">
-              Glenmark
-              <div className="dmak-glenmark-tagline">A new way for a new world</div>
+            {/* Glenmark Logo */}
+            <div className="absolute top-6 right-8">
+              <img 
+                src="/glenmark.svg" 
+                alt="Glenmark" 
+                className="w-35 h-20"
+                style={{ width: '140px', height: '79px' }}
+              />
             </div>
-          </div>
         </div>
 
         {/* Stats Cards */}
