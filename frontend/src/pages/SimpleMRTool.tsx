@@ -13,7 +13,8 @@ import {
   ChevronDown,
   LogOut,
   Shield,
-  Activity
+  Activity,
+  X
 } from 'lucide-react';
 
 interface Contact {
@@ -1069,106 +1070,251 @@ const SimpleMRTool: React.FC = () => {
             {/* Messages Tab */}
             {activeTab === 'messages' && (
               <div className="space-y-6">
-                {/* Group Selection */}
-                <div className="bg-white rounded-lg p-6" style={{ background: 'rgba(215, 181, 109, 0.1)' }}>
-                  <h2 className="text-2xl font-bold text-black mb-6" style={{ fontFamily: 'Jura' }}>Select Target Groups</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {groups.map(group => (
-                      <label key={group.id} className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={selectedGroups.includes(group.name)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedGroups([...selectedGroups, group.name]);
-                            } else {
-                              setSelectedGroups(selectedGroups.filter(g => g !== group.name));
-                            }
-                          }}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                        <div>
-                          <span className="font-medium text-black" style={{ fontFamily: 'Jura' }}>{group.name}</span>
-                          <p className="text-sm text-gray-500" style={{ fontFamily: 'Jura' }}>{group.contactCount} contacts</p>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                  {selectedGroups.length > 0 && (
-                    <div className="mt-4 p-4 rounded-lg" style={{ background: 'rgba(44, 38, 150, 0.1)' }}>
-                      <p className="text-sm text-black" style={{ fontFamily: 'Jura' }}>
-                        Selected: {selectedGroups.join(', ')} 
-                        ({contacts.filter(c => selectedGroups.includes(c.group)).length} total contacts)
-                      </p>
+                {/* Top Row - Two Cards Side by Side */}
+                <div className="grid grid-cols-2 gap-6" style={{ gap: '24px' }}>
+                  {/* Select Target Groups Card */}
+                  <div className="bg-white rounded-lg p-6" style={{ 
+                    background: 'rgba(215, 181, 109, 0.1)', 
+                    borderRadius: '10px',
+                    width: '541px',
+                    height: '282px',
+                    padding: '24px'
+                  }}>
+                    <h2 className="text-2xl font-bold text-black mb-6" style={{ 
+                      fontFamily: 'Jura',
+                      fontSize: '24px',
+                      lineHeight: '28px',
+                      fontWeight: 700,
+                      marginBottom: '24px'
+                    }}>Select Target Groups</h2>
+                    
+                    {/* Dropdown for Group Selection */}
+                    <div className="relative">
+                      <select
+                        value={selectedGroups[0] || ''}
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            setSelectedGroups([e.target.value]);
+                          } else {
+                            setSelectedGroups([]);
+                          }
+                        }}
+                        className="w-full px-4 py-3 rounded-lg border-0 appearance-none"
+                        style={{ 
+                          background: '#F2F2F2',
+                          borderRadius: '10px',
+                          height: '52px',
+                          padding: '12px 16px',
+                          fontFamily: 'Jura',
+                          fontSize: '16px'
+                        }}
+                      >
+                        <option value="">Select a group</option>
+                        {groups.map(group => (
+                          <option key={group.id} value={group.name}>{group.name}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                     </div>
-                  )}
-                </div>
+                    
+                    {/* Selected Groups Display Area */}
+                    <div className="mt-4 p-4 rounded-lg" style={{ 
+                      background: '#F2F2F2',
+                      borderRadius: '10px',
+                      minHeight: '100px',
+                      marginTop: '16px'
+                    }}>
+                      {selectedGroups.length > 0 ? (
+                        <div className="space-y-2">
+                          {selectedGroups.map(groupName => (
+                            <div key={groupName} className="flex items-center justify-between p-2 bg-white rounded-lg">
+                              <span className="text-sm font-medium text-black" style={{ fontFamily: 'Jura' }}>
+                                {groupName}
+                              </span>
+                              <button
+                                onClick={() => setSelectedGroups(selectedGroups.filter(g => g !== groupName))}
+                                className="text-red-600 hover:text-red-800"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ))}
+                          <p className="text-xs text-gray-500" style={{ fontFamily: 'Jura' }}>
+                            {contacts.filter(c => selectedGroups.includes(c.group)).length} contacts selected
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500 text-center" style={{ fontFamily: 'Jura' }}>
+                          No groups selected
+                        </p>
+                      )}
+                    </div>
+                  </div>
 
-                {/* Message Composition */}
-                <div className="bg-white rounded-lg p-6" style={{ background: 'rgba(215, 181, 109, 0.1)' }}>
-                  <h2 className="text-2xl font-bold text-black mb-6" style={{ fontFamily: 'Jura' }}>Compose Message</h2>
-                  <textarea
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Type your message here..."
-                    rows={4}
-                    maxLength={1000}
-                    className="w-full px-3 py-3 rounded-lg border-0 resize-none"
-                    style={{ background: '#F2F2F2' }}
-                  />
-                  <div className="flex justify-between items-center mt-2">
-                    <span className={`text-sm ${message.length > 900 ? 'text-red-600' : 'text-gray-500'}`} style={{ fontFamily: 'Jura' }}>
-                      {message.length}/1000 characters
-                    </span>
-                    <span className="text-sm text-gray-500" style={{ fontFamily: 'Jura' }}>
-                      {selectedGroups.length > 0 ? `${contacts.filter(c => selectedGroups.includes(c.group)).length} recipients` : 'No groups selected'}
-                    </span>
+                  {/* Compose Message Card */}
+                  <div className="bg-white rounded-lg p-6" style={{ 
+                    background: 'rgba(215, 181, 109, 0.1)', 
+                    borderRadius: '10px',
+                    width: '541px',
+                    height: '282px',
+                    padding: '24px'
+                  }}>
+                    <h2 className="text-2xl font-bold text-black mb-6" style={{ 
+                      fontFamily: 'Jura',
+                      fontSize: '24px',
+                      lineHeight: '28px',
+                      fontWeight: 700,
+                      marginBottom: '24px'
+                    }}>Compose Message</h2>
+                    
+                    <textarea
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      placeholder="Type your message here..."
+                      rows={6}
+                      maxLength={10000}
+                      className="w-full px-3 py-3 rounded-lg border-0 resize-none"
+                      style={{ 
+                        background: '#F2F2F2',
+                        borderRadius: '10px',
+                        height: '161px',
+                        padding: '12px 16px',
+                        fontFamily: 'Jura',
+                        fontSize: '16px'
+                      }}
+                    />
+                    
+                    <div className="flex justify-between items-center mt-2">
+                      <span className={`text-sm ${message.length > 9000 ? 'text-red-600' : 'text-gray-500'}`} style={{ 
+                        fontFamily: 'Jura',
+                        fontSize: '13.51px',
+                        lineHeight: '16px',
+                        fontWeight: 600,
+                        letterSpacing: '0.08em'
+                      }}>
+                        {message.length}/10,000 Characters
+                      </span>
+                      <span className="text-sm text-gray-500" style={{ 
+                        fontFamily: 'Jura',
+                        fontSize: '13.51px',
+                        lineHeight: '16px',
+                        fontWeight: 600,
+                        letterSpacing: '0.08em'
+                      }}>
+                        {selectedGroups.length > 0 ? `${contacts.filter(c => selectedGroups.includes(c.group)).length} recipients` : 'No Groups Selected'}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Message Actions */}
-                <div className="bg-white rounded-lg p-6" style={{ background: 'rgba(215, 181, 109, 0.1)' }}>
-                  <h2 className="text-2xl font-bold text-black mb-6" style={{ fontFamily: 'Jura' }}>Send Message</h2>
+                {/* Bottom Section - Send Messages */}
+                <div className="bg-white rounded-lg p-6" style={{ 
+                  background: 'rgba(215, 181, 109, 0.1)', 
+                  borderRadius: '10px',
+                  width: '1111px',
+                  height: '318px',
+                  padding: '24px'
+                }}>
+                  <h2 className="text-2xl font-bold text-black mb-6" style={{ 
+                    fontFamily: 'Jura',
+                    fontSize: '24px',
+                    lineHeight: '28px',
+                    fontWeight: 700,
+                    marginBottom: '24px'
+                  }}>Send Messages</h2>
+                  
                   <div className="space-y-4">
+                    {/* Action Buttons */}
                     <div className="flex items-center space-x-4">
                       <button
                         onClick={openWhatsAppWeb}
-                        className="inline-flex items-center px-6 py-3 rounded-lg text-white text-base font-medium"
-                        style={{ background: '#25D366', fontFamily: 'Jura' }}
+                        className="inline-flex items-center px-6 py-3 rounded-lg text-white text-sm font-semibold"
+                        style={{ 
+                          background: '#2C2696', 
+                          fontFamily: 'Jura',
+                          fontSize: '13.51px',
+                          lineHeight: '16px',
+                          fontWeight: 600,
+                          letterSpacing: '0.08em',
+                          padding: '10px 16px',
+                          borderRadius: '10px',
+                          height: '43px'
+                        }}
                       >
-                        <ExternalLink className="h-5 w-5 mr-2" />
-                        Open WhatsApp Web
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Open Whatsapp Web
                       </button>
                       <button
                         onClick={copyPhoneNumbers}
                         disabled={selectedGroups.length === 0}
-                        className="inline-flex items-center px-6 py-3 rounded-lg text-gray-700 text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                        style={{ background: '#F2F2F2', fontFamily: 'Jura' }}
+                        className="inline-flex items-center px-6 py-3 rounded-lg text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{ 
+                          background: '#1E1E1E', 
+                          fontFamily: 'Jura',
+                          fontSize: '13.51px',
+                          lineHeight: '16px',
+                          fontWeight: 600,
+                          letterSpacing: '0.08em',
+                          padding: '10px 16px',
+                          borderRadius: '10px',
+                          height: '43px'
+                        }}
                       >
-                        <Copy className="h-5 w-5 mr-2" />
+                        <Copy className="h-4 w-4 mr-2" />
                         Copy Phone Numbers
                       </button>
                     </div>
                     
-                    <div className="p-4 rounded-lg" style={{ background: 'rgba(255, 193, 7, 0.1)' }}>
-                      <h3 className="text-sm font-medium text-black mb-2" style={{ fontFamily: 'Jura' }}>How to send messages:</h3>
-                      <ol className="text-sm text-black space-y-1 list-decimal list-inside" style={{ fontFamily: 'Jura' }}>
-                        <li>Click "Open WhatsApp Web" to open WhatsApp in a new tab</li>
-                        <li>Click "Copy Phone Numbers" to copy all recipient numbers</li>
-                        <li>In WhatsApp Web, paste the numbers and send your message to each contact</li>
-                        <li>This is a manual process as per requirements</li>
-                      </ol>
+                    {/* Instructions Box */}
+                    <div className="p-4 rounded-lg" style={{ 
+                      background: 'rgba(44, 38, 150, 0.05)',
+                      border: '1px solid #2C2696',
+                      borderRadius: '10px',
+                      width: '1014px',
+                      height: '128px',
+                      padding: '16px'
+                    }}>
+                      <h3 className="text-sm font-medium text-black mb-2" style={{ 
+                        fontFamily: 'Jura',
+                        fontSize: '13.51px',
+                        lineHeight: '16px',
+                        fontWeight: 700,
+                        letterSpacing: '0.08em',
+                        color: '#2C2696'
+                      }}>How to send messages</h3>
+                      <p className="text-sm text-black" style={{ 
+                        fontFamily: 'Jura',
+                        fontSize: '14px',
+                        lineHeight: '17px',
+                        fontWeight: 400,
+                        letterSpacing: '0.08em',
+                        color: '#2C2696'
+                      }}>
+                        Click "Open Whatsapp Web" to open Whatsapp in a new tab. Click "Copy Phone Numbers" to copy all phone numbers. In Whatsapp Web, paste the numbers and send your message to each contact. This is a manual process as per requirements.
+                      </p>
                     </div>
 
-                    <button
-                      onClick={sendMessage}
-                      disabled={!message.trim() || selectedGroups.length === 0}
-                      className="w-full inline-flex justify-center items-center px-6 py-3 rounded-lg text-white text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                      style={{ background: '#2C2696', fontFamily: 'Jura' }}
-                    >
-                      <MessageSquare className="h-5 w-5 mr-2" />
-                      Log Message (for tracking)
-                    </button>
+                    {/* Log Messages Button */}
+                    <div className="flex justify-end">
+                      <button
+                        onClick={sendMessage}
+                        disabled={!message.trim() || selectedGroups.length === 0}
+                        className="px-6 py-3 rounded-lg text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{ 
+                          background: '#1E1E1E', 
+                          fontFamily: 'Jura',
+                          fontSize: '13.51px',
+                          lineHeight: '16px',
+                          fontWeight: 600,
+                          letterSpacing: '0.08em',
+                          padding: '10px 16px',
+                          borderRadius: '10px',
+                          height: '43px'
+                        }}
+                      >
+                        Log Messages (For Tracking)
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
