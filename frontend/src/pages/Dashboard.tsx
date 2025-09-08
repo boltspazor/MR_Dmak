@@ -143,10 +143,14 @@ const Dashboard: React.FC = () => {
         
         <div className="absolute bottom-6 right-6">
           <img 
-            src="/dvk.svg" 
+            src="/dvk-simple.svg" 
             alt="DVK" 
             className="w-22 h-20"
             style={{ width: '68px', height: '57px' }}
+            onError={(e) => {
+              console.error('Failed to load DVK logo:', e);
+              e.currentTarget.style.display = 'none';
+            }}
           />
         </div>
       </div>
@@ -182,10 +186,19 @@ const Dashboard: React.FC = () => {
             {/* Glenmark Logo */}
             <div className="absolute top-6 right-8">
               <img 
-                src="/glenmark.svg" 
+                src="/glenmark-simple.svg" 
                 alt="Glenmark" 
                 className="w-35 h-20"
                 style={{ width: '140px', height: '79px' }}
+                onError={(e) => {
+                  console.error('Failed to load Glenmark logo:', e);
+                  e.currentTarget.style.display = 'none';
+                  // Show fallback text
+                  const fallback = document.createElement('div');
+                  fallback.textContent = 'Glenmark';
+                  fallback.style.cssText = 'color: #000; font-weight: bold; font-size: 14px;';
+                  e.currentTarget.parentNode?.appendChild(fallback);
+                }}
               />
             </div>
         </div>

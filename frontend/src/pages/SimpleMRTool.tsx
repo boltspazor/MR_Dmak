@@ -337,16 +337,16 @@ const SimpleMRTool: React.FC = () => {
           <div className="flex flex-col items-center p-2 rounded-lg w-16 h-16 border border-gray-200" style={{ background: 'rgba(236, 234, 226, 0.1)' }}>
             <BarChart3 className="h-7 w-7 text-white mb-1" />
             <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>DMak Tool</span>
-          </div>
+            </div>
           
           {/* Groups */}
-          <button 
+              <button
             onClick={() => handleSidebarNavigation('/groups')}
             className="flex flex-col items-center p-2 rounded-lg w-16 h-16 hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
-          >
+              >
             <Users className="h-7 w-7 text-white mb-1" />
             <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>Groups</span>
-          </button>
+              </button>
           
           {/* Medical Items */}
           <button 
@@ -396,13 +396,13 @@ const SimpleMRTool: React.FC = () => {
           {/* DVK Logo */}
           <div className="mt-4">
             <img 
-              src="/dvk.svg" 
+              src="/dvk-simple.svg" 
               alt="DVK" 
               style={{ width: '68px', height: '57px' }}
             />
+            </div>
           </div>
         </div>
-      </div>
 
       {/* Main Content */}
       <div className="ml-23" style={{ marginLeft: '102px', padding: '65px 102px 0 0' }}>
@@ -426,12 +426,12 @@ const SimpleMRTool: React.FC = () => {
               }}>
                 Simple tool for managing Medical Representatives and sending Whatsapp messages
               </p>
-            </div>
-            
+      </div>
+
             {/* Glenmark Logo */}
             <div className="absolute top-0 right-0" style={{ right: '102px' }}>
               <img 
-                src="/glenmark.svg" 
+                src="/glenmark-simple.svg" 
                 alt="Glenmark" 
                 style={{ width: '140px', height: '79px' }}
               />
@@ -440,7 +440,7 @@ const SimpleMRTool: React.FC = () => {
           
           {/* Tabs */}
           <div className="flex space-x-8 mt-6" style={{ marginTop: '24px', marginLeft: '100px' }}>
-            <button
+              <button
               onClick={() => setActiveTab('contacts')}
               className={`pb-2 border-b-2 text-lg font-medium ${
                 activeTab === 'contacts' 
@@ -459,7 +459,7 @@ const SimpleMRTool: React.FC = () => {
               }}
             >
               Contacts
-            </button>
+              </button>
             <button
               onClick={() => setActiveTab('messages')}
               className={`pb-2 border-b-2 text-lg font-medium ${
@@ -518,8 +518,8 @@ const SimpleMRTool: React.FC = () => {
             >
               Export Data
             </button>
-          </div>
         </div>
+      </div>
 
         {/* Main Content Area */}
         <div className="relative" style={{ width: '1308px', height: '935px', marginLeft: '100px' }}>
@@ -537,8 +537,8 @@ const SimpleMRTool: React.FC = () => {
           
           {/* Content */}
           <div className="relative" style={{ padding: '24px' }}>
-            {/* Contacts Tab */}
-            {activeTab === 'contacts' && (
+                {/* Contacts Tab */}
+        {activeTab === 'contacts' && (
               <div className="grid grid-cols-2 gap-8" style={{ gap: '29px' }}>
                 {/* Left Column - Add New Contact */}
                 <div className="bg-white rounded-lg" style={{ 
@@ -567,10 +567,10 @@ const SimpleMRTool: React.FC = () => {
                         letterSpacing: '0.08em',
                         marginBottom: '8px'
                       }}>MR ID*</label>
-                      <input
-                        type="text"
-                        value={newContact.mrId}
-                        onChange={(e) => setNewContact({...newContact, mrId: e.target.value})}
+                <input
+                  type="text"
+                  value={newContact.mrId}
+                  onChange={(e) => setNewContact({...newContact, mrId: e.target.value})}
                         className="w-full px-3 py-3 rounded-lg border-0"
                         style={{ 
                           background: '#F2F2F2',
@@ -592,10 +592,10 @@ const SimpleMRTool: React.FC = () => {
                         letterSpacing: '0.08em',
                         marginBottom: '8px'
                       }}>First Name*</label>
-                      <input
-                        type="text"
-                        value={newContact.firstName}
-                        onChange={(e) => setNewContact({...newContact, firstName: e.target.value})}
+                <input
+                  type="text"
+                  value={newContact.firstName}
+                  onChange={(e) => setNewContact({...newContact, firstName: e.target.value})}
                         className="w-full px-3 py-3 rounded-lg border-0"
                         style={{ 
                           background: '#F2F2F2',
@@ -617,10 +617,10 @@ const SimpleMRTool: React.FC = () => {
                         letterSpacing: '0.08em',
                         marginBottom: '8px'
                       }}>Last Name*</label>
-                      <input
-                        type="text"
-                        value={newContact.lastName}
-                        onChange={(e) => setNewContact({...newContact, lastName: e.target.value})}
+                <input
+                  type="text"
+                  value={newContact.lastName}
+                  onChange={(e) => setNewContact({...newContact, lastName: e.target.value})}
                         className="w-full px-3 py-3 rounded-lg border-0"
                         style={{ 
                           background: '#F2F2F2',
@@ -642,10 +642,10 @@ const SimpleMRTool: React.FC = () => {
                         letterSpacing: '0.08em',
                         marginBottom: '8px'
                       }}>Phone Number*</label>
-                      <input
-                        type="tel"
-                        value={newContact.phone}
-                        onChange={(e) => setNewContact({...newContact, phone: e.target.value})}
+                <input
+                  type="tel"
+                  value={newContact.phone}
+                  onChange={(e) => setNewContact({...newContact, phone: e.target.value})}
                         className="w-full px-3 py-3 rounded-lg border-0"
                         style={{ 
                           background: '#F2F2F2',
@@ -668,9 +668,9 @@ const SimpleMRTool: React.FC = () => {
                         marginBottom: '8px'
                       }}>Select Group*</label>
                       <div className="relative">
-                        <select
-                          value={newContact.group}
-                          onChange={(e) => setNewContact({...newContact, group: e.target.value})}
+                <select
+                  value={newContact.group}
+                  onChange={(e) => setNewContact({...newContact, group: e.target.value})}
                           className="w-full px-3 py-3 rounded-lg border-0 appearance-none"
                           style={{ 
                             background: '#F2F2F2',
@@ -680,10 +680,10 @@ const SimpleMRTool: React.FC = () => {
                           }}
                         >
                           <option value="">Select a group</option>
-                          {groups.map(group => (
-                            <option key={group.id} value={group.name}>{group.name}</option>
-                          ))}
-                        </select>
+                  {groups.map(group => (
+                    <option key={group.id} value={group.name}>{group.name}</option>
+                  ))}
+                </select>
                         <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                       </div>
                     </div>
@@ -699,8 +699,8 @@ const SimpleMRTool: React.FC = () => {
                         marginBottom: '8px'
                       }}>Comments</label>
                       <textarea
-                        value={newContact.comments}
-                        onChange={(e) => setNewContact({...newContact, comments: e.target.value})}
+                  value={newContact.comments}
+                  onChange={(e) => setNewContact({...newContact, comments: e.target.value})}
                         rows={3}
                         className="w-full px-3 py-3 rounded-lg border-0"
                         style={{ 
@@ -710,12 +710,12 @@ const SimpleMRTool: React.FC = () => {
                           padding: '12px 16px'
                         }}
                         placeholder="Enter comments"
-                      />
-                    </div>
+                />
+              </div>
                     
                     {/* Add Contacts Button */}
-                    <button
-                      onClick={addContact}
+              <button
+                onClick={addContact}
                       className="w-full px-4 py-2 rounded-lg text-white text-sm font-semibold"
                       style={{ 
                         background: '#2C2696', 
@@ -730,10 +730,10 @@ const SimpleMRTool: React.FC = () => {
                       }}
                     >
                       Add Contacts
-                    </button>
+              </button>
                   </div>
-                </div>
-                
+            </div>
+
                 {/* Right Column - Import CSV and Manage Groups */}
                 <div className="space-y-6" style={{ gap: '31px' }}>
                   {/* Import Contacts from CSV */}
@@ -753,10 +753,10 @@ const SimpleMRTool: React.FC = () => {
                     }}>Import Contacts from CSV</h2>
                     
                     <div className="space-y-4" style={{ gap: '16px' }}>
-                      <div className="flex items-center space-x-4">
-                        <input
-                          type="file"
-                          accept=".csv"
+              <div className="flex items-center space-x-4">
+                <input
+                  type="file"
+                  accept=".csv"
                           onChange={(e) => {
                             const file = e.target.files?.[0] || null;
                             setSelectedFile(file);
@@ -800,8 +800,8 @@ const SimpleMRTool: React.FC = () => {
                         CSV format: MR ID, First Name, Last Name, Phone Number, Group, Comments
                       </p>
                       
-                      <button
-                        onClick={downloadCSVTemplate}
+                <button
+                  onClick={downloadCSVTemplate}
                         className="px-4 py-2 rounded-lg text-white text-sm font-semibold"
                         style={{ 
                           background: '#1E1E1E', 
@@ -815,11 +815,11 @@ const SimpleMRTool: React.FC = () => {
                           height: '36px'
                         }}
                       >
-                        Download Template
-                      </button>
-                    </div>
-                  </div>
-                  
+                  Download Template
+                </button>
+              </div>
+            </div>
+
                   {/* Manage Groups */}
                   <div className="bg-white rounded-lg" style={{ 
                     background: 'rgba(215, 181, 109, 0.1)', 
@@ -846,10 +846,10 @@ const SimpleMRTool: React.FC = () => {
                           letterSpacing: '0.08em',
                           marginBottom: '8px'
                         }}>New Group Name</label>
-                        <input
-                          type="text"
-                          value={newGroup.name}
-                          onChange={(e) => setNewGroup({name: e.target.value})}
+                <input
+                  type="text"
+                  value={newGroup.name}
+                  onChange={(e) => setNewGroup({name: e.target.value})}
                           className="w-full px-3 py-3 rounded-lg border-0"
                           style={{ 
                             background: '#F2F2F2',
@@ -861,8 +861,8 @@ const SimpleMRTool: React.FC = () => {
                         />
                       </div>
                       
-                      <button
-                        onClick={addGroup}
+                <button
+                  onClick={addGroup}
                         className="px-4 py-2 rounded-lg text-white text-sm font-semibold"
                         style={{ 
                           background: '#1E1E1E', 
@@ -876,14 +876,14 @@ const SimpleMRTool: React.FC = () => {
                           height: '36px'
                         }}
                       >
-                        Add Group
-                      </button>
+                  Add Group
+                </button>
+              </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
             )}
-            
+
             {/* Contacts Table */}
             {activeTab === 'contacts' && (
               <div className="mt-8 bg-white rounded-lg" style={{ 
@@ -906,14 +906,14 @@ const SimpleMRTool: React.FC = () => {
                       lineHeight: '28px',
                       fontWeight: 700
                     }}>All Contacts</h2>
-                    <div className="flex items-center space-x-4">
-                      <div className="relative">
+                  <div className="flex items-center space-x-4">
+                    <div className="relative">
                         <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                        <input
-                          type="text"
+                      <input
+                        type="text"
                           placeholder="Search Contacts..."
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
                           className="pl-10 pr-4 py-2 rounded-lg border-0"
                           style={{ 
                             background: '#F2F2F2',
@@ -921,8 +921,8 @@ const SimpleMRTool: React.FC = () => {
                             height: '44px',
                             padding: '12px 16px'
                           }}
-                        />
-                      </div>
+                      />
+                    </div>
                       <span className="text-sm text-black font-bold" style={{ 
                         fontFamily: 'Jura',
                         fontSize: '14px',
@@ -931,9 +931,9 @@ const SimpleMRTool: React.FC = () => {
                       }}>
                         {filteredContacts.length} Contacts
                       </span>
-                    </div>
                   </div>
                 </div>
+              </div>
                 
                 {/* Table */}
                 <div className="overflow-x-auto" style={{ 
@@ -987,8 +987,8 @@ const SimpleMRTool: React.FC = () => {
                           lineHeight: '17px',
                           fontWeight: 300
                         }}>Actions</th>
-                      </tr>
-                    </thead>
+                    </tr>
+                  </thead>
                     <tbody>
                       {filteredContacts.length > 0 ? (
                         filteredContacts.map(contact => (
@@ -1021,14 +1021,14 @@ const SimpleMRTool: React.FC = () => {
                               lineHeight: '17px'
                             }}>{contact.comments || '-'}</td>
                             <td className="py-3 px-6 text-sm text-center">
-                              <button
-                                onClick={() => deleteContact(contact.id)}
+                          <button
+                            onClick={() => deleteContact(contact.id)}
                                 className="text-red-600 hover:text-red-800"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </td>
-                          </tr>
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </td>
+                      </tr>
                         ))
                       ) : (
                         <tr>
@@ -1061,15 +1061,15 @@ const SimpleMRTool: React.FC = () => {
                           </td>
                         </tr>
                       )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
+                  </tbody>
+                </table>
+            </div>
+          </div>
+        )}
 
-            {/* Messages Tab */}
-            {activeTab === 'messages' && (
-              <div className="space-y-6">
+        {/* Messages Tab */}
+        {activeTab === 'messages' && (
+          <div className="space-y-6">
                 {/* Top Row - Two Cards Side by Side */}
                 <div className="grid grid-cols-2 gap-6" style={{ gap: '24px' }}>
                   {/* Select Target Groups Card */}
@@ -1092,10 +1092,10 @@ const SimpleMRTool: React.FC = () => {
                     <div className="relative">
                       <select
                         value={selectedGroups[0] || ''}
-                        onChange={(e) => {
+                      onChange={(e) => {
                           if (e.target.value) {
                             setSelectedGroups([e.target.value]);
-                          } else {
+                        } else {
                             setSelectedGroups([]);
                           }
                         }}
@@ -1115,7 +1115,7 @@ const SimpleMRTool: React.FC = () => {
                         ))}
                       </select>
                       <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    </div>
+              </div>
                     
                     {/* Selected Groups Display Area */}
                     <div className="mt-4 p-4 rounded-lg" style={{ 
@@ -1141,15 +1141,15 @@ const SimpleMRTool: React.FC = () => {
                           ))}
                           <p className="text-xs text-gray-500" style={{ fontFamily: 'Jura' }}>
                             {contacts.filter(c => selectedGroups.includes(c.group)).length} contacts selected
-                          </p>
-                        </div>
+                  </p>
+                </div>
                       ) : (
                         <p className="text-sm text-gray-500 text-center" style={{ fontFamily: 'Jura' }}>
                           No groups selected
                         </p>
-                      )}
+              )}
                     </div>
-                  </div>
+            </div>
 
                   {/* Compose Message Card */}
                   <div className="bg-white rounded-lg p-6" style={{ 
@@ -1167,10 +1167,10 @@ const SimpleMRTool: React.FC = () => {
                       marginBottom: '24px'
                     }}>Compose Message</h2>
                     
-                    <textarea
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      placeholder="Type your message here..."
+              <textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Type your message here..."
                       rows={6}
                       maxLength={10000}
                       className="w-full px-3 py-3 rounded-lg border-0 resize-none"
@@ -1184,7 +1184,7 @@ const SimpleMRTool: React.FC = () => {
                       }}
                     />
                     
-                    <div className="flex justify-between items-center mt-2">
+              <div className="flex justify-between items-center mt-2">
                       <span className={`text-sm ${message.length > 9000 ? 'text-red-600' : 'text-gray-500'}`} style={{ 
                         fontFamily: 'Jura',
                         fontSize: '13.51px',
@@ -1193,7 +1193,7 @@ const SimpleMRTool: React.FC = () => {
                         letterSpacing: '0.08em'
                       }}>
                         {message.length}/10,000 Characters
-                      </span>
+                </span>
                       <span className="text-sm text-gray-500" style={{ 
                         fontFamily: 'Jura',
                         fontSize: '13.51px',
@@ -1202,10 +1202,10 @@ const SimpleMRTool: React.FC = () => {
                         letterSpacing: '0.08em'
                       }}>
                         {selectedGroups.length > 0 ? `${contacts.filter(c => selectedGroups.includes(c.group)).length} recipients` : 'No Groups Selected'}
-                      </span>
+                </span>
                     </div>
-                  </div>
-                </div>
+              </div>
+            </div>
 
                 {/* Bottom Section - Send Messages */}
                 <div className="bg-white rounded-lg p-6" style={{ 
@@ -1223,11 +1223,11 @@ const SimpleMRTool: React.FC = () => {
                     marginBottom: '24px'
                   }}>Send Messages</h2>
                   
-                  <div className="space-y-4">
+              <div className="space-y-4">
                     {/* Action Buttons */}
-                    <div className="flex items-center space-x-4">
-                      <button
-                        onClick={openWhatsAppWeb}
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={openWhatsAppWeb}
                         className="inline-flex items-center px-6 py-3 rounded-lg text-white text-sm font-semibold"
                         style={{ 
                           background: '#2C2696', 
@@ -1243,10 +1243,10 @@ const SimpleMRTool: React.FC = () => {
                       >
                         <ExternalLink className="h-4 w-4 mr-2" />
                         Open Whatsapp Web
-                      </button>
-                      <button
-                        onClick={copyPhoneNumbers}
-                        disabled={selectedGroups.length === 0}
+                  </button>
+                  <button
+                    onClick={copyPhoneNumbers}
+                    disabled={selectedGroups.length === 0}
                         className="inline-flex items-center px-6 py-3 rounded-lg text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{ 
                           background: '#1E1E1E', 
@@ -1261,10 +1261,10 @@ const SimpleMRTool: React.FC = () => {
                         }}
                       >
                         <Copy className="h-4 w-4 mr-2" />
-                        Copy Phone Numbers
-                      </button>
-                    </div>
-                    
+                    Copy Phone Numbers
+                  </button>
+                </div>
+                
                     {/* Instructions Box */}
                     <div className="p-4 rounded-lg" style={{ 
                       background: 'rgba(44, 38, 150, 0.05)',
@@ -1292,13 +1292,13 @@ const SimpleMRTool: React.FC = () => {
                       }}>
                         Click "Open Whatsapp Web" to open Whatsapp in a new tab. Click "Copy Phone Numbers" to copy all phone numbers. In Whatsapp Web, paste the numbers and send your message to each contact. This is a manual process as per requirements.
                       </p>
-                    </div>
+                </div>
 
                     {/* Log Messages Button */}
                     <div className="flex justify-end">
-                      <button
-                        onClick={sendMessage}
-                        disabled={!message.trim() || selectedGroups.length === 0}
+                <button
+                  onClick={sendMessage}
+                  disabled={!message.trim() || selectedGroups.length === 0}
                         className="px-6 py-3 rounded-lg text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{ 
                           background: '#1E1E1E', 
@@ -1313,147 +1313,147 @@ const SimpleMRTool: React.FC = () => {
                         }}
                       >
                         Log Messages (For Tracking)
-                      </button>
+                </button>
                     </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Dashboard Tab */}
+        {activeTab === 'dashboard' && (
+          <div className="space-y-6">
+            {/* Statistics Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="bg-white rounded-lg p-6" style={{ background: 'rgba(215, 181, 109, 0.1)' }}>
+                <div className="flex items-center">
+                      <div className="p-3 rounded-full" style={{ background: 'rgba(59, 130, 246, 0.1)' }}>
+                        <Users className="h-6 w-6" style={{ color: '#3B82F6' }} />
+                  </div>
+                  <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600" style={{ fontFamily: 'Jura' }}>Total Contacts</p>
+                        <p className="text-2xl font-semibold text-black" style={{ fontFamily: 'Jura' }}>{stats.totalContacts}</p>
                   </div>
                 </div>
               </div>
-            )}
-
-            {/* Dashboard Tab */}
-            {activeTab === 'dashboard' && (
-              <div className="space-y-6">
-                {/* Statistics Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              
                   <div className="bg-white rounded-lg p-6" style={{ background: 'rgba(215, 181, 109, 0.1)' }}>
-                    <div className="flex items-center">
-                      <div className="p-3 rounded-full" style={{ background: 'rgba(59, 130, 246, 0.1)' }}>
-                        <Users className="h-6 w-6" style={{ color: '#3B82F6' }} />
-                      </div>
-                      <div className="ml-4">
-                        <p className="text-sm font-medium text-gray-600" style={{ fontFamily: 'Jura' }}>Total Contacts</p>
-                        <p className="text-2xl font-semibold text-black" style={{ fontFamily: 'Jura' }}>{stats.totalContacts}</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-white rounded-lg p-6" style={{ background: 'rgba(215, 181, 109, 0.1)' }}>
-                    <div className="flex items-center">
+                <div className="flex items-center">
                       <div className="p-3 rounded-full" style={{ background: 'rgba(34, 197, 94, 0.1)' }}>
                         <FileText className="h-6 w-6" style={{ color: '#22C55E' }} />
-                      </div>
-                      <div className="ml-4">
+                  </div>
+                  <div className="ml-4">
                         <p className="text-sm font-medium text-gray-600" style={{ fontFamily: 'Jura' }}>Total Groups</p>
                         <p className="text-2xl font-semibold text-black" style={{ fontFamily: 'Jura' }}>{stats.totalGroups}</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-white rounded-lg p-6" style={{ background: 'rgba(215, 181, 109, 0.1)' }}>
-                    <div className="flex items-center">
-                      <div className="p-3 rounded-full" style={{ background: 'rgba(168, 85, 247, 0.1)' }}>
-                        <MessageSquare className="h-6 w-6" style={{ color: '#A855F7' }} />
-                      </div>
-                      <div className="ml-4">
-                        <p className="text-sm font-medium text-gray-600" style={{ fontFamily: 'Jura' }}>Messages Sent</p>
-                        <p className="text-2xl font-semibold text-black" style={{ fontFamily: 'Jura' }}>{stats.totalMessages}</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-white rounded-lg p-6" style={{ background: 'rgba(215, 181, 109, 0.1)' }}>
-                    <div className="flex items-center">
-                      <div className="p-3 rounded-full" style={{ background: 'rgba(249, 115, 22, 0.1)' }}>
-                        <BarChart3 className="h-6 w-6" style={{ color: '#F97316' }} />
-                      </div>
-                      <div className="ml-4">
-                        <p className="text-sm font-medium text-gray-600" style={{ fontFamily: 'Jura' }}>Engagement Rate</p>
-                        <p className="text-2xl font-semibold text-black" style={{ fontFamily: 'Jura' }}>{stats.engagementRate}%</p>
-                      </div>
-                    </div>
                   </div>
                 </div>
+              </div>
+              
+                  <div className="bg-white rounded-lg p-6" style={{ background: 'rgba(215, 181, 109, 0.1)' }}>
+                <div className="flex items-center">
+                      <div className="p-3 rounded-full" style={{ background: 'rgba(168, 85, 247, 0.1)' }}>
+                        <MessageSquare className="h-6 w-6" style={{ color: '#A855F7' }} />
+                  </div>
+                  <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600" style={{ fontFamily: 'Jura' }}>Messages Sent</p>
+                        <p className="text-2xl font-semibold text-black" style={{ fontFamily: 'Jura' }}>{stats.totalMessages}</p>
+                  </div>
+                </div>
+              </div>
+              
+                  <div className="bg-white rounded-lg p-6" style={{ background: 'rgba(215, 181, 109, 0.1)' }}>
+                <div className="flex items-center">
+                      <div className="p-3 rounded-full" style={{ background: 'rgba(249, 115, 22, 0.1)' }}>
+                        <BarChart3 className="h-6 w-6" style={{ color: '#F97316' }} />
+                  </div>
+                  <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600" style={{ fontFamily: 'Jura' }}>Engagement Rate</p>
+                        <p className="text-2xl font-semibold text-black" style={{ fontFamily: 'Jura' }}>{stats.engagementRate}%</p>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-                {/* Recent Activity */}
+            {/* Recent Activity */}
                 <div className="bg-white rounded-lg" style={{ background: 'rgba(215, 181, 109, 0.1)' }}>
                   <div className="p-6 border-b" style={{ background: 'rgba(44, 38, 150, 0.1)' }}>
                     <h2 className="text-2xl font-bold text-black" style={{ fontFamily: 'Jura' }}>Recent Message Activity</h2>
-                  </div>
-                  <div className="p-6">
-                    {messageLogs.length > 0 ? (
-                      <div className="space-y-4">
-                        {messageLogs.slice(0, 5).map(log => (
-                          <div key={log.id} className="border border-gray-200 rounded-lg p-4">
-                            <div className="flex justify-between items-start">
-                              <div className="flex-1">
+              </div>
+              <div className="p-6">
+                {messageLogs.length > 0 ? (
+                  <div className="space-y-4">
+                    {messageLogs.slice(0, 5).map(log => (
+                      <div key={log.id} className="border border-gray-200 rounded-lg p-4">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
                                 <p className="text-sm font-medium text-black" style={{ fontFamily: 'Jura' }}>{log.message}</p>
                                 <p className="text-xs text-gray-500 mt-1" style={{ fontFamily: 'Jura' }}>
-                                  Sent to {log.groups.join(', ')} ({log.contactCount} contacts)
-                                </p>
-                              </div>
-                              <span className="text-xs text-gray-500" style={{ fontFamily: 'Jura' }}>
-                                {new Date(log.sentAt).toLocaleDateString()}
-                              </span>
-                            </div>
+                              Sent to {log.groups.join(', ')} ({log.contactCount} contacts)
+                            </p>
                           </div>
-                        ))}
+                              <span className="text-xs text-gray-500" style={{ fontFamily: 'Jura' }}>
+                            {new Date(log.sentAt).toLocaleDateString()}
+                          </span>
+                        </div>
                       </div>
-                    ) : (
-                      <div className="text-center py-12">
-                        <MessageSquare className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <MessageSquare className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                         <p className="text-gray-500" style={{ fontFamily: 'Jura' }}>No messages sent yet</p>
                         <p className="text-sm text-gray-400" style={{ fontFamily: 'Jura' }}>Go to the Messages tab to send your first message</p>
-                      </div>
-                    )}
                   </div>
-                </div>
+                )}
+              </div>
+            </div>
 
-                {/* Data Management */}
+            {/* Data Management */}
                 <div className="bg-white rounded-lg p-6" style={{ background: 'rgba(215, 181, 109, 0.1)' }}>
                   <h2 className="text-2xl font-bold text-black mb-6" style={{ fontFamily: 'Jura' }}>Data Management</h2>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                      <div>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                  <div>
                         <h3 className="font-medium text-black" style={{ fontFamily: 'Jura' }}>Export Data</h3>
                         <p className="text-sm text-gray-500" style={{ fontFamily: 'Jura' }}>Download your contacts and groups as CSV files</p>
-                      </div>
-                      <button
-                        onClick={exportContactsToCSV}
+                  </div>
+                  <button
+                    onClick={exportContactsToCSV}
                         className="inline-flex items-center px-4 py-2 rounded-lg text-gray-700 text-sm font-medium"
                         style={{ background: '#F2F2F2', fontFamily: 'Jura' }}
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Export Contacts
-                      </button>
-                    </div>
-                    
-                    <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                      <div>
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Export Contacts
+                  </button>
+                </div>
+                
+                <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                  <div>
                         <h3 className="font-medium text-black" style={{ fontFamily: 'Jura' }}>Clear All Data</h3>
                         <p className="text-sm text-gray-500" style={{ fontFamily: 'Jura' }}>Remove all contacts, groups, and message logs</p>
-                      </div>
-                      <button
-                        onClick={() => {
-                          if (window.confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
-                            setContacts([]);
-                            setGroups([]);
-                            setMessageLogs([]);
-                            localStorage.removeItem('mr_contacts');
-                            localStorage.removeItem('mr_groups');
-                            localStorage.removeItem('mr_message_logs');
-                          }
-                        }}
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (window.confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
+                        setContacts([]);
+                        setGroups([]);
+                        setMessageLogs([]);
+                        localStorage.removeItem('mr_contacts');
+                        localStorage.removeItem('mr_groups');
+                        localStorage.removeItem('mr_message_logs');
+                      }
+                    }}
                         className="inline-flex items-center px-4 py-2 rounded-lg text-red-700 text-sm font-medium"
                         style={{ background: 'rgba(239, 68, 68, 0.1)', fontFamily: 'Jura' }}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Clear All Data
-                      </button>
-                    </div>
-                  </div>
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Clear All Data
+                  </button>
                 </div>
               </div>
-            )}
+            </div>
+          </div>
+        )}
           </div>
         </div>
       </div>

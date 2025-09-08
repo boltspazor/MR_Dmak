@@ -333,7 +333,7 @@ const MedicalReps: React.FC = () => {
           {/* DVK Logo */}
           <div className="mt-4">
             <img 
-              src="/dvk.svg" 
+              src="/dvk-simple.svg" 
               alt="DVK" 
               style={{ width: '68px', height: '57px' }}
             />
@@ -368,7 +368,7 @@ const MedicalReps: React.FC = () => {
             {/* Glenmark Logo */}
             <div className="absolute top-0 right-0" style={{ right: '102px' }}>
               <img 
-                src="/glenmark.svg" 
+                src="/glenmark-simple.svg" 
                 alt="Glenmark" 
                 style={{ width: '140px', height: '79px' }}
               />
@@ -456,7 +456,7 @@ const MedicalReps: React.FC = () => {
           
           {/* Content */}
           <div className="relative" style={{ padding: '24px' }}>
-            {/* Statistics Cards */}
+        {/* Statistics Cards */}
             <div className="grid grid-cols-4 gap-6 mb-8" style={{ gap: '24px', marginBottom: '32px' }}>
               {/* Total MRs */}
               <div className="bg-white rounded-lg p-6" style={{ 
@@ -618,7 +618,7 @@ const MedicalReps: React.FC = () => {
                   {filteredMRs.length} MRs
                 </span>
               </div>
-            </div>
+                </div>
 
             {/* MRs Table */}
             <div className="bg-white rounded-lg" style={{ 
@@ -719,7 +719,7 @@ const MedicalReps: React.FC = () => {
                   <div className="text-center py-12">
                     <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
                       <UserCircle className="h-12 w-12 text-gray-400" />
-                    </div>
+                </div>
                     <h3 className="text-lg font-bold text-black mb-2" style={{ 
                       fontFamily: 'Jura',
                       fontSize: '18.36px',
@@ -768,117 +768,117 @@ const MedicalReps: React.FC = () => {
                     >
                       Add First MR
                     </button>
-                  </div>
+                </div>
                 )}
               </div>
             </div>
           </div>
         </div>
-      </div>
+        </div>
 
       {/* Create/Edit Form Modal */}
-      {showCreateForm && (
+        {showCreateForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-96">
             <h2 className="text-lg font-semibold text-black mb-4" style={{ fontFamily: 'Jura' }}>
-              {editingMR ? 'Edit Medical Representative' : 'Add New Medical Representative'}
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+                {editingMR ? 'Edit Medical Representative' : 'Add New Medical Representative'}
+              </h2>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
                   <label className="block text-sm font-medium text-black mb-1" style={{ fontFamily: 'Jura' }}>
-                    MR ID *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.mrId}
-                    onChange={(e) => setFormData({...formData, mrId: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter MR ID"
-                  />
+                      MR ID *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.mrId}
+                      onChange={(e) => setFormData({...formData, mrId: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter MR ID"
+                    />
+                  </div>
+                  <div>
+                  <label className="block text-sm font-medium text-black mb-1" style={{ fontFamily: 'Jura' }}>
+                      First Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.firstName}
+                      onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter first name"
+                    />
+                  </div>
+                  <div>
+                  <label className="block text-sm font-medium text-black mb-1" style={{ fontFamily: 'Jura' }}>
+                      Last Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.lastName}
+                      onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter last name"
+                    />
+                  </div>
+                  <div>
+                  <label className="block text-sm font-medium text-black mb-1" style={{ fontFamily: 'Jura' }}>
+                      Phone *
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      value={formData.phone}
+                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter phone number"
+                    />
+                  </div>
+                  <div>
+                  <label className="block text-sm font-medium text-black mb-1" style={{ fontFamily: 'Jura' }}>
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter email address"
+                    />
+                  </div>
+                  <div>
+                  <label className="block text-sm font-medium text-black mb-1" style={{ fontFamily: 'Jura' }}>
+                      Group *
+                    </label>
+                    <select
+                      required
+                      value={formData.groupId}
+                      onChange={(e) => setFormData({...formData, groupId: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select a group</option>
+                      {groups.map(group => (
+                        <option key={group.id} value={group.id}>{group.groupName}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-black mb-1" style={{ fontFamily: 'Jura' }}>
-                    First Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.firstName}
-                    onChange={(e) => setFormData({...formData, firstName: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter first name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-black mb-1" style={{ fontFamily: 'Jura' }}>
-                    Last Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.lastName}
-                    onChange={(e) => setFormData({...formData, lastName: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter last name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-black mb-1" style={{ fontFamily: 'Jura' }}>
-                    Phone *
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    value={formData.phone}
-                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter phone number"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-black mb-1" style={{ fontFamily: 'Jura' }}>
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter email address"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-black mb-1" style={{ fontFamily: 'Jura' }}>
-                    Group *
-                  </label>
-                  <select
-                    required
-                    value={formData.groupId}
-                    onChange={(e) => setFormData({...formData, groupId: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select a group</option>
-                    {groups.map(group => (
-                      <option key={group.id} value={group.id}>{group.groupName}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div>
                 <label className="block text-sm font-medium text-black mb-1" style={{ fontFamily: 'Jura' }}>
-                  Comments
-                </label>
-                <textarea
-                  value={formData.comments}
-                  onChange={(e) => setFormData({...formData, comments: e.target.value})}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter any additional comments"
-                />
-              </div>
-              <div className="flex space-x-3">
+                    Comments
+                  </label>
+                  <textarea
+                    value={formData.comments}
+                    onChange={(e) => setFormData({...formData, comments: e.target.value})}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter any additional comments"
+                  />
+                </div>
+                <div className="flex space-x-3">
                 <button
                   type="submit"
                   className="px-4 py-2 rounded-lg text-white text-sm font-semibold"
@@ -887,83 +887,83 @@ const MedicalReps: React.FC = () => {
                     fontFamily: 'Jura'
                   }}
                 >
-                  {editingMR ? 'Update MR' : 'Add MR'}
+                    {editingMR ? 'Update MR' : 'Add MR'}
                 </button>
                 <button
-                  type="button"
-                  onClick={() => {
-                    setShowCreateForm(false);
-                    setEditingMR(null);
-                    setFormData({
-                      mrId: '',
-                      firstName: '',
-                      lastName: '',
-                      phone: '',
-                      email: '',
-                      groupId: '',
-                      comments: ''
-                    });
-                  }}
+                    type="button"
+                    onClick={() => {
+                      setShowCreateForm(false);
+                      setEditingMR(null);
+                      setFormData({
+                        mrId: '',
+                        firstName: '',
+                        lastName: '',
+                        phone: '',
+                        email: '',
+                        groupId: '',
+                        comments: ''
+                      });
+                    }}
                   className="px-4 py-2 rounded-lg text-gray-700 text-sm font-semibold border border-gray-300"
                   style={{ fontFamily: 'Jura' }}
-                >
-                  Cancel
+                  >
+                    Cancel
                 </button>
-              </div>
-            </form>
+                </div>
+              </form>
           </div>
         </div>
-      )}
+        )}
 
       {/* Bulk Upload Form Modal */}
-      {showUploadForm && (
+        {showUploadForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-96">
             <h2 className="text-lg font-semibold text-black mb-4" style={{ fontFamily: 'Jura' }}>
               Bulk Upload Medical Representatives
             </h2>
-            <div className="space-y-4">
-              <div className="flex items-center space-x-4">
-                <input
-                  type="file"
-                  accept=".xlsx,.xls,.csv"
-                  onChange={handleFileUpload}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                />
+              <div className="space-y-4">
+                <div className="flex items-center space-x-4">
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={handleFileUpload}
+                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  />
                 <button
-                  onClick={() => downloadTemplate('excel')}
+                    onClick={() => downloadTemplate('excel')}
                   className="px-4 py-2 rounded-lg text-gray-700 text-sm font-semibold border border-gray-300"
                   style={{ fontFamily: 'Jura' }}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download Excel Template
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download Excel Template
                 </button>
                 <button
-                  onClick={() => downloadTemplate('csv')}
+                    onClick={() => downloadTemplate('csv')}
                   className="px-4 py-2 rounded-lg text-gray-700 text-sm font-semibold border border-gray-300"
                   style={{ fontFamily: 'Jura' }}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download CSV Template
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download CSV Template
                 </button>
-              </div>
+                </div>
               <p className="text-sm text-gray-600" style={{ fontFamily: 'Jura' }}>
-                Upload an Excel file (.xlsx, .xls) or CSV file. Make sure to follow the template format.
-              </p>
-              <div className="flex space-x-3">
+                  Upload an Excel file (.xlsx, .xls) or CSV file. Make sure to follow the template format.
+                </p>
+                <div className="flex space-x-3">
                 <button
-                  onClick={() => setShowUploadForm(false)}
+                    onClick={() => setShowUploadForm(false)}
                   className="px-4 py-2 rounded-lg text-gray-700 text-sm font-semibold border border-gray-300"
                   style={{ fontFamily: 'Jura' }}
-                >
-                  Close
+                  >
+                    Close
                 </button>
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+              </div>
+            )}
+          </div>
   );
 };
 

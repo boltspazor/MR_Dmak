@@ -222,7 +222,7 @@ const Groups: React.FC = () => {
           {/* DVK Logo */}
           <div className="mt-4">
             <img 
-              src="/dvk.svg" 
+              src="/dvk-simple.svg" 
               alt="DVK" 
               style={{ width: '68px', height: '57px' }}
             />
@@ -257,7 +257,7 @@ const Groups: React.FC = () => {
             {/* Glenmark Logo */}
             <div className="absolute top-0 right-0" style={{ right: '102px' }}>
               <img 
-                src="/glenmark.svg" 
+                src="/glenmark-simple.svg" 
                 alt="Glenmark" 
                 style={{ width: '140px', height: '79px' }}
               />
