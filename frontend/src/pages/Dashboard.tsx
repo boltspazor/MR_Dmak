@@ -2,11 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Users, 
-  UserCircle, 
   MessageSquare, 
-  TrendingUp,
-  Plus,
-  ArrowRight,
   Activity,
   BarChart3,
   LogOut,
@@ -18,7 +14,7 @@ import { api } from '../lib/api';
 import { DashboardStats } from '../types';
 
 const Dashboard: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -30,9 +26,12 @@ const Dashboard: React.FC = () => {
     try {
       const token = localStorage.getItem('authToken');
       if (!token) {
+        console.log('No auth token found, redirecting to login');
         setLoading(false);
         return;
       }
+      
+      console.log('Fetching dashboard stats with token:', token.substring(0, 20) + '...');
       
       // Fetch dashboard stats and recent campaigns
       const [statsResponse, campaignsResponse, groupsResponse] = await Promise.all([
@@ -69,8 +68,21 @@ const Dashboard: React.FC = () => {
       setStats(dashboardStats);
     } catch (error: any) {
       console.error('Error fetching dashboard stats:', error);
-      // Don't show error for unauthorized users
-      if (error.response?.status !== 401) {
+      console.error('Error details:', {
+        status: error.response?.status,
+        message: error.message,
+        url: error.config?.url,
+        baseURL: error.config?.baseURL
+      });
+      
+      // Handle different error types
+      if (error.response?.status === 401) {
+        console.log('Unauthorized - redirecting to login');
+        // Don't show error for unauthorized users
+      } else if (error.response?.status === 500) {
+        console.error('Server error - check Railway backend logs');
+        // You might want to show a user-friendly message here
+      } else {
         console.error('Dashboard API error:', error);
       }
     } finally {
