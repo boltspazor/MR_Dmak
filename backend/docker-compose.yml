@@ -1,21 +1,19 @@
 
-version: '3.8'
-
 services:
-  postgres:
-    image: postgres:15-alpine
+  mongodb:
+    image: mongo:7.0
     environment:
-      POSTGRES_DB: mr_communication
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: mr_communication
     ports:
-      - "5432:5432"
+      - "27017:27017"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mongodb_data:/data/db
     networks:
       - mr_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -42,12 +40,12 @@ services:
     ports:
       - "5000:5000"
     environment:
-      DATABASE_URL: postgresql://postgres:password@postgres:5432/mr_communication
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/mr_communication?authSource=admin
       REDIS_URL: redis://redis:6379
       JWT_SECRET: your-super-secret-jwt-key
       NODE_ENV: production
     depends_on:
-      postgres:
+      mongodb:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -59,7 +57,7 @@ services:
     restart: unless-stopped
 
 volumes:
-  postgres_data:
+  mongodb_data:
   redis_data:
 
 networks:
