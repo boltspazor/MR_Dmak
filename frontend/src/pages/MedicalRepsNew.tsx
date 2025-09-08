@@ -2,11 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   UserCircle, 
+  Plus, 
   Edit, 
   Trash2, 
   Search, 
   Download,
+  Upload,
   Users,
+  Phone,
+  Mail,
+  Calendar,
+  Filter,
   BarChart3,
   Activity,
   LogOut,
