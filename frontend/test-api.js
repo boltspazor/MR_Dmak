@@ -6,7 +6,7 @@ async function testAPI() {
     console.log('🧪 Testing API Connection...');
     console.log('=====================================');
     
-    const API_BASE_URL = 'http://localhost:5001/api';
+    const API_BASE_URL = 'http://mr_backend.railway.internal:5000/api';
     
     try {
         // Test 1: Health check
@@ -45,7 +45,7 @@ async function testAPI() {
             console.log('Run: cd backend && npm run dev');
         } else if (error.response?.status === 404) {
             console.log('\n🔧 Solution: Check API URL configuration');
-            console.log('Expected: http://localhost:5001/api');
+            console.log('Expected: http://mr_backend.railway.internal:5000/api');
             console.log('Actual:', API_BASE_URL);
         } else {
             console.log('\n🔧 Solution: Check backend logs for more details');
