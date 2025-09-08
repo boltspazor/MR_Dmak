@@ -3,15 +3,19 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Install dependencies
+# Install dependencies (including dev dependencies for build)
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci
 
 # Copy source code
 COPY . .
 
+
 # Build TypeScript
 RUN npm run build
+
+# Remove dev dependencies to reduce image size
+RUN npm prune --production
 
 # Create necessary directories
 RUN mkdir -p uploads logs
