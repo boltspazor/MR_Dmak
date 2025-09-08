@@ -7,10 +7,7 @@ const getApiBaseUrl = () => {
   if (window.location.hostname.includes('railway.app')) {
     // For Railway production, try different possible service names
     const possibleUrls = [
-      'https://mr_backend.railway.internal:5000/api',
-      'https://mr-backend.railway.internal:5000/api',
-      'https://mrbackend.railway.internal:5000/api',
-      'https://backend.railway.internal:5000/api'
+      'https://mrbackend-production-2ce3.up.railway.app/api'
     ];
     
     // Return the first one for now, but log all options
