@@ -28,11 +28,33 @@ Make sure your Railway services are named:
 - Frontend service: `frontend` (or any name)
 - Backend service: `mr_backend` (this is important for internal communication)
 
+**IMPORTANT**: The service name must NOT contain spaces. Use underscores or hyphens only.
+
 ## Internal Communication
 
-The frontend will connect to the backend using:
+The frontend will automatically detect Railway deployment and connect to the backend using:
 - URL: `http://mr_backend.railway.internal:5000/api`
 - This uses Railway's internal networking for service-to-service communication
+
+## Troubleshooting
+
+### Common Issues:
+
+1. **405 Method Not Allowed**: Usually means the service name has a space
+   - Solution: Rename your backend service to `mr_backend` (no spaces)
+
+2. **URL Construction Error**: If you see URLs like `https://frontend.railway.app/mr backend.railway.internal/...`
+   - Solution: Check that your service name doesn't contain spaces
+
+3. **Connection Refused**: Backend service not running
+   - Solution: Check Railway logs for backend service
+
+### Debug Information:
+
+The frontend will log API configuration details to the browser console:
+- Hostname detection
+- Service URL being used
+- Environment variables
 
 ## Testing
 

@@ -1,7 +1,44 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://mr_backend.railway.internal:5001/api';
+// Determine the API base URL based on environment
+const getApiBaseUrl = () => {
+  // Check if we're in production (Railway)
+  if (window.location.hostname.includes('railway.app')) {
+    // For Railway production, try different possible service names
+    const possibleUrls = [
+      'http://mr_backend.railway.internal:5000/api',
+      'http://mr-backend.railway.internal:5000/api',
+      'http://mrbackend.railway.internal:5000/api',
+      'http://backend.railway.internal:5000/api'
+    ];
+    
+    // Return the first one for now, but log all options
+    console.log('🚀 Railway detected, trying service URLs:', possibleUrls);
+    return possibleUrls[0];
+  }
+  
+  // Check for environment variable
+  const envUrl = (import.meta as any).env?.VITE_API_BASE_URL;
+  if (envUrl) {
+    console.log('📝 Using environment variable URL:', envUrl);
+    return envUrl;
+  }
+  
+  // Default to localhost for development
+  console.log('🏠 Using localhost for development');
+  return 'http://localhost:5001/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
+
+// Debug logging
+console.log('🌐 API Configuration:', {
+  hostname: window.location.hostname,
+  isRailway: window.location.hostname.includes('railway.app'),
+  apiBaseUrl: API_BASE_URL,
+  envVar: (import.meta as any).env?.VITE_API_BASE_URL
+});
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -29,6 +66,9 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     console.error('API Error:', error);
+    console.error('Request URL:', error.config?.url);
+    console.error('Base URL:', error.config?.baseURL);
+    console.error('Full URL:', error.config?.baseURL + error.config?.url);
     
     if (error.response?.status === 401) {
       localStorage.removeItem('authToken');
@@ -43,6 +83,8 @@ api.interceptors.response.use(
       message = 'Cannot connect to server. Please check if the backend is running.';
     } else if (error.response?.status === 404) {
       message = 'API endpoint not found. Please check the server configuration.';
+    } else if (error.response?.status === 405) {
+      message = 'Method not allowed. Please check the API endpoint configuration.';
     } else if (error.response?.status === 500) {
       message = 'Server error. Please try again later.';
     } else if (error.response?.data?.error) {
