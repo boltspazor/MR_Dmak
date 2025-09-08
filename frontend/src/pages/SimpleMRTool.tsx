@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Users, 
   MessageSquare, 
@@ -10,7 +11,9 @@ import {
   ExternalLink,
   BarChart3,
   ChevronDown,
-  X
+  LogOut,
+  Shield,
+  Activity
 } from 'lucide-react';
 
 interface Contact {
@@ -38,6 +41,7 @@ interface MessageLog {
 }
 
 const SimpleMRTool: React.FC = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'contacts' | 'messages' | 'dashboard'>('contacts');
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
@@ -303,16 +307,30 @@ const SimpleMRTool: React.FC = () => {
 
   const stats = getTotalStats();
 
+  // Navigation functions
+  const handleSidebarNavigation = (route: string) => {
+    navigate(route);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+    navigate('/login');
+  };
+
   return (
     <div className="min-h-screen" style={{ background: '#ECEAE2', width: '1440px', height: '1024px' }}>
       {/* Sidebar */}
       <div className="fixed left-0 top-0 w-23 h-screen" style={{ background: '#2C2696', width: '92px' }}>
         <div className="flex flex-col items-center py-4 space-y-2">
           {/* Dashboard */}
-          <div className="flex flex-col items-center p-2 rounded-lg w-16 h-16">
+          <button 
+            onClick={() => handleSidebarNavigation('/dashboard')}
+            className="flex flex-col items-center p-2 rounded-lg w-16 h-16 hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
+          >
             <BarChart3 className="h-7 w-7 text-white mb-1" />
             <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>Dashboard</span>
-          </div>
+          </button>
           
           {/* DMak Tool - Active */}
           <div className="flex flex-col items-center p-2 rounded-lg w-16 h-16 border border-gray-200" style={{ background: 'rgba(236, 234, 226, 0.1)' }}>
@@ -321,40 +339,58 @@ const SimpleMRTool: React.FC = () => {
           </div>
           
           {/* Groups */}
-          <div className="flex flex-col items-center p-2 rounded-lg w-16 h-16">
+          <button 
+            onClick={() => handleSidebarNavigation('/groups')}
+            className="flex flex-col items-center p-2 rounded-lg w-16 h-16 hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
+          >
             <Users className="h-7 w-7 text-white mb-1" />
             <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>Groups</span>
-          </div>
+          </button>
           
           {/* Medical Items */}
-          <div className="flex flex-col items-center p-2 rounded-lg w-16 h-16">
+          <button 
+            onClick={() => handleSidebarNavigation('/mrs')}
+            className="flex flex-col items-center p-2 rounded-lg w-16 h-16 hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
+          >
             <FileText className="h-7 w-7 text-white mb-1" />
             <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>Medical Items</span>
-          </div>
+          </button>
           
           {/* Campaigns */}
-          <div className="flex flex-col items-center p-2 rounded-lg w-16 h-16">
+          <button 
+            onClick={() => handleSidebarNavigation('/campaigns')}
+            className="flex flex-col items-center p-2 rounded-lg w-16 h-16 hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
+          >
             <MessageSquare className="h-7 w-7 text-white mb-1" />
             <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>Campaigns</span>
-          </div>
+          </button>
           
           {/* Manager */}
-          <div className="flex flex-col items-center p-2 rounded-lg w-16 h-16">
-            <Users className="h-7 w-7 text-white mb-1" />
+          <button 
+            onClick={() => handleSidebarNavigation('/super-admin')}
+            className="flex flex-col items-center p-2 rounded-lg w-16 h-16 hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
+          >
+            <Shield className="h-7 w-7 text-white mb-1" />
             <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>Manager</span>
-          </div>
+          </button>
           
           {/* Reports */}
-          <div className="flex flex-col items-center p-2 rounded-lg w-16 h-16">
-            <BarChart3 className="h-7 w-7 text-white mb-1" />
+          <button 
+            onClick={() => handleSidebarNavigation('/reports')}
+            className="flex flex-col items-center p-2 rounded-lg w-16 h-16 hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
+          >
+            <Activity className="h-7 w-7 text-white mb-1" />
             <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>Reports</span>
-          </div>
+          </button>
           
           {/* Logout */}
-          <div className="flex flex-col items-center p-2 rounded-lg w-16 h-16 mt-auto">
-            <X className="h-7 w-7 text-white mb-1" />
+          <button 
+            onClick={handleLogout}
+            className="flex flex-col items-center p-2 rounded-lg w-16 h-16 mt-auto hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
+          >
+            <LogOut className="h-7 w-7 text-white mb-1" />
             <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>Logout</span>
-          </div>
+          </button>
           
           {/* DVK Logo */}
           <div className="mt-4">

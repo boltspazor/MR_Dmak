@@ -2,9 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Users, 
+  Plus, 
   Edit, 
   Trash2, 
   Search, 
+  Download,
+  UserPlus,
   BarChart3,
   Calendar,
   Activity,
@@ -14,7 +17,7 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { api } from '../lib/api';
-import { Group } from '../types';
+import { Group, MedicalRepresentative } from '../types';
 
 const Groups: React.FC = () => {
   const navigate = useNavigate();
