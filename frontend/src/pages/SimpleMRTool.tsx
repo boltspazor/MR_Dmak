@@ -1,18 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Users, 
-  UserPlus, 
   MessageSquare, 
   Download, 
-  Upload, 
   Trash2, 
   Search,
-  Plus,
   FileText,
-  Smartphone,
   Copy,
   ExternalLink,
-  BarChart3
+  BarChart3,
+  ChevronDown,
+  X
 } from 'lucide-react';
 
 interface Contact {
@@ -47,6 +45,7 @@ const SimpleMRTool: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
   const [message, setMessage] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Form states
   const [newContact, setNewContact] = useState({
@@ -163,17 +162,6 @@ const SimpleMRTool: React.FC = () => {
     setNewGroup({ name: '' });
   };
 
-  const deleteGroup = (id: string) => {
-    const group = groups.find(g => g.id === id);
-    if (group && group.contactCount > 0) {
-      alert('Cannot delete group with existing contacts. Please move or delete all contacts first.');
-      return;
-    }
-
-    if (window.confirm('Are you sure you want to delete this group?')) {
-      setGroups(groups.filter(g => g.id !== id));
-    }
-  };
 
   // CSV import/export functions
   const exportContactsToCSV = () => {
@@ -212,7 +200,6 @@ const SimpleMRTool: React.FC = () => {
     reader.onload = (e) => {
       const text = e.target?.result as string;
       const lines = text.split('\n');
-      const headers = lines[0].split(',');
       
       const importedContacts: Contact[] = [];
       
@@ -238,12 +225,14 @@ const SimpleMRTool: React.FC = () => {
       if (importedContacts.length > 0) {
         setContacts([...contacts, ...importedContacts]);
         alert(`Successfully imported ${importedContacts.length} contacts`);
+        setSelectedFile(null);
       } else {
         alert('No valid contacts found in CSV file');
       }
     };
     reader.readAsText(file);
   };
+
 
   // Message functions
   const sendMessage = () => {
@@ -315,479 +304,976 @@ const SimpleMRTool: React.FC = () => {
   const stats = getTotalStats();
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">MR Communication Tool</h1>
-              <p className="text-gray-600">Simple tool for managing Medical Representatives and sending WhatsApp messages</p>
-            </div>
-            <div className="flex space-x-3">
-              <button
-                onClick={exportContactsToCSV}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Export Data
-              </button>
-            </div>
+    <div className="min-h-screen" style={{ background: '#ECEAE2', width: '1440px', height: '1024px' }}>
+      {/* Sidebar */}
+      <div className="fixed left-0 top-0 w-23 h-screen" style={{ background: '#2C2696', width: '92px' }}>
+        <div className="flex flex-col items-center py-4 space-y-2">
+          {/* Dashboard */}
+          <div className="flex flex-col items-center p-2 rounded-lg w-16 h-16">
+            <BarChart3 className="h-7 w-7 text-white mb-1" />
+            <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>Dashboard</span>
           </div>
-        </div>
-      </div>
-
-      {/* Navigation Tabs */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex space-x-8">
-            {[
-              { id: 'contacts', label: 'Contacts', icon: Users },
-              { id: 'messages', label: 'Send Messages', icon: MessageSquare },
-              { id: 'dashboard', label: 'Dashboard', icon: BarChart3 }
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <tab.icon className="h-5 w-5 inline mr-2" />
-                {tab.label}
-              </button>
-            ))}
-          </nav>
+          
+          {/* DMak Tool - Active */}
+          <div className="flex flex-col items-center p-2 rounded-lg w-16 h-16 border border-gray-200" style={{ background: 'rgba(236, 234, 226, 0.1)' }}>
+            <BarChart3 className="h-7 w-7 text-white mb-1" />
+            <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>DMak Tool</span>
+          </div>
+          
+          {/* Groups */}
+          <div className="flex flex-col items-center p-2 rounded-lg w-16 h-16">
+            <Users className="h-7 w-7 text-white mb-1" />
+            <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>Groups</span>
+          </div>
+          
+          {/* Medical Items */}
+          <div className="flex flex-col items-center p-2 rounded-lg w-16 h-16">
+            <FileText className="h-7 w-7 text-white mb-1" />
+            <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>Medical Items</span>
+          </div>
+          
+          {/* Campaigns */}
+          <div className="flex flex-col items-center p-2 rounded-lg w-16 h-16">
+            <MessageSquare className="h-7 w-7 text-white mb-1" />
+            <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>Campaigns</span>
+          </div>
+          
+          {/* Manager */}
+          <div className="flex flex-col items-center p-2 rounded-lg w-16 h-16">
+            <Users className="h-7 w-7 text-white mb-1" />
+            <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>Manager</span>
+          </div>
+          
+          {/* Reports */}
+          <div className="flex flex-col items-center p-2 rounded-lg w-16 h-16">
+            <BarChart3 className="h-7 w-7 text-white mb-1" />
+            <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>Reports</span>
+          </div>
+          
+          {/* Logout */}
+          <div className="flex flex-col items-center p-2 rounded-lg w-16 h-16 mt-auto">
+            <X className="h-7 w-7 text-white mb-1" />
+            <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>Logout</span>
+          </div>
+          
+          {/* DVK Logo */}
+          <div className="mt-4">
+            <div className="text-white text-xs font-bold" style={{ fontFamily: 'Jura' }}>DVK</div>
+          </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {/* Contacts Tab */}
-        {activeTab === 'contacts' && (
-          <div className="space-y-6">
-            {/* Add Contact Form */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Add New Contact</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <input
-                  type="text"
-                  placeholder="MR ID *"
-                  value={newContact.mrId}
-                  onChange={(e) => setNewContact({...newContact, mrId: e.target.value})}
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <input
-                  type="text"
-                  placeholder="First Name *"
-                  value={newContact.firstName}
-                  onChange={(e) => setNewContact({...newContact, firstName: e.target.value})}
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <input
-                  type="text"
-                  placeholder="Last Name *"
-                  value={newContact.lastName}
-                  onChange={(e) => setNewContact({...newContact, lastName: e.target.value})}
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <input
-                  type="tel"
-                  placeholder="Phone *"
-                  value={newContact.phone}
-                  onChange={(e) => setNewContact({...newContact, phone: e.target.value})}
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <select
-                  value={newContact.group}
-                  onChange={(e) => setNewContact({...newContact, group: e.target.value})}
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select Group *</option>
-                  {groups.map(group => (
-                    <option key={group.id} value={group.name}>{group.name}</option>
-                  ))}
-                </select>
-                <input
-                  type="text"
-                  placeholder="Comments"
-                  value={newContact.comments}
-                  onChange={(e) => setNewContact({...newContact, comments: e.target.value})}
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <button
-                onClick={addContact}
-                className="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-              >
-                <UserPlus className="h-4 w-4 mr-2" />
-                Add Contact
-              </button>
-            </div>
-
-            {/* CSV Import */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Import Contacts from CSV</h2>
-              <div className="flex items-center space-x-4">
-                <input
-                  type="file"
-                  accept=".csv"
-                  onChange={handleCSVImport}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                />
-                <button
-                  onClick={downloadCSVTemplate}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download Template
-                </button>
-              </div>
-              <p className="text-sm text-gray-600 mt-2">
-                CSV format: MR ID, First Name, Last Name, Phone, Group, Comments
+      <div className="ml-23" style={{ marginLeft: '102px', padding: '65px 102px 0 0' }}>
+        {/* Header */}
+        <div className="relative mb-8" style={{ marginBottom: '32px' }}>
+          <div className="flex justify-between items-start">
+            <div style={{ marginLeft: '100px' }}>
+              <h1 className="text-3xl font-bold text-black mb-2" style={{ 
+                fontFamily: 'Jura', 
+                fontSize: '32px', 
+                lineHeight: '38px',
+                fontWeight: 700,
+                marginBottom: '8px'
+              }}>DMak Tool</h1>
+              <p className="text-lg text-black" style={{ 
+                fontFamily: 'Jura', 
+                fontSize: '18.36px',
+                lineHeight: '22px',
+                fontWeight: 500,
+                letterSpacing: '0.08em'
+              }}>
+                Simple tool for managing Medical Representatives and sending Whatsapp messages
               </p>
             </div>
-
-            {/* Groups Management */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Manage Groups</h2>
-              <div className="flex items-center space-x-4 mb-4">
-                <input
-                  type="text"
-                  placeholder="New Group Name"
-                  value={newGroup.name}
-                  onChange={(e) => setNewGroup({name: e.target.value})}
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <button
-                  onClick={addGroup}
-                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Group
-                </button>
+            
+            {/* Glenmark Logo */}
+            <div className="absolute top-0 right-0" style={{ right: '102px' }}>
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">G</span>
+                </div>
+                <div>
+                  <div className="text-black font-bold" style={{ fontFamily: 'Jura' }}>glenmark</div>
+                  <div className="text-xs text-gray-600" style={{ fontFamily: 'Jura' }}>A new way for a new world</div>
+                </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {groups.map(group => (
-                  <div key={group.id} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-medium text-gray-900">{group.name}</h3>
-                        <p className="text-sm text-gray-500">{group.contactCount} contacts</p>
+            </div>
+          </div>
+          
+          {/* Tabs */}
+          <div className="flex space-x-8 mt-6" style={{ marginTop: '24px', marginLeft: '100px' }}>
+            <button
+              onClick={() => setActiveTab('contacts')}
+              className={`pb-2 border-b-2 text-lg font-medium ${
+                activeTab === 'contacts' 
+                  ? 'border-blue-900 text-black' 
+                  : 'border-transparent text-gray-600'
+              }`}
+              style={{ 
+                fontFamily: 'Jura',
+                fontSize: '18.36px',
+                lineHeight: '22px',
+                fontWeight: activeTab === 'contacts' ? 700 : 500,
+                letterSpacing: '0.08em',
+                paddingBottom: '8px',
+                borderBottomWidth: activeTab === 'contacts' ? '2px' : '0px',
+                borderBottomColor: activeTab === 'contacts' ? '#2C2696' : 'transparent'
+              }}
+            >
+              Contacts
+            </button>
+            <button
+              onClick={() => setActiveTab('messages')}
+              className={`pb-2 border-b-2 text-lg font-medium ${
+                activeTab === 'messages' 
+                  ? 'border-blue-900 text-black' 
+                  : 'border-transparent text-gray-600'
+              }`}
+              style={{ 
+                fontFamily: 'Jura',
+                fontSize: '18.36px',
+                lineHeight: '22px',
+                fontWeight: activeTab === 'messages' ? 700 : 500,
+                letterSpacing: '0.08em',
+                paddingBottom: '8px',
+                borderBottomWidth: activeTab === 'messages' ? '2px' : '0px',
+                borderBottomColor: activeTab === 'messages' ? '#2C2696' : 'transparent'
+              }}
+            >
+              Send Messages
+            </button>
+            <button
+              onClick={() => setActiveTab('dashboard')}
+              className={`pb-2 border-b-2 text-lg font-medium ${
+                activeTab === 'dashboard' 
+                  ? 'border-blue-900 text-black' 
+                  : 'border-transparent text-gray-600'
+              }`}
+              style={{ 
+                fontFamily: 'Jura',
+                fontSize: '18.36px',
+                lineHeight: '22px',
+                fontWeight: activeTab === 'dashboard' ? 700 : 500,
+                letterSpacing: '0.08em',
+                paddingBottom: '8px',
+                borderBottomWidth: activeTab === 'dashboard' ? '2px' : '0px',
+                borderBottomColor: activeTab === 'dashboard' ? '#2C2696' : 'transparent'
+              }}
+            >
+              Dashboard
+            </button>
+            
+            {/* Export Data Button */}
+            <button
+              onClick={exportContactsToCSV}
+              className="ml-auto px-4 py-2 rounded-lg text-white text-sm font-semibold"
+              style={{ 
+                background: '#2C2696', 
+                fontFamily: 'Jura',
+                fontSize: '13.51px',
+                lineHeight: '16px',
+                fontWeight: 600,
+                letterSpacing: '0.08em',
+                padding: '10px 16px',
+                borderRadius: '10px'
+              }}
+            >
+              Export Data
+            </button>
+          </div>
+        </div>
+
+        {/* Main Content Area */}
+        <div className="relative" style={{ width: '1308px', height: '935px', marginLeft: '100px' }}>
+          {/* Background with blur effect */}
+          <div 
+            className="absolute inset-0 rounded-2xl"
+            style={{
+              background: 'linear-gradient(120.66deg, rgba(255, 255, 255, 0.4) 7.56%, rgba(255, 255, 255, 0.1) 93.23%)',
+              backdropFilter: 'blur(20px)',
+              borderRadius: '15px',
+              width: '1308px',
+              height: '935px'
+            }}
+          />
+          
+          {/* Content */}
+          <div className="relative" style={{ padding: '24px' }}>
+            {/* Contacts Tab */}
+            {activeTab === 'contacts' && (
+              <div className="grid grid-cols-2 gap-8" style={{ gap: '29px' }}>
+                {/* Left Column - Add New Contact */}
+                <div className="bg-white rounded-lg" style={{ 
+                  background: 'rgba(215, 181, 109, 0.1)', 
+                  borderRadius: '10px',
+                  width: '541px',
+                  height: '627px',
+                  padding: '24px'
+                }}>
+                  <h2 className="text-2xl font-bold text-black mb-6" style={{ 
+                    fontFamily: 'Jura',
+                    fontSize: '24px',
+                    lineHeight: '28px',
+                    fontWeight: 700,
+                    marginBottom: '24px'
+                  }}>Add New Contact</h2>
+                  
+                  <div className="space-y-4" style={{ gap: '16px' }}>
+                    {/* MR ID */}
+                    <div>
+                      <label className="block text-sm font-medium text-black mb-1" style={{ 
+                        fontFamily: 'Jura',
+                        fontSize: '15px',
+                        lineHeight: '18px',
+                        fontWeight: 500,
+                        letterSpacing: '0.08em',
+                        marginBottom: '8px'
+                      }}>MR ID*</label>
+                      <input
+                        type="text"
+                        value={newContact.mrId}
+                        onChange={(e) => setNewContact({...newContact, mrId: e.target.value})}
+                        className="w-full px-3 py-3 rounded-lg border-0"
+                        style={{ 
+                          background: '#F2F2F2',
+                          borderRadius: '10px',
+                          height: '44px',
+                          padding: '12px 16px'
+                        }}
+                        placeholder="Enter MR ID"
+                      />
+                    </div>
+                    
+                    {/* First Name */}
+                    <div>
+                      <label className="block text-sm font-medium text-black mb-1" style={{ 
+                        fontFamily: 'Jura',
+                        fontSize: '15px',
+                        lineHeight: '18px',
+                        fontWeight: 500,
+                        letterSpacing: '0.08em',
+                        marginBottom: '8px'
+                      }}>First Name*</label>
+                      <input
+                        type="text"
+                        value={newContact.firstName}
+                        onChange={(e) => setNewContact({...newContact, firstName: e.target.value})}
+                        className="w-full px-3 py-3 rounded-lg border-0"
+                        style={{ 
+                          background: '#F2F2F2',
+                          borderRadius: '10px',
+                          height: '44px',
+                          padding: '12px 16px'
+                        }}
+                        placeholder="Enter first name"
+                      />
+                    </div>
+                    
+                    {/* Last Name */}
+                    <div>
+                      <label className="block text-sm font-medium text-black mb-1" style={{ 
+                        fontFamily: 'Jura',
+                        fontSize: '15px',
+                        lineHeight: '18px',
+                        fontWeight: 500,
+                        letterSpacing: '0.08em',
+                        marginBottom: '8px'
+                      }}>Last Name*</label>
+                      <input
+                        type="text"
+                        value={newContact.lastName}
+                        onChange={(e) => setNewContact({...newContact, lastName: e.target.value})}
+                        className="w-full px-3 py-3 rounded-lg border-0"
+                        style={{ 
+                          background: '#F2F2F2',
+                          borderRadius: '10px',
+                          height: '44px',
+                          padding: '12px 16px'
+                        }}
+                        placeholder="Enter last name"
+                      />
+                    </div>
+                    
+                    {/* Phone Number */}
+                    <div>
+                      <label className="block text-sm font-medium text-black mb-1" style={{ 
+                        fontFamily: 'Jura',
+                        fontSize: '15px',
+                        lineHeight: '18px',
+                        fontWeight: 500,
+                        letterSpacing: '0.08em',
+                        marginBottom: '8px'
+                      }}>Phone Number*</label>
+                      <input
+                        type="tel"
+                        value={newContact.phone}
+                        onChange={(e) => setNewContact({...newContact, phone: e.target.value})}
+                        className="w-full px-3 py-3 rounded-lg border-0"
+                        style={{ 
+                          background: '#F2F2F2',
+                          borderRadius: '10px',
+                          height: '44px',
+                          padding: '12px 16px'
+                        }}
+                        placeholder="Enter phone number"
+                      />
+                    </div>
+                    
+                    {/* Select Group */}
+                    <div>
+                      <label className="block text-sm font-medium text-black mb-1" style={{ 
+                        fontFamily: 'Jura',
+                        fontSize: '15px',
+                        lineHeight: '18px',
+                        fontWeight: 500,
+                        letterSpacing: '0.08em',
+                        marginBottom: '8px'
+                      }}>Select Group*</label>
+                      <div className="relative">
+                        <select
+                          value={newContact.group}
+                          onChange={(e) => setNewContact({...newContact, group: e.target.value})}
+                          className="w-full px-3 py-3 rounded-lg border-0 appearance-none"
+                          style={{ 
+                            background: '#F2F2F2',
+                            borderRadius: '10px',
+                            height: '44px',
+                            padding: '12px 16px'
+                          }}
+                        >
+                          <option value="">Select a group</option>
+                          {groups.map(group => (
+                            <option key={group.id} value={group.name}>{group.name}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                       </div>
+                    </div>
+                    
+                    {/* Comments */}
+                    <div>
+                      <label className="block text-sm font-medium text-black mb-1" style={{ 
+                        fontFamily: 'Jura',
+                        fontSize: '15px',
+                        lineHeight: '18px',
+                        fontWeight: 500,
+                        letterSpacing: '0.08em',
+                        marginBottom: '8px'
+                      }}>Comments</label>
+                      <textarea
+                        value={newContact.comments}
+                        onChange={(e) => setNewContact({...newContact, comments: e.target.value})}
+                        rows={3}
+                        className="w-full px-3 py-3 rounded-lg border-0"
+                        style={{ 
+                          background: '#F2F2F2',
+                          borderRadius: '10px',
+                          height: '88px',
+                          padding: '12px 16px'
+                        }}
+                        placeholder="Enter comments"
+                      />
+                    </div>
+                    
+                    {/* Add Contacts Button */}
+                    <button
+                      onClick={addContact}
+                      className="w-full px-4 py-2 rounded-lg text-white text-sm font-semibold"
+                      style={{ 
+                        background: '#2C2696', 
+                        fontFamily: 'Jura',
+                        fontSize: '13.51px',
+                        lineHeight: '16px',
+                        fontWeight: 600,
+                        letterSpacing: '0.08em',
+                        padding: '10px 16px',
+                        borderRadius: '10px',
+                        height: '36px'
+                      }}
+                    >
+                      Add Contacts
+                    </button>
+                  </div>
+                </div>
+                
+                {/* Right Column - Import CSV and Manage Groups */}
+                <div className="space-y-6" style={{ gap: '31px' }}>
+                  {/* Import Contacts from CSV */}
+                  <div className="bg-white rounded-lg" style={{ 
+                    background: 'rgba(215, 181, 109, 0.1)', 
+                    borderRadius: '10px',
+                    width: '541px',
+                    height: '298px',
+                    padding: '24px'
+                  }}>
+                    <h2 className="text-2xl font-bold text-black mb-6" style={{ 
+                      fontFamily: 'Jura',
+                      fontSize: '24px',
+                      lineHeight: '28px',
+                      fontWeight: 700,
+                      marginBottom: '24px'
+                    }}>Import Contacts from CSV</h2>
+                    
+                    <div className="space-y-4" style={{ gap: '16px' }}>
+                      <div className="flex items-center space-x-4">
+                        <input
+                          type="file"
+                          accept=".csv"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0] || null;
+                            setSelectedFile(file);
+                            handleCSVImport(e);
+                          }}
+                          className="hidden"
+                          id="csv-upload"
+                        />
+                        <label
+                          htmlFor="csv-upload"
+                          className="px-4 py-2 rounded-full text-sm font-semibold cursor-pointer"
+                          style={{ 
+                            background: 'rgba(44, 38, 150, 0.11)', 
+                            color: '#2C2696', 
+                            fontFamily: 'Jura',
+                            fontSize: '16px',
+                            lineHeight: '19px',
+                            fontWeight: 700,
+                            padding: '10px 15px',
+                            borderRadius: '20px'
+                          }}
+                        >
+                          Choose File
+                        </label>
+                        <span className="text-sm text-black" style={{ 
+                          fontFamily: 'Jura',
+                          fontSize: '16px',
+                          lineHeight: '19px',
+                          fontWeight: 700
+                        }}>
+                          {selectedFile ? selectedFile.name : 'No File Chosen'}
+                        </span>
+                      </div>
+                      
+                      <p className="text-sm text-black" style={{ 
+                        fontFamily: 'Jura',
+                        fontSize: '16px',
+                        lineHeight: '19px',
+                        fontWeight: 700
+                      }}>
+                        CSV format: MR ID, First Name, Last Name, Phone Number, Group, Comments
+                      </p>
+                      
                       <button
-                        onClick={() => deleteGroup(group.id)}
-                        className="text-red-600 hover:text-red-800"
+                        onClick={downloadCSVTemplate}
+                        className="px-4 py-2 rounded-lg text-white text-sm font-semibold"
+                        style={{ 
+                          background: '#1E1E1E', 
+                          fontFamily: 'Jura',
+                          fontSize: '13.51px',
+                          lineHeight: '16px',
+                          fontWeight: 600,
+                          letterSpacing: '0.08em',
+                          padding: '10px 16px',
+                          borderRadius: '10px',
+                          height: '36px'
+                        }}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        Download Template
                       </button>
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Contacts Table */}
-            <div className="bg-white rounded-lg shadow">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-gray-900">All Contacts</h2>
-                  <div className="flex items-center space-x-4">
-                    <div className="relative">
-                      <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="Search contacts..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <span className="text-sm text-gray-500">{filteredContacts.length} contacts</span>
-                  </div>
-                </div>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MR ID</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Group</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comments</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredContacts.map(contact => (
-                      <tr key={contact.id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{contact.mrId}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{contact.firstName} {contact.lastName}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{contact.phone}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{contact.group}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{contact.comments || '-'}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <button
-                            onClick={() => deleteContact(contact.id)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {filteredContacts.length === 0 && (
-                  <div className="text-center py-12">
-                    <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">No contacts found</p>
-                    <p className="text-sm text-gray-400">Add your first contact above or import from CSV</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Messages Tab */}
-        {activeTab === 'messages' && (
-          <div className="space-y-6">
-            {/* Group Selection */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Select Target Groups</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {groups.map(group => (
-                  <label key={group.id} className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={selectedGroups.includes(group.name)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedGroups([...selectedGroups, group.name]);
-                        } else {
-                          setSelectedGroups(selectedGroups.filter(g => g !== group.name));
-                        }
-                      }}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <div>
-                      <span className="font-medium text-gray-900">{group.name}</span>
-                      <p className="text-sm text-gray-500">{group.contactCount} contacts</p>
-                    </div>
-                  </label>
-                ))}
-              </div>
-              {selectedGroups.length > 0 && (
-                <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-blue-800">
-                    Selected: {selectedGroups.join(', ')} 
-                    ({contacts.filter(c => selectedGroups.includes(c.group)).length} total contacts)
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Message Composition */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Compose Message</h2>
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Type your message here..."
-                rows={4}
-                maxLength={1000}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-              />
-              <div className="flex justify-between items-center mt-2">
-                <span className={`text-sm ${message.length > 900 ? 'text-red-600' : 'text-gray-500'}`}>
-                  {message.length}/1000 characters
-                </span>
-                <span className="text-sm text-gray-500">
-                  {selectedGroups.length > 0 ? `${contacts.filter(c => selectedGroups.includes(c.group)).length} recipients` : 'No groups selected'}
-                </span>
-              </div>
-            </div>
-
-            {/* Message Actions */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Send Message</h2>
-              <div className="space-y-4">
-                <div className="flex items-center space-x-4">
-                  <button
-                    onClick={openWhatsAppWeb}
-                    className="inline-flex items-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-green-600 hover:bg-green-700"
-                  >
-                    <ExternalLink className="h-5 w-5 mr-2" />
-                    Open WhatsApp Web
-                  </button>
-                  <button
-                    onClick={copyPhoneNumbers}
-                    disabled={selectedGroups.length === 0}
-                    className="inline-flex items-center px-6 py-3 border border-gray-300 rounded-md shadow-sm text-base font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Copy className="h-5 w-5 mr-2" />
-                    Copy Phone Numbers
-                  </button>
-                </div>
-                
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <h3 className="text-sm font-medium text-yellow-800 mb-2">How to send messages:</h3>
-                  <ol className="text-sm text-yellow-700 space-y-1 list-decimal list-inside">
-                    <li>Click "Open WhatsApp Web" to open WhatsApp in a new tab</li>
-                    <li>Click "Copy Phone Numbers" to copy all recipient numbers</li>
-                    <li>In WhatsApp Web, paste the numbers and send your message to each contact</li>
-                    <li>This is a manual process as per requirements</li>
-                  </ol>
-                </div>
-
-                <button
-                  onClick={sendMessage}
-                  disabled={!message.trim() || selectedGroups.length === 0}
-                  className="w-full inline-flex justify-center items-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <MessageSquare className="h-5 w-5 mr-2" />
-                  Log Message (for tracking)
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Dashboard Tab */}
-        {activeTab === 'dashboard' && (
-          <div className="space-y-6">
-            {/* Statistics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex items-center">
-                  <div className="p-3 rounded-full bg-blue-100 text-blue-600">
-                    <Users className="h-6 w-6" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Total Contacts</p>
-                    <p className="text-2xl font-semibold text-gray-900">{stats.totalContacts}</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex items-center">
-                  <div className="p-3 rounded-full bg-green-100 text-green-600">
-                    <FileText className="h-6 w-6" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Total Groups</p>
-                    <p className="text-2xl font-semibold text-gray-900">{stats.totalGroups}</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex items-center">
-                  <div className="p-3 rounded-full bg-purple-100 text-purple-600">
-                    <MessageSquare className="h-6 w-6" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Messages Sent</p>
-                    <p className="text-2xl font-semibold text-gray-900">{stats.totalMessages}</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex items-center">
-                  <div className="p-3 rounded-full bg-orange-100 text-orange-600">
-                    <BarChart3 className="h-6 w-6" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Engagement Rate</p>
-                    <p className="text-2xl font-semibold text-gray-900">{stats.engagementRate}%</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Recent Activity */}
-            <div className="bg-white rounded-lg shadow">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-900">Recent Message Activity</h2>
-              </div>
-              <div className="p-6">
-                {messageLogs.length > 0 ? (
-                  <div className="space-y-4">
-                    {messageLogs.slice(0, 5).map(log => (
-                      <div key={log.id} className="border border-gray-200 rounded-lg p-4">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">{log.message}</p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              Sent to {log.groups.join(', ')} ({log.contactCount} contacts)
-                            </p>
-                          </div>
-                          <span className="text-xs text-gray-500">
-                            {new Date(log.sentAt).toLocaleDateString()}
-                          </span>
-                        </div>
+                  
+                  {/* Manage Groups */}
+                  <div className="bg-white rounded-lg" style={{ 
+                    background: 'rgba(215, 181, 109, 0.1)', 
+                    borderRadius: '10px',
+                    width: '541px',
+                    height: '298px',
+                    padding: '24px'
+                  }}>
+                    <h2 className="text-2xl font-bold text-black mb-6" style={{ 
+                      fontFamily: 'Jura',
+                      fontSize: '24px',
+                      lineHeight: '28px',
+                      fontWeight: 700,
+                      marginBottom: '24px'
+                    }}>Manage Groups</h2>
+                    
+                    <div className="space-y-4" style={{ gap: '16px' }}>
+                      <div>
+                        <label className="block text-sm font-medium text-black mb-1" style={{ 
+                          fontFamily: 'Jura',
+                          fontSize: '15px',
+                          lineHeight: '18px',
+                          fontWeight: 500,
+                          letterSpacing: '0.08em',
+                          marginBottom: '8px'
+                        }}>New Group Name</label>
+                        <input
+                          type="text"
+                          value={newGroup.name}
+                          onChange={(e) => setNewGroup({name: e.target.value})}
+                          className="w-full px-3 py-3 rounded-lg border-0"
+                          style={{ 
+                            background: '#F2F2F2',
+                            borderRadius: '10px',
+                            height: '55px',
+                            padding: '12px 16px'
+                          }}
+                          placeholder="Enter group name"
+                        />
                       </div>
-                    ))}
+                      
+                      <button
+                        onClick={addGroup}
+                        className="px-4 py-2 rounded-lg text-white text-sm font-semibold"
+                        style={{ 
+                          background: '#1E1E1E', 
+                          fontFamily: 'Jura',
+                          fontSize: '13.51px',
+                          lineHeight: '16px',
+                          fontWeight: 600,
+                          letterSpacing: '0.08em',
+                          padding: '10px 16px',
+                          borderRadius: '10px',
+                          height: '36px'
+                        }}
+                      >
+                        Add Group
+                      </button>
+                    </div>
                   </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <MessageSquare className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">No messages sent yet</p>
-                    <p className="text-sm text-gray-400">Go to the Messages tab to send your first message</p>
-                  </div>
-                )}
+                </div>
               </div>
-            </div>
-
-            {/* Data Management */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Data Management</h2>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                  <div>
-                    <h3 className="font-medium text-gray-900">Export Data</h3>
-                    <p className="text-sm text-gray-500">Download your contacts and groups as CSV files</p>
+            )}
+            
+            {/* Contacts Table */}
+            {activeTab === 'contacts' && (
+              <div className="mt-8 bg-white rounded-lg" style={{ 
+                background: 'rgba(215, 181, 109, 0.1)',
+                borderRadius: '10px',
+                width: '1111px',
+                height: '627px',
+                marginTop: '32px'
+              }}>
+                {/* Table Header */}
+                <div className="p-6 border-b" style={{ 
+                  background: 'rgba(44, 38, 150, 0.1)',
+                  borderRadius: '10px 10px 0px 0px',
+                  padding: '24px'
+                }}>
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-2xl font-bold text-black" style={{ 
+                      fontFamily: 'Jura',
+                      fontSize: '24px',
+                      lineHeight: '28px',
+                      fontWeight: 700
+                    }}>All Contacts</h2>
+                    <div className="flex items-center space-x-4">
+                      <div className="relative">
+                        <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                        <input
+                          type="text"
+                          placeholder="Search Contacts..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-10 pr-4 py-2 rounded-lg border-0"
+                          style={{ 
+                            background: '#F2F2F2',
+                            borderRadius: '10px',
+                            height: '44px',
+                            padding: '12px 16px'
+                          }}
+                        />
+                      </div>
+                      <span className="text-sm text-black font-bold" style={{ 
+                        fontFamily: 'Jura',
+                        fontSize: '14px',
+                        lineHeight: '17px',
+                        fontWeight: 700
+                      }}>
+                        {filteredContacts.length} Contacts
+                      </span>
+                    </div>
                   </div>
-                  <button
-                    onClick={exportContactsToCSV}
-                    className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Export Contacts
-                  </button>
                 </div>
                 
-                <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                  <div>
-                    <h3 className="font-medium text-gray-900">Clear All Data</h3>
-                    <p className="text-sm text-gray-500">Remove all contacts, groups, and message logs</p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      if (window.confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
-                        setContacts([]);
-                        setGroups([]);
-                        setMessageLogs([]);
-                        localStorage.removeItem('mr_contacts');
-                        localStorage.removeItem('mr_groups');
-                        localStorage.removeItem('mr_message_logs');
-                      }
-                    }}
-                    className="inline-flex items-center px-4 py-2 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Clear All Data
-                  </button>
+                {/* Table */}
+                <div className="overflow-x-auto" style={{ 
+                  background: '#F2F2F2',
+                  borderRadius: '10px',
+                  boxShadow: '0px 4px 4px rgba(0, 0, 0, 0.25)',
+                  margin: '38px',
+                  width: '1038px',
+                  height: '498px'
+                }}>
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b" style={{ 
+                        background: 'rgba(44, 38, 150, 0.1)',
+                        borderRadius: '10px 10px 0px 0px',
+                        height: '53px'
+                      }}>
+                        <th className="text-center py-3 px-6 text-sm font-medium text-black" style={{ 
+                          fontFamily: 'Jura',
+                          fontSize: '14px',
+                          lineHeight: '17px',
+                          fontWeight: 300
+                        }}>MR ID</th>
+                        <th className="text-center py-3 px-6 text-sm font-medium text-black" style={{ 
+                          fontFamily: 'Jura',
+                          fontSize: '14px',
+                          lineHeight: '17px',
+                          fontWeight: 300
+                        }}>Name</th>
+                        <th className="text-center py-3 px-6 text-sm font-medium text-black" style={{ 
+                          fontFamily: 'Jura',
+                          fontSize: '14px',
+                          lineHeight: '17px',
+                          fontWeight: 300
+                        }}>Phone No.</th>
+                        <th className="text-center py-3 px-6 text-sm font-medium text-black" style={{ 
+                          fontFamily: 'Jura',
+                          fontSize: '14px',
+                          lineHeight: '17px',
+                          fontWeight: 300
+                        }}>Group</th>
+                        <th className="text-center py-3 px-6 text-sm font-medium text-black" style={{ 
+                          fontFamily: 'Jura',
+                          fontSize: '14px',
+                          lineHeight: '17px',
+                          fontWeight: 300
+                        }}>Comments</th>
+                        <th className="text-center py-3 px-6 text-sm font-medium text-black" style={{ 
+                          fontFamily: 'Jura',
+                          fontSize: '14px',
+                          lineHeight: '17px',
+                          fontWeight: 300
+                        }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredContacts.length > 0 ? (
+                        filteredContacts.map(contact => (
+                          <tr key={contact.id} className="border-b hover:bg-gray-50">
+                            <td className="py-3 px-6 text-sm text-black text-center" style={{ 
+                              fontFamily: 'Jura',
+                              fontSize: '14px',
+                              lineHeight: '17px'
+                            }}>{contact.mrId}</td>
+                            <td className="py-3 px-6 text-sm text-black text-center" style={{ 
+                              fontFamily: 'Jura',
+                              fontSize: '14px',
+                              lineHeight: '17px'
+                            }}>
+                              {contact.firstName} {contact.lastName}
+                            </td>
+                            <td className="py-3 px-6 text-sm text-black text-center" style={{ 
+                              fontFamily: 'Jura',
+                              fontSize: '14px',
+                              lineHeight: '17px'
+                            }}>{contact.phone}</td>
+                            <td className="py-3 px-6 text-sm text-black text-center" style={{ 
+                              fontFamily: 'Jura',
+                              fontSize: '14px',
+                              lineHeight: '17px'
+                            }}>{contact.group}</td>
+                            <td className="py-3 px-6 text-sm text-black text-center" style={{ 
+                              fontFamily: 'Jura',
+                              fontSize: '14px',
+                              lineHeight: '17px'
+                            }}>{contact.comments || '-'}</td>
+                            <td className="py-3 px-6 text-sm text-center">
+                              <button
+                                onClick={() => deleteContact(contact.id)}
+                                className="text-red-600 hover:text-red-800"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="text-center py-12">
+                            <div className="flex flex-col items-center">
+                              <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4">
+                                <Users className="h-12 w-12 text-gray-400" />
+                              </div>
+                              <h3 className="text-lg font-bold mb-2" style={{ 
+                                fontFamily: 'Jura',
+                                fontSize: '18.36px',
+                                lineHeight: '22px',
+                                fontWeight: 700,
+                                letterSpacing: '0.08em',
+                                color: '#2C2696'
+                              }}>
+                                No Contacts Found
+                              </h3>
+                              <p className="text-sm" style={{ 
+                                fontFamily: 'Jura',
+                                fontSize: '10px',
+                                lineHeight: '12px',
+                                fontWeight: 700,
+                                letterSpacing: '0.08em',
+                                color: '#2C2696'
+                              }}>
+                                Add your first contact above or import from CSV
+                              </p>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-            </div>
+            )}
+
+            {/* Messages Tab */}
+            {activeTab === 'messages' && (
+              <div className="space-y-6">
+                {/* Group Selection */}
+                <div className="bg-white rounded-lg p-6" style={{ background: 'rgba(215, 181, 109, 0.1)' }}>
+                  <h2 className="text-2xl font-bold text-black mb-6" style={{ fontFamily: 'Jura' }}>Select Target Groups</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {groups.map(group => (
+                      <label key={group.id} className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedGroups.includes(group.name)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedGroups([...selectedGroups, group.name]);
+                            } else {
+                              setSelectedGroups(selectedGroups.filter(g => g !== group.name));
+                            }
+                          }}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <div>
+                          <span className="font-medium text-black" style={{ fontFamily: 'Jura' }}>{group.name}</span>
+                          <p className="text-sm text-gray-500" style={{ fontFamily: 'Jura' }}>{group.contactCount} contacts</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                  {selectedGroups.length > 0 && (
+                    <div className="mt-4 p-4 rounded-lg" style={{ background: 'rgba(44, 38, 150, 0.1)' }}>
+                      <p className="text-sm text-black" style={{ fontFamily: 'Jura' }}>
+                        Selected: {selectedGroups.join(', ')} 
+                        ({contacts.filter(c => selectedGroups.includes(c.group)).length} total contacts)
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Message Composition */}
+                <div className="bg-white rounded-lg p-6" style={{ background: 'rgba(215, 181, 109, 0.1)' }}>
+                  <h2 className="text-2xl font-bold text-black mb-6" style={{ fontFamily: 'Jura' }}>Compose Message</h2>
+                  <textarea
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder="Type your message here..."
+                    rows={4}
+                    maxLength={1000}
+                    className="w-full px-3 py-3 rounded-lg border-0 resize-none"
+                    style={{ background: '#F2F2F2' }}
+                  />
+                  <div className="flex justify-between items-center mt-2">
+                    <span className={`text-sm ${message.length > 900 ? 'text-red-600' : 'text-gray-500'}`} style={{ fontFamily: 'Jura' }}>
+                      {message.length}/1000 characters
+                    </span>
+                    <span className="text-sm text-gray-500" style={{ fontFamily: 'Jura' }}>
+                      {selectedGroups.length > 0 ? `${contacts.filter(c => selectedGroups.includes(c.group)).length} recipients` : 'No groups selected'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Message Actions */}
+                <div className="bg-white rounded-lg p-6" style={{ background: 'rgba(215, 181, 109, 0.1)' }}>
+                  <h2 className="text-2xl font-bold text-black mb-6" style={{ fontFamily: 'Jura' }}>Send Message</h2>
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-4">
+                      <button
+                        onClick={openWhatsAppWeb}
+                        className="inline-flex items-center px-6 py-3 rounded-lg text-white text-base font-medium"
+                        style={{ background: '#25D366', fontFamily: 'Jura' }}
+                      >
+                        <ExternalLink className="h-5 w-5 mr-2" />
+                        Open WhatsApp Web
+                      </button>
+                      <button
+                        onClick={copyPhoneNumbers}
+                        disabled={selectedGroups.length === 0}
+                        className="inline-flex items-center px-6 py-3 rounded-lg text-gray-700 text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{ background: '#F2F2F2', fontFamily: 'Jura' }}
+                      >
+                        <Copy className="h-5 w-5 mr-2" />
+                        Copy Phone Numbers
+                      </button>
+                    </div>
+                    
+                    <div className="p-4 rounded-lg" style={{ background: 'rgba(255, 193, 7, 0.1)' }}>
+                      <h3 className="text-sm font-medium text-black mb-2" style={{ fontFamily: 'Jura' }}>How to send messages:</h3>
+                      <ol className="text-sm text-black space-y-1 list-decimal list-inside" style={{ fontFamily: 'Jura' }}>
+                        <li>Click "Open WhatsApp Web" to open WhatsApp in a new tab</li>
+                        <li>Click "Copy Phone Numbers" to copy all recipient numbers</li>
+                        <li>In WhatsApp Web, paste the numbers and send your message to each contact</li>
+                        <li>This is a manual process as per requirements</li>
+                      </ol>
+                    </div>
+
+                    <button
+                      onClick={sendMessage}
+                      disabled={!message.trim() || selectedGroups.length === 0}
+                      className="w-full inline-flex justify-center items-center px-6 py-3 rounded-lg text-white text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{ background: '#2C2696', fontFamily: 'Jura' }}
+                    >
+                      <MessageSquare className="h-5 w-5 mr-2" />
+                      Log Message (for tracking)
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Dashboard Tab */}
+            {activeTab === 'dashboard' && (
+              <div className="space-y-6">
+                {/* Statistics Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="bg-white rounded-lg p-6" style={{ background: 'rgba(215, 181, 109, 0.1)' }}>
+                    <div className="flex items-center">
+                      <div className="p-3 rounded-full" style={{ background: 'rgba(59, 130, 246, 0.1)' }}>
+                        <Users className="h-6 w-6" style={{ color: '#3B82F6' }} />
+                      </div>
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600" style={{ fontFamily: 'Jura' }}>Total Contacts</p>
+                        <p className="text-2xl font-semibold text-black" style={{ fontFamily: 'Jura' }}>{stats.totalContacts}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white rounded-lg p-6" style={{ background: 'rgba(215, 181, 109, 0.1)' }}>
+                    <div className="flex items-center">
+                      <div className="p-3 rounded-full" style={{ background: 'rgba(34, 197, 94, 0.1)' }}>
+                        <FileText className="h-6 w-6" style={{ color: '#22C55E' }} />
+                      </div>
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600" style={{ fontFamily: 'Jura' }}>Total Groups</p>
+                        <p className="text-2xl font-semibold text-black" style={{ fontFamily: 'Jura' }}>{stats.totalGroups}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white rounded-lg p-6" style={{ background: 'rgba(215, 181, 109, 0.1)' }}>
+                    <div className="flex items-center">
+                      <div className="p-3 rounded-full" style={{ background: 'rgba(168, 85, 247, 0.1)' }}>
+                        <MessageSquare className="h-6 w-6" style={{ color: '#A855F7' }} />
+                      </div>
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600" style={{ fontFamily: 'Jura' }}>Messages Sent</p>
+                        <p className="text-2xl font-semibold text-black" style={{ fontFamily: 'Jura' }}>{stats.totalMessages}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white rounded-lg p-6" style={{ background: 'rgba(215, 181, 109, 0.1)' }}>
+                    <div className="flex items-center">
+                      <div className="p-3 rounded-full" style={{ background: 'rgba(249, 115, 22, 0.1)' }}>
+                        <BarChart3 className="h-6 w-6" style={{ color: '#F97316' }} />
+                      </div>
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600" style={{ fontFamily: 'Jura' }}>Engagement Rate</p>
+                        <p className="text-2xl font-semibold text-black" style={{ fontFamily: 'Jura' }}>{stats.engagementRate}%</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recent Activity */}
+                <div className="bg-white rounded-lg" style={{ background: 'rgba(215, 181, 109, 0.1)' }}>
+                  <div className="p-6 border-b" style={{ background: 'rgba(44, 38, 150, 0.1)' }}>
+                    <h2 className="text-2xl font-bold text-black" style={{ fontFamily: 'Jura' }}>Recent Message Activity</h2>
+                  </div>
+                  <div className="p-6">
+                    {messageLogs.length > 0 ? (
+                      <div className="space-y-4">
+                        {messageLogs.slice(0, 5).map(log => (
+                          <div key={log.id} className="border border-gray-200 rounded-lg p-4">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <p className="text-sm font-medium text-black" style={{ fontFamily: 'Jura' }}>{log.message}</p>
+                                <p className="text-xs text-gray-500 mt-1" style={{ fontFamily: 'Jura' }}>
+                                  Sent to {log.groups.join(', ')} ({log.contactCount} contacts)
+                                </p>
+                              </div>
+                              <span className="text-xs text-gray-500" style={{ fontFamily: 'Jura' }}>
+                                {new Date(log.sentAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-12">
+                        <MessageSquare className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                        <p className="text-gray-500" style={{ fontFamily: 'Jura' }}>No messages sent yet</p>
+                        <p className="text-sm text-gray-400" style={{ fontFamily: 'Jura' }}>Go to the Messages tab to send your first message</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Data Management */}
+                <div className="bg-white rounded-lg p-6" style={{ background: 'rgba(215, 181, 109, 0.1)' }}>
+                  <h2 className="text-2xl font-bold text-black mb-6" style={{ fontFamily: 'Jura' }}>Data Management</h2>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                      <div>
+                        <h3 className="font-medium text-black" style={{ fontFamily: 'Jura' }}>Export Data</h3>
+                        <p className="text-sm text-gray-500" style={{ fontFamily: 'Jura' }}>Download your contacts and groups as CSV files</p>
+                      </div>
+                      <button
+                        onClick={exportContactsToCSV}
+                        className="inline-flex items-center px-4 py-2 rounded-lg text-gray-700 text-sm font-medium"
+                        style={{ background: '#F2F2F2', fontFamily: 'Jura' }}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Export Contacts
+                      </button>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                      <div>
+                        <h3 className="font-medium text-black" style={{ fontFamily: 'Jura' }}>Clear All Data</h3>
+                        <p className="text-sm text-gray-500" style={{ fontFamily: 'Jura' }}>Remove all contacts, groups, and message logs</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (window.confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
+                            setContacts([]);
+                            setGroups([]);
+                            setMessageLogs([]);
+                            localStorage.removeItem('mr_contacts');
+                            localStorage.removeItem('mr_groups');
+                            localStorage.removeItem('mr_message_logs');
+                          }
+                        }}
+                        className="inline-flex items-center px-4 py-2 rounded-lg text-red-700 text-sm font-medium"
+                        style={{ background: 'rgba(239, 68, 68, 0.1)', fontFamily: 'Jura' }}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Clear All Data
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
