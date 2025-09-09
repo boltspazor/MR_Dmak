@@ -35,13 +35,13 @@ export class ExcelService {
           row[header] = values[index] || '';
         });
         
-        // Map to expected format
+        // Map to expected format - handle various header formats
         data.push({
-          mrId: row.mrid || row.id || `MR${i}`,
-          firstName: row.firstname || row.fname || '',
-          lastName: row.lastname || row.lname || '',
-          groupName: row.groupname || row.group || '',
-          marketingManager: row.marketingmanager || row.manager || '',
+          mrId: row['mr id'] || row.mrid || row.id || `MR${i}`,
+          firstName: row['first name'] || row.firstname || row.fname || '',
+          lastName: row['last name'] || row.lastname || row.lname || '',
+          groupName: row['group'] || row.groupname || row.group || '',
+          marketingManager: row['marketing manager'] || row.marketingmanager || row.manager || 'Default Manager', // Default value
           phone: formatPhoneNumber(row.phone || ''),
           email: row.email || '',
           address: row.address || '',
@@ -74,13 +74,13 @@ export class ExcelService {
           normalizedRow[normalizedKey] = row[key];
         });
         
-        // Map to expected format
+        // Map to expected format - handle various header formats
         return {
           mrId: normalizedRow.mrid || normalizedRow.id || `MR${index + 1}`,
           firstName: normalizedRow.firstname || normalizedRow.fname || '',
           lastName: normalizedRow.lastname || normalizedRow.lname || '',
           groupName: normalizedRow.groupname || normalizedRow.group || '',
-          marketingManager: normalizedRow.marketingmanager || normalizedRow.manager || '',
+          marketingManager: normalizedRow.marketingmanager || normalizedRow.manager || 'Default Manager', // Default value
           phone: formatPhoneNumber(normalizedRow.phone || ''),
           email: normalizedRow.email || '',
           address: normalizedRow.address || '',
@@ -100,13 +100,25 @@ export class ExcelService {
     data.forEach((row, index) => {
       const rowErrors: string[] = [];
       
-      if (!row.mrId) rowErrors.push(`Row ${index + 1}: MR ID is required`);
-      if (!row.firstName) rowErrors.push(`Row ${index + 1}: First Name is required`);
-      if (!row.lastName) rowErrors.push(`Row ${index + 1}: Last Name is required`);
-      if (!row.groupName) rowErrors.push(`Row ${index + 1}: Group Name is required`);
-      if (!row.marketingManager) rowErrors.push(`Row ${index + 1}: Marketing Manager is required`);
-      if (!row.phone || !isValidPhoneNumber(row.phone)) {
-        rowErrors.push(`Row ${index + 1}: Valid phone number is required`);
+      if (!row.mrId || row.mrId.trim() === '') {
+        rowErrors.push(`Row ${index + 1}: MR ID is required`);
+      }
+      if (!row.firstName || row.firstName.trim() === '') {
+        rowErrors.push(`Row ${index + 1}: First Name is required`);
+      }
+      if (!row.lastName || row.lastName.trim() === '') {
+        rowErrors.push(`Row ${index + 1}: Last Name is required`);
+      }
+      if (!row.groupName || row.groupName.trim() === '') {
+        rowErrors.push(`Row ${index + 1}: Group Name is required`);
+      }
+      if (!row.marketingManager || row.marketingManager.trim() === '') {
+        rowErrors.push(`Row ${index + 1}: Marketing Manager is required`);
+      }
+      if (!row.phone || row.phone.trim() === '') {
+        rowErrors.push(`Row ${index + 1}: Phone number is required`);
+      } else if (!isValidPhoneNumber(row.phone)) {
+        rowErrors.push(`Row ${index + 1}: Invalid phone number format (${row.phone}). Expected format: +91XXXXXXXXXX`);
       }
       
       if (rowErrors.length === 0) {
@@ -114,6 +126,14 @@ export class ExcelService {
       } else {
         errors.push(...rowErrors);
       }
+    });
+
+    // Log validation results for debugging
+    logger.info('MR Data Validation Results', {
+      totalRows: data.length,
+      validRows: valid.length,
+      errorRows: errors.length,
+      errors: errors.slice(0, 5) // Log first 5 errors
     });
 
     return { valid, errors };
@@ -125,23 +145,17 @@ export class ExcelService {
         'MR ID': 'MR001',
         'First Name': 'John',
         'Last Name': 'Doe',
-        'Group Name': 'North Region',
-        'Marketing Manager': 'Manager Name',
+        'Group': 'North Zone',
         'Phone': '+919876543210',
-        'Email': 'john.doe@example.com',
-        'Address': '123 Main St, City, State',
-        'Comments': 'Sample MR data'
+        'Comments': 'Senior MR'
       },
       {
         'MR ID': 'MR002',
         'First Name': 'Jane',
         'Last Name': 'Smith',
-        'Group Name': 'South Region',
-        'Marketing Manager': 'Manager Name',
+        'Group': 'South Zone',
         'Phone': '+919876543211',
-        'Email': 'jane.smith@example.com',
-        'Address': '456 Oak Ave, City, State',
-        'Comments': 'Another sample'
+        'Comments': ''
       }
     ];
 
@@ -150,5 +164,20 @@ export class ExcelService {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'MR Template');
     
     return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+  }
+
+  generateCSVTemplate(): string {
+    const headers = ['MR ID', 'First Name', 'Last Name', 'Group', 'Phone', 'Comments'];
+    const sampleData = [
+      ['MR001', 'John', 'Doe', 'North Zone', '+919876543210', 'Senior MR'],
+      ['MR002', 'Jane', 'Smith', 'South Zone', '+919876543211', '']
+    ];
+    
+    const csvContent = [
+      headers.join(','),
+      ...sampleData.map(row => row.join(','))
+    ].join('\n');
+    
+    return csvContent;
   }
 }

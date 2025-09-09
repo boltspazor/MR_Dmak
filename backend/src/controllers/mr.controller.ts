@@ -201,16 +201,11 @@ export class MRController {
 
   async downloadCSVTemplate(req: Request, res: Response) {
     try {
-      const csvContent = [
-        'mrId,firstName,lastName,phone,email,groupName,marketingManager,comments',
-        'MR001,John,Doe,+919876543210,john.doe@example.com,North Zone,Super Admin,Senior MR with 5 years experience',
-        'MR002,Jane,Smith,+919876543211,jane.smith@example.com,South Zone,Super Admin,New hire',
-        'MR003,Mike,Johnson,+919876543212,mike.johnson@example.com,East Zone,Super Admin,Specialist in cardiology'
-      ].join('\n');
+      const template = excelService.generateCSVTemplate();
       
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', 'attachment; filename=mr-template.csv');
-      return res.send(csvContent);
+      return res.send(template);
     } catch (error: any) {
       logger.error('CSV template download failed', { error: error.message });
       return res.status(500).json({ error: 'Failed to generate CSV template' });
