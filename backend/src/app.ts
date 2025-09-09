@@ -96,6 +96,10 @@ app.get('/api/webhook', async (req, res) => {
       token as string, 
       challenge as string
     );
+<<<<<<< Updated upstream
+=======
+    
+>>>>>>> Stashed changes
 
     console.log('Webhook verification result:', result);
 

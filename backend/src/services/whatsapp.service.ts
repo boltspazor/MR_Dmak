@@ -113,16 +113,22 @@ export class WhatsAppService {
       return challenge;
     }
     
+<<<<<<< Updated upstream
 <<<<<<< HEAD
     logger.warn('Webhook verification failed', { mode, token: token ? `${token.substring(0, 4)}...` : 'undefined' });
 =======
+=======
+>>>>>>> Stashed changes
     logger.warn('Webhook verification failed', { 
       mode, 
       token: token ? `${token.substring(0, 4)}...` : 'undefined',
       expectedToken: verifyToken ? `${verifyToken.substring(0, 4)}...` : 'undefined',
       tokensMatch: token === verifyToken
     });
+<<<<<<< Updated upstream
 >>>>>>> origin/main
+=======
+>>>>>>> Stashed changes
     return null;
   }
 
