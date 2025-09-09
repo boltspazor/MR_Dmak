@@ -98,7 +98,9 @@ export class WhatsAppService {
       mode, 
       token: token ? `${token.substring(0, 4)}...` : 'undefined',
       hasVerifyToken: !!verifyToken,
-      challenge: challenge ? `${challenge.substring(0, 4)}...` : 'undefined'
+      verifyTokenValue: verifyToken ? `${verifyToken.substring(0, 4)}...` : 'undefined',
+      challenge: challenge ? `${challenge.substring(0, 4)}...` : 'undefined',
+      tokensMatch: token === verifyToken
     });
     
     if (!verifyToken) {
@@ -111,7 +113,12 @@ export class WhatsAppService {
       return challenge;
     }
     
-    logger.warn('Webhook verification failed', { mode, token: token ? `${token.substring(0, 4)}...` : 'undefined' });
+    logger.warn('Webhook verification failed', { 
+      mode, 
+      token: token ? `${token.substring(0, 4)}...` : 'undefined',
+      expectedToken: verifyToken ? `${verifyToken.substring(0, 4)}...` : 'undefined',
+      tokensMatch: token === verifyToken
+    });
     return null;
   }
 
@@ -146,5 +153,6 @@ export class WhatsAppService {
         // Update message log status in database
       });
     }
+    
   }
 }
