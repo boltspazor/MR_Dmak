@@ -27,6 +27,9 @@ export class ExcelService {
       const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
       const data: MRData[] = [];
       
+      // Debug logging
+      logger.info('CSV Headers detected', { headers });
+      
       for (let i = 1; i < lines.length; i++) {
         const values = lines[i].split(',').map(v => v.trim());
         const row: any = {};
@@ -35,18 +38,31 @@ export class ExcelService {
           row[header] = values[index] || '';
         });
         
+        // Debug logging for each row
+        logger.info(`Parsing row ${i}`, { row, values });
+        
         // Map to expected format - handle various header formats
-        data.push({
-          mrId: row['mr id'] || row.mrid || row.id || `MR${i}`,
-          firstName: row['first name'] || row.firstname || row.fname || '',
-          lastName: row['last name'] || row.lastname || row.lname || '',
-          groupName: row['group'] || row.groupname || row.group || '',
+        const fullName = row['name'] || row.name || '';
+        const nameParts = fullName.split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+        
+        const parsedData = {
+          mrId: row['id'] || row['mr id'] || row.mrid || row.id || `MR${i}`,
+          firstName: firstName,
+          lastName: lastName,
+          groupName: row['zone'] || row['group'] || row.groupname || row.group || '',
           marketingManager: row['marketing manager'] || row.marketingmanager || row.manager || 'Default Manager', // Default value
           phone: formatPhoneNumber(row.phone || ''),
           email: row.email || '',
           address: row.address || '',
-          comments: row.comments || '',
-        });
+          comments: row.comments || row.designation || '',
+        };
+        
+        // Debug logging for parsed data
+        logger.info(`Parsed data for row ${i}`, { parsedData });
+        
+        data.push(parsedData);
       }
       
       return data;
@@ -75,16 +91,21 @@ export class ExcelService {
         });
         
         // Map to expected format - handle various header formats
+        const fullName = normalizedRow.name || '';
+        const nameParts = fullName.split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+        
         return {
           mrId: normalizedRow.mrid || normalizedRow.id || `MR${index + 1}`,
-          firstName: normalizedRow.firstname || normalizedRow.fname || '',
-          lastName: normalizedRow.lastname || normalizedRow.lname || '',
-          groupName: normalizedRow.groupname || normalizedRow.group || '',
+          firstName: firstName,
+          lastName: lastName,
+          groupName: normalizedRow.zone || normalizedRow.groupname || normalizedRow.group || '',
           marketingManager: normalizedRow.marketingmanager || normalizedRow.manager || 'Default Manager', // Default value
           phone: formatPhoneNumber(normalizedRow.phone || ''),
           email: normalizedRow.email || '',
           address: normalizedRow.address || '',
-          comments: normalizedRow.comments || '',
+          comments: normalizedRow.comments || normalizedRow.designation || '',
         };
       });
     } catch (error) {
@@ -142,20 +163,18 @@ export class ExcelService {
   generateExcelTemplate(): Buffer {
     const templateData = [
       {
-        'MR ID': 'MR001',
-        'First Name': 'John',
-        'Last Name': 'Doe',
-        'Group': 'North Zone',
+        'ID': 'MR001',
+        'Name': 'Prabhjeet Singh',
         'Phone': '+919876543210',
-        'Comments': 'Senior MR'
+        'Zone': 'North Zone',
+        'Designation': 'Senior'
       },
       {
-        'MR ID': 'MR002',
-        'First Name': 'Jane',
-        'Last Name': 'Smith',
-        'Group': 'South Zone',
+        'ID': 'MR002',
+        'Name': 'Vidyanshu Giri',
         'Phone': '+919876543211',
-        'Comments': ''
+        'Zone': 'South Zone',
+        'Designation': 'Senior'
       }
     ];
 
@@ -167,10 +186,10 @@ export class ExcelService {
   }
 
   generateCSVTemplate(): string {
-    const headers = ['MR ID', 'First Name', 'Last Name', 'Group', 'Phone', 'Comments'];
+    const headers = ['ID', 'Name', 'Phone', 'Zone', 'Designation'];
     const sampleData = [
-      ['MR001', 'John', 'Doe', 'North Zone', '+919876543210', 'Senior MR'],
-      ['MR002', 'Jane', 'Smith', 'South Zone', '+919876543211', '']
+      ['MR001', 'Prabhjeet Singh', '+919876543210', 'North Zone', 'Senior'],
+      ['MR002', 'Vidyanshu Giri', '+919876543211', 'South Zone', 'Senior']
     ];
     
     const csvContent = [
