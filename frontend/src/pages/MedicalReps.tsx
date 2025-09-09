@@ -5,21 +5,16 @@ import {
   Edit, 
   Trash2, 
   Search, 
-  Download,
-  Users,
-  BarChart3,
-  Activity,
-  LogOut,
-  Shield,
-  FileText,
-  MessageSquare
+  Download
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { MedicalRepresentative, Group } from '../types';
 import Sidebar from '../components/Sidebar';
+import { useAuth } from '../contexts/AuthContext';
 
 const MedicalReps: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [mrs, setMrs] = useState<MedicalRepresentative[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
@@ -264,7 +259,7 @@ const MedicalReps: React.FC = () => {
         activePage="mrs"
         onNavigate={handleSidebarNavigation}
         onLogout={handleLogout}
-        userName="Marketing Manager"
+        userName={user?.name || "User"}
       />
 
       {/* Main Content */}

@@ -23,9 +23,11 @@ import {
 import { api } from '../lib/api';
 import { Campaign, Group } from '../types';
 import Sidebar from '../components/Sidebar';
+import { useAuth } from '../contexts/AuthContext';
 
 const Campaigns: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
@@ -291,7 +293,7 @@ const Campaigns: React.FC = () => {
         activePage="campaigns"
         onNavigate={handleSidebarNavigation}
         onLogout={handleLogout}
-        userName="Marketing Manager"
+        userName={user?.name || "User"}
       />
 
       {/* Main Content */}

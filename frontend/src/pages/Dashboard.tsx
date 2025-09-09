@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   MessageSquare, 
   BarChart3,
@@ -28,6 +29,7 @@ interface CampaignRecord {
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [campaigns, setCampaigns] = useState<CampaignRecord[]>([]);
   const [filteredCampaigns, setFilteredCampaigns] = useState<CampaignRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -291,7 +293,7 @@ const Dashboard: React.FC = () => {
         activePage="dashboard"
         onNavigate={handleSidebarNavigation}
         onLogout={handleLogout}
-        userName="Marketing Manager"
+        userName={user?.name || "User"}
       />
 
       {/* Main Content */}

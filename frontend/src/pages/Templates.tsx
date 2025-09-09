@@ -23,9 +23,11 @@ import {
 import { api } from '../lib/api';
 import { Template, TemplateStats } from '../types';
 import Sidebar from '../components/Sidebar';
+import { useAuth } from '../contexts/AuthContext';
 
 const Templates: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [stats, setStats] = useState<TemplateStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -251,7 +253,7 @@ const Templates: React.FC = () => {
         activePage="templates"
         onNavigate={handleSidebarNavigation}
         onLogout={handleLogout}
-        userName="Marketing Manager"
+        userName={user?.name || "User"}
       />
 
       {/* Main Content */}

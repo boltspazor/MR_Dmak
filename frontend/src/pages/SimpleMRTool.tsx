@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   Users, 
   MessageSquare, 
@@ -9,8 +10,7 @@ import {
   BarChart3,
   X,
   Upload,
-  Send,
-  Image as ImageIcon
+  Send
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
@@ -103,6 +103,7 @@ const mockApi = {
 
 const SimpleMRTool: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'contacts' | 'groups' | 'reports'>('contacts');
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
@@ -558,7 +559,7 @@ const SimpleMRTool: React.FC = () => {
         activePage="dmak"
         onNavigate={handleSidebarNavigation}
         onLogout={handleLogout}
-        userName="User Name"
+        userName={user?.name || "User"}
       />
 
       {/* Main Content */}

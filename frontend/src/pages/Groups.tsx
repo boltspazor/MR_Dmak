@@ -10,9 +10,11 @@ import {
 import { api } from '../lib/api';
 import { Group } from '../types';
 import Sidebar from '../components/Sidebar';
+import { useAuth } from '../contexts/AuthContext';
 
 const Groups: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -147,7 +149,7 @@ const Groups: React.FC = () => {
         activePage="groups"
         onNavigate={handleSidebarNavigation}
         onLogout={handleLogout}
-        userName="Marketing Manager"
+        userName={user?.name || "User"}
       />
 
       {/* Main Content */}
