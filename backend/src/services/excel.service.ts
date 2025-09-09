@@ -51,7 +51,7 @@ export class ExcelService {
           mrId: row['id'] || row['mr id'] || row.mrid || row.id || `MR${i}`,
           firstName: firstName,
           lastName: lastName,
-          groupName: row['zone'] || row['group'] || row.groupname || row.group || '',
+          groupName: row['zone'] || row['group'] || row.groupname || row.group || 'Default Group', // Default group when not provided
           marketingManager: row['marketing manager'] || row.marketingmanager || row.manager || 'Default Manager', // Default value
           phone: formatPhoneNumber(row.phone || ''),
           email: row.email || '',
@@ -100,7 +100,7 @@ export class ExcelService {
           mrId: normalizedRow.mrid || normalizedRow.id || `MR${index + 1}`,
           firstName: firstName,
           lastName: lastName,
-          groupName: normalizedRow.zone || normalizedRow.groupname || normalizedRow.group || '',
+          groupName: normalizedRow.zone || normalizedRow.groupname || normalizedRow.group || 'Default Group', // Default group when not provided
           marketingManager: normalizedRow.marketingmanager || normalizedRow.manager || 'Default Manager', // Default value
           phone: formatPhoneNumber(normalizedRow.phone || ''),
           email: normalizedRow.email || '',
@@ -166,14 +166,12 @@ export class ExcelService {
         'ID': 'MR001',
         'Name': 'Prabhjeet Singh',
         'Phone': '+919876543210',
-        'Zone': 'North Zone',
         'Designation': 'Senior'
       },
       {
         'ID': 'MR002',
         'Name': 'Vidyanshu Giri',
         'Phone': '+919876543211',
-        'Zone': 'South Zone',
         'Designation': 'Senior'
       }
     ];
@@ -186,10 +184,10 @@ export class ExcelService {
   }
 
   generateCSVTemplate(): string {
-    const headers = ['ID', 'Name', 'Phone', 'Zone', 'Designation'];
+    const headers = ['ID', 'Name', 'Phone', 'Designation'];
     const sampleData = [
-      ['MR001', 'Prabhjeet Singh', '+919876543210', 'North Zone', 'Senior'],
-      ['MR002', 'Vidyanshu Giri', '+919876543211', 'South Zone', 'Senior']
+      ['MR001', 'Prabhjeet Singh', '+919876543210', 'Senior'],
+      ['MR002', 'Vidyanshu Giri', '+919876543211', 'Senior']
     ];
     
     const csvContent = [
