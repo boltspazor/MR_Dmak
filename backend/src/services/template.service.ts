@@ -36,6 +36,7 @@ export class TemplateService {
     } catch (error) {
       logger.error('Error processing template:', { templateId, error });
       throw error;
+
       
     }
   }
