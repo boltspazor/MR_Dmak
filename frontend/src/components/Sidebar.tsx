@@ -25,12 +25,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3, route: '/dashboard' },
     { id: 'dmak', label: 'DMak', icon: BarChart3, route: '/simple-mr-tool' },
-    { id: 'groups', label: 'Groups', icon: Users, route: '/groups' },
-    { id: 'mrs', label: 'Medical Items', icon: FileText, route: '/mrs' },
-    { id: 'campaigns', label: 'Campaigns', icon: MessageSquare, route: '/campaigns' },
+    { id: 'mrs', label: 'MR Management', icon: Users, route: '/mrs' },
     { id: 'templates', label: 'Templates', icon: FileText, route: '/templates' },
-    { id: 'super-admin', label: 'Manager', icon: Shield, route: '/super-admin' },
-    { id: 'reports', label: 'Reports', icon: Activity, route: '/reports' },
+    { id: 'campaigns', label: 'Campaigns', icon: MessageSquare, route: '/campaigns' },
+    { id: 'super-admin', label: 'Super Admin', icon: Shield, route: '/super-admin' },
   ];
 
   return (
@@ -38,16 +36,13 @@ const Sidebar: React.FC<SidebarProps> = ({
       className="fixed left-0 top-0 w-23 h-screen" 
       style={{ 
         width: '92px',
-        background: 'linear-gradient(180deg, #6994AE 0%, #ffffff 100%)'
+        background: 'linear-gradient(180deg, #3B82F6 0%, #ffffff 100%)'
       }}
     >
       <div className="flex flex-col items-center py-4 space-y-2">
         {/* User Name */}
         <div className="text-white text-xs font-semibold mb-4 text-center px-2">
-          <div className="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center mb-2">
-            <span className="text-white font-bold">{userName.charAt(0).toUpperCase()}</span>
-          </div>
-          <div className="text-xs">{userName}</div>
+          <div className="text-xs font-medium">{userName}</div>
         </div>
 
         {/* Menu Items */}

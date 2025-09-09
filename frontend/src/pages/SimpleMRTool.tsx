@@ -3,19 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Users, 
   MessageSquare, 
-  Download, 
   Trash2, 
   Search,
   FileText,
-  Copy,
-  ExternalLink,
-  BarChart3,
-  ChevronDown,
-  X
+  BarChart3
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import CommonFeatures from '../components/CommonFeatures';
+import AddMRDialog from '../components/AddMRDialog';
 
 interface Contact {
   id: string;
@@ -103,28 +99,16 @@ const mockApi = {
 
 const SimpleMRTool: React.FC = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'contacts' | 'messages' | 'dashboard'>('contacts');
+  const [activeTab, setActiveTab] = useState<'contacts' | 'groups' | 'reports'>('contacts');
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [messageLogs, setMessageLogs] = useState<MessageLog[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
-  const [message, setMessage] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(true);
   const [sortField, setSortField] = useState<keyof Contact>('mrId');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [isAddMRDialogOpen, setIsAddMRDialogOpen] = useState(false);
 
   // Form states
-  const [newContact, setNewContact] = useState({
-    mrId: '',
-    firstName: '',
-    lastName: '',
-    phone: '',
-    group: '',
-    comments: ''
-  });
-
   const [newGroup, setNewGroup] = useState({
     name: ''
   });
@@ -132,7 +116,6 @@ const SimpleMRTool: React.FC = () => {
   // Load data on component mount
   useEffect(() => {
     const loadData = async () => {
-      setLoading(true);
       try {
         await Promise.all([
           fetchContactsFromBackend(),
@@ -150,8 +133,8 @@ const SimpleMRTool: React.FC = () => {
           }
         ];
         setMessageLogs(savedMessageLogs);
-      } finally {
-        setLoading(false);
+      } catch (error) {
+        console.error('Error loading data:', error);
       }
     };
     
@@ -216,55 +199,36 @@ const SimpleMRTool: React.FC = () => {
   }, [contacts]);
 
   // Contact management functions
-  const addContact = async () => {
-    if (!newContact.mrId || !newContact.firstName || !newContact.lastName || !newContact.phone || !newContact.group) {
-      alert('Please fill in all required fields');
-      return;
-    }
 
+  const handleAddMR = async (contactData: Omit<Contact, 'id'>) => {
     try {
       // Find the group ID by name
-      const selectedGroup = groups.find(g => g.name === newContact.group);
+      const selectedGroup = groups.find(g => g.name === contactData.group);
       if (!selectedGroup) {
         alert('Selected group not found');
         return;
       }
 
       await mockApi.post('/mrs', {
-        mrId: newContact.mrId,
-        firstName: newContact.firstName,
-        lastName: newContact.lastName,
-        phone: newContact.phone,
+        mrId: contactData.mrId,
+        firstName: contactData.firstName,
+        lastName: contactData.lastName,
+        phone: contactData.phone,
         groupId: selectedGroup.id,
-        comments: newContact.comments
+        comments: contactData.comments
       });
 
       // Add to local state (since we're using mock API)
       const newContactData: Contact = {
         id: Date.now().toString(),
-        mrId: newContact.mrId,
-        firstName: newContact.firstName,
-        lastName: newContact.lastName,
-        phone: newContact.phone,
-        group: newContact.group,
-        comments: newContact.comments
+        ...contactData
       };
       
       setContacts([...contacts, newContactData]);
-      
-      setNewContact({
-        mrId: '',
-        firstName: '',
-        lastName: '',
-        phone: '',
-        group: '',
-        comments: ''
-      });
-      
-      alert('Contact added successfully!');
+      alert('MR added successfully!');
     } catch (error: any) {
-      console.error('Error adding contact:', error);
-      alert('Failed to add contact');
+      console.error('Error adding MR:', error);
+      alert('Failed to add MR');
     }
   };
 
@@ -434,7 +398,6 @@ const SimpleMRTool: React.FC = () => {
       
       alert(`Bulk upload completed!\n\nCreated: ${created} MRs\nTotal Processed: ${lines.length - 1}${errors.length > 0 ? `\n\nErrors (${errors.length}):\n${errors.slice(0, 5).join('\n')}` : ''}`);
       
-      setSelectedFile(null);
       // Reset file input
       event.target.value = '';
     } catch (error: any) {
@@ -444,56 +407,6 @@ const SimpleMRTool: React.FC = () => {
   };
 
   // Message functions
-  const sendMessage = () => {
-    if (!message.trim()) {
-      alert('Please enter a message');
-      return;
-    }
-
-    if (selectedGroups.length === 0) {
-      alert('Please select at least one group');
-      return;
-    }
-
-    const targetContacts = contacts.filter(contact => 
-      selectedGroups.includes(contact.group)
-    );
-
-    if (targetContacts.length === 0) {
-      alert('No contacts found in selected groups');
-      return;
-    }
-
-    const messageLog: MessageLog = {
-      id: Date.now().toString(),
-      message: message.trim(),
-      groups: selectedGroups,
-      sentAt: new Date().toISOString(),
-      contactCount: targetContacts.length
-    };
-
-    setMessageLogs([messageLog, ...messageLogs]);
-    setMessage('');
-    setSelectedGroups([]);
-    alert('Message logged for tracking!');
-  };
-
-  const openWhatsAppWeb = () => {
-    window.open('https://web.whatsapp.com', '_blank');
-  };
-
-  const copyPhoneNumbers = () => {
-    const targetContacts = contacts.filter(contact => 
-      selectedGroups.includes(contact.group)
-    );
-
-    const phoneNumbers = targetContacts.map(contact => contact.phone).join('\n');
-    navigator.clipboard.writeText(phoneNumbers).then(() => {
-      alert('Phone numbers copied to clipboard!');
-    }).catch(() => {
-      alert('Failed to copy phone numbers. Please copy manually:\n\n' + phoneNumbers);
-    });
-  };
 
   const filteredContacts = contacts
     .filter(contact =>
@@ -592,7 +505,7 @@ const SimpleMRTool: React.FC = () => {
         
         {/* Tabs */}
         <div className="flex space-x-8 mt-6">
-          {['contacts', 'messages', 'dashboard'].map((tab) => (
+          {['contacts', 'groups', 'reports'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab as any)}
@@ -615,158 +528,46 @@ const SimpleMRTool: React.FC = () => {
             onExportPDF={exportContactsToPDF}
           >
             <div className="space-y-8">
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Left Column - Add New Contact */}
-                <div className="bg-white bg-opacity-40 rounded-lg p-6">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Add New Contact</h2>
+              {/* Action Buttons */}
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-gray-900">MR Management</h2>
+                <div className="flex space-x-4">
+                  <button
+                    onClick={() => setIsAddMRDialogOpen(true)}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
+                  >
+                    Add Individual MR
+                  </button>
                   
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">MR ID*</label>
-                      <input
-                        type="text"
-                        value={newContact.mrId}
-                        onChange={(e) => setNewContact({...newContact, mrId: e.target.value})}
-                        className="w-full px-3 py-3 rounded-lg border-0 bg-gray-100"
-                        placeholder="Enter MR ID"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">First Name*</label>
-                      <input
-                        type="text"
-                        value={newContact.firstName}
-                        onChange={(e) => setNewContact({...newContact, firstName: e.target.value})}
-                        className="w-full px-3 py-3 rounded-lg border-0 bg-gray-100"
-                        placeholder="Enter first name"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Last Name*</label>
-                      <input
-                        type="text"
-                        value={newContact.lastName}
-                        onChange={(e) => setNewContact({...newContact, lastName: e.target.value})}
-                        className="w-full px-3 py-3 rounded-lg border-0 bg-gray-100"
-                        placeholder="Enter last name"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number*</label>
-                      <input
-                        type="tel"
-                        value={newContact.phone}
-                        onChange={(e) => setNewContact({...newContact, phone: e.target.value})}
-                        className="w-full px-3 py-3 rounded-lg border-0 bg-gray-100"
-                        placeholder="Enter phone number"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Select Group*</label>
-                      <div className="relative">
-                        <select
-                          value={newContact.group}
-                          onChange={(e) => setNewContact({...newContact, group: e.target.value})}
-                          className="w-full px-3 py-3 rounded-lg border-0 bg-gray-100 appearance-none"
-                        >
-                          <option value="">Select a group</option>
-                          {groups.map(group => (
-                            <option key={group.id} value={group.name}>{group.name}</option>
-                          ))}
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Comments</label>
-                      <textarea
-                        value={newContact.comments}
-                        onChange={(e) => setNewContact({...newContact, comments: e.target.value})}
-                        rows={3}
-                        className="w-full px-3 py-3 rounded-lg border-0 bg-gray-100"
-                        placeholder="Enter comments"
-                      />
-                    </div>
-                    
-                    <button
-                      onClick={addContact}
-                      className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="file"
+                      accept=".csv"
+                      onChange={handleCSVImport}
+                      className="hidden"
+                      id="csv-upload"
+                    />
+                    <label
+                      htmlFor="csv-upload"
+                      className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-semibold cursor-pointer hover:bg-indigo-200"
                     >
-                      Add Contact
+                      Import CSV
+                    </label>
+                    <button
+                      onClick={downloadCSVTemplate}
+                      className="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-semibold hover:bg-gray-900"
+                    >
+                      Download Template
                     </button>
                   </div>
                 </div>
+              </div>
 
-                {/* Right Column - Import CSV and Manage Groups */}
-                <div className="space-y-6">
-                  {/* Import Contacts from CSV */}
-                  <div className="bg-white bg-opacity-40 rounded-lg p-6">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Import Contacts from CSV</h2>
-                    
-                    <div className="space-y-4">
-                      <div className="flex items-center space-x-4">
-                        <input
-                          type="file"
-                          accept=".csv"
-                          onChange={handleCSVImport}
-                          className="hidden"
-                          id="csv-upload"
-                        />
-                        <label
-                          htmlFor="csv-upload"
-                          className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-full text-sm font-semibold cursor-pointer hover:bg-indigo-200"
-                        >
-                          Choose File
-                        </label>
-                        <span className="text-sm text-gray-700">
-                          {selectedFile ? selectedFile.name : 'No File Chosen'}
-                        </span>
-                      </div>
-                      
-                      <p className="text-sm text-gray-700">
-                        CSV format: MR ID, First Name, Last Name, Phone Number, Group, Comments
-                      </p>
-                      
-                      <button
-                        onClick={downloadCSVTemplate}
-                        className="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-semibold hover:bg-gray-900"
-                      >
-                        Download Template
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Manage Groups */}
-                  <div className="bg-white bg-opacity-40 rounded-lg p-6">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Manage Groups</h2>
-                    
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">New Group Name</label>
-                        <input
-                          type="text"
-                          value={newGroup.name}
-                          onChange={(e) => setNewGroup({name: e.target.value})}
-                          className="w-full px-3 py-3 rounded-lg border-0 bg-gray-100"
-                          placeholder="Enter group name"
-                        />
-                      </div>
-                      
-                      <button
-                        onClick={addGroup}
-                        className="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-semibold hover:bg-gray-900"
-                      >
-                        Add Group
-                      </button>
-                    </div>
-                  </div>
-                </div>
+              {/* CSV Import Info */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-700">
+                  <strong>CSV Format:</strong> MR ID, First Name, Last Name, Phone Number, Group, Comments
+                </p>
               </div>
 
               {/* Contacts Table */}
@@ -900,215 +701,114 @@ const SimpleMRTool: React.FC = () => {
           </CommonFeatures>
         )}
 
-        {/* Messages Tab */}
-        {activeTab === 'messages' && (
-          <div className="bg-white bg-opacity-60 backdrop-blur-sm rounded-xl p-6 min-h-96">
+        {/* Groups Tab */}
+        {activeTab === 'groups' && (
+          <CommonFeatures
+            summaryItems={summaryItems}
+            onExportCSV={exportContactsToCSV}
+            onExportPDF={exportContactsToPDF}
+          >
             <div className="space-y-6">
-              {loading ? (
-                <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-                  <p className="text-gray-600">Loading contacts and groups...</p>
-                </div>
-              ) : (
-                <>
-                  {/* Top Row - Two Cards Side by Side */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Select Target Groups Card */}
-                    <div className="bg-white bg-opacity-40 rounded-lg p-6">
-                      <h2 className="text-2xl font-bold text-gray-900 mb-6">Select Target Groups</h2>
-                      
-                      {/* Dropdown for Group Selection */}
-                      <div className="relative">
-                        <select
-                          value={selectedGroups[0] || ''}
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              setSelectedGroups([e.target.value]);
-                            } else {
-                              setSelectedGroups([]);
-                            }
-                          }}
-                          className="w-full px-4 py-3 rounded-lg border-0 bg-gray-100 appearance-none"
-                        >
-                          <option value="">Select a group</option>
-                          {groups.length > 0 ? (
-                            groups.map(group => (
-                              <option key={group.id} value={group.name}>{group.name}</option>
-                            ))
-                          ) : (
-                            <option value="" disabled>No groups available</option>
-                          )}
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                      </div>
-                      
-                      {/* Selected Groups Display Area */}
-                      <div className="mt-4 p-4 bg-gray-100 rounded-lg min-h-24">
-                        {selectedGroups.length > 0 ? (
-                          <div className="space-y-2">
-                            {selectedGroups.map(groupName => (
-                              <div key={groupName} className="flex items-center justify-between p-2 bg-white rounded-lg">
-                                <span className="text-sm font-medium text-gray-900">
-                                  {groupName}
-                                </span>
-                                <button
-                                  onClick={() => setSelectedGroups(selectedGroups.filter(g => g !== groupName))}
-                                  className="text-red-600 hover:text-red-800"
-                                >
-                                  <X className="h-4 w-4" />
-                                </button>
-                              </div>
-                            ))}
-                            <p className="text-xs text-gray-500">
-                              {contacts.filter(c => selectedGroups.includes(c.group)).length} contacts selected
-                            </p>
-                          </div>
-                        ) : (
-                          <p className="text-sm text-gray-500 text-center">
-                            No groups selected
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Compose Message Card */}
-                    <div className="bg-white bg-opacity-40 rounded-lg p-6">
-                      <h2 className="text-2xl font-bold text-gray-900 mb-6">Compose Message</h2>
-                      
-                      <textarea
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                        placeholder="Type your message here..."
-                        rows={6}
-                        maxLength={10000}
-                        className="w-full px-3 py-3 rounded-lg border-0 bg-gray-100 resize-none"
-                      />
-                      
-                      <div className="flex justify-between items-center mt-2">
-                        <span className={`text-sm ${message.length > 9000 ? 'text-red-600' : 'text-gray-500'}`}>
-                          {message.length}/10,000 Characters
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          {selectedGroups.length > 0 ? `${contacts.filter(c => selectedGroups.includes(c.group)).length} recipients` : 'No Groups Selected'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Bottom Section - Send Messages */}
-                  <div className="bg-white bg-opacity-40 rounded-lg p-6">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Send Messages</h2>
-                    
-                    <div className="space-y-4">
-                      {/* Action Buttons */}
-                      <div className="flex items-center space-x-4">
-                        <button
-                          onClick={openWhatsAppWeb}
-                          className="inline-flex items-center px-6 py-3 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
-                        >
-                          <ExternalLink className="h-4 w-4 mr-2" />
-                          Open WhatsApp Web
-                        </button>
-                        <button
-                          onClick={copyPhoneNumbers}
-                          disabled={selectedGroups.length === 0}
-                          className="inline-flex items-center px-6 py-3 bg-gray-800 text-white rounded-lg text-sm font-semibold hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Copy className="h-4 w-4 mr-2" />
-                          Copy Phone Numbers
-                        </button>
-                      </div>
-                  
-                      {/* Instructions Box */}
-                      <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
-                        <h3 className="text-sm font-medium text-indigo-800 mb-2">How to send messages</h3>
-                        <p className="text-sm text-indigo-700">
-                          Click "Open WhatsApp Web" to open WhatsApp in a new tab. Click "Copy Phone Numbers" to copy all phone numbers. In WhatsApp Web, paste the numbers and send your message to each contact. This is a manual process as per requirements.
-                        </p>
-                      </div>
-
-                      {/* Log Messages Button */}
-                      <div className="flex justify-end">
-                        <button
-                          onClick={sendMessage}
-                          disabled={!message.trim() || selectedGroups.length === 0}
-                          className="px-6 py-3 bg-gray-800 text-white rounded-lg text-sm font-semibold hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          Log Message (For Tracking)
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Dashboard Tab */}
-        {activeTab === 'dashboard' && (
-          <div className="bg-white bg-opacity-60 backdrop-blur-sm rounded-xl p-6 min-h-96">
-            <div className="space-y-6">
-              {/* Statistics Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="bg-white bg-opacity-40 rounded-lg p-6">
-                  <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-blue-100">
-                      <Users className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Total Contacts</p>
-                      <p className="text-2xl font-semibold text-gray-900">{stats.totalContacts}</p>
-                    </div>
-                  </div>
-                </div>
+              {/* Groups Management */}
+              <div className="bg-white bg-opacity-40 rounded-lg p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">Groups Management</h2>
                 
-                <div className="bg-white bg-opacity-40 rounded-lg p-6">
-                  <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-green-100">
-                      <FileText className="h-6 w-6 text-green-600" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Total Groups</p>
-                      <p className="text-2xl font-semibold text-gray-900">{stats.totalGroups}</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="bg-white bg-opacity-40 rounded-lg p-6">
-                  <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-purple-100">
-                      <MessageSquare className="h-6 w-6 text-purple-600" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Messages Sent</p>
-                      <p className="text-2xl font-semibold text-gray-900">{stats.totalMessages}</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="bg-white bg-opacity-40 rounded-lg p-6">
-                  <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-orange-100">
-                      <BarChart3 className="h-6 w-6 text-orange-600" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Engagement Rate</p>
-                      <p className="text-2xl font-semibold text-gray-900">{stats.engagementRate}%</p>
-                    </div>
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-4">
+                    <input
+                      type="text"
+                      value={newGroup.name}
+                      onChange={(e) => setNewGroup({name: e.target.value})}
+                      className="flex-1 px-3 py-3 rounded-lg border-0 bg-gray-100"
+                      placeholder="Enter group name"
+                    />
+                    <button
+                      onClick={addGroup}
+                      className="px-4 py-3 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
+                    >
+                      Add Group
+                    </button>
                   </div>
                 </div>
               </div>
 
-              {/* Recent Activity */}
+              {/* Groups List */}
               <div className="bg-white bg-opacity-40 rounded-lg">
                 <div className="p-6 border-b bg-indigo-50">
-                  <h2 className="text-2xl font-bold text-gray-900">Recent Message Activity</h2>
+                  <h2 className="text-2xl font-bold text-gray-900">All Groups</h2>
+                </div>
+                
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-indigo-50 border-b">
+                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Group Name</th>
+                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Contact Count</th>
+                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {groups.length > 0 ? (
+                        groups.map(group => (
+                          <tr key={group.id} className="border-b hover:bg-gray-50">
+                            <td className="py-3 px-6 text-sm text-gray-900 text-center">{group.name}</td>
+                            <td className="py-3 px-6 text-sm text-gray-900 text-center">{group.contactCount}</td>
+                            <td className="py-3 px-6 text-sm text-center">
+                              <button
+                                onClick={() => {
+                                  if (window.confirm('Are you sure you want to delete this group?')) {
+                                    setGroups(groups.filter(g => g.id !== group.id));
+                                  }
+                                }}
+                                className="text-red-600 hover:text-red-800"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={3} className="text-center py-12">
+                            <div className="flex flex-col items-center">
+                              <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4">
+                                <Users className="h-12 w-12 text-gray-400" />
+                              </div>
+                              <h3 className="text-lg font-bold mb-2 text-indigo-600">
+                                No Groups Found
+                              </h3>
+                              <p className="text-sm text-indigo-600">
+                                Add your first group above
+                              </p>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </CommonFeatures>
+        )}
+
+        {/* Reports Tab */}
+        {activeTab === 'reports' && (
+          <CommonFeatures
+            summaryItems={summaryItems}
+            onExportCSV={exportContactsToCSV}
+            onExportPDF={exportContactsToPDF}
+          >
+            <div className="space-y-6">
+              {/* Message Reports */}
+              <div className="bg-white bg-opacity-40 rounded-lg">
+                <div className="p-6 border-b bg-indigo-50">
+                  <h2 className="text-2xl font-bold text-gray-900">Message Reports</h2>
                 </div>
                 <div className="p-6">
                   {messageLogs.length > 0 ? (
                     <div className="space-y-4">
-                      {messageLogs.slice(0, 5).map(log => (
+                      {messageLogs.map(log => (
                         <div key={log.id} className="border border-gray-200 rounded-lg p-4">
                           <div className="flex justify-between items-start">
                             <div className="flex-1">
@@ -1127,55 +827,23 @@ const SimpleMRTool: React.FC = () => {
                   ) : (
                     <div className="text-center py-12">
                       <MessageSquare className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500">No messages sent yet</p>
-                      <p className="text-sm text-gray-400">Go to the Messages tab to send your first message</p>
+                      <p className="text-gray-500">No message reports available</p>
+                      <p className="text-sm text-gray-400">Send messages to see reports here</p>
                     </div>
                   )}
                 </div>
               </div>
-
-              {/* Data Management */}
-              <div className="bg-white bg-opacity-40 rounded-lg p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Data Management</h2>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                    <div>
-                      <h3 className="font-medium text-gray-900">Export Data</h3>
-                      <p className="text-sm text-gray-500">Download your contacts and groups as CSV files</p>
-                    </div>
-                    <button
-                      onClick={exportContactsToCSV}
-                      className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Export Contacts
-                    </button>
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                    <div>
-                      <h3 className="font-medium text-gray-900">Clear All Data</h3>
-                      <p className="text-sm text-gray-500">Remove all contacts, groups, and message logs</p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        if (window.confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
-                          setContacts([]);
-                          setGroups([]);
-                          setMessageLogs([]);
-                        }
-                      }}
-                      className="inline-flex items-center px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Clear All Data
-                    </button>
-                  </div>
-                </div>
-              </div>
             </div>
-          </div>
+          </CommonFeatures>
         )}
+
+        {/* Add MR Dialog */}
+        <AddMRDialog
+          isOpen={isAddMRDialogOpen}
+          onClose={() => setIsAddMRDialogOpen(false)}
+          onAdd={handleAddMR}
+          groups={groups}
+        />
       </div>
     </div>
   );

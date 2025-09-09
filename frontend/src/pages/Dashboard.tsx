@@ -1,341 +1,553 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { 
-  Users, 
   MessageSquare, 
-  Activity,
   BarChart3,
-  LogOut,
-  Shield,
-  FileText
+  Search,
+  Eye,
+  CheckCircle,
+  XCircle,
+  Clock
 } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { api } from '../lib/api';
-import { DashboardStats } from '../types';
+import Sidebar from '../components/Sidebar';
+import Header from '../components/Header';
+import CommonFeatures from '../components/CommonFeatures';
+
+interface CampaignRecord {
+  id: string;
+  marketingManager: string;
+  groupName: string;
+  mrName: string;
+  templateName: string;
+  recipientList: string;
+  date: string;
+  sendStatus: 'success' | 'failed' | 'pending';
+  templateId: string;
+  recipientListId: string;
+}
 
 const Dashboard: React.FC = () => {
-  const { logout } = useAuth();
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const [campaigns, setCampaigns] = useState<CampaignRecord[]>([]);
+  const [filteredCampaigns, setFilteredCampaigns] = useState<CampaignRecord[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [managerFilter, setManagerFilter] = useState<string>('all');
+  const [groupFilter, setGroupFilter] = useState<string>('all');
+  const [sortField, setSortField] = useState<keyof CampaignRecord>('date');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
+  // Mock data for demonstration
   useEffect(() => {
-    fetchDashboardStats();
+    const mockCampaigns: CampaignRecord[] = [
+      {
+        id: '1',
+        marketingManager: 'John Smith',
+        groupName: 'North Zone',
+        mrName: 'Alice Johnson',
+        templateName: 'Monthly Update Template',
+        recipientList: 'North Zone Q1 List',
+        date: '2024-01-15',
+        sendStatus: 'success',
+        templateId: 't1',
+        recipientListId: 'r1'
+      },
+      {
+        id: '2',
+        marketingManager: 'John Smith',
+        groupName: 'South Zone',
+        mrName: 'Bob Wilson',
+        templateName: 'Product Launch Template',
+        recipientList: 'South Zone Q1 List',
+        date: '2024-01-14',
+        sendStatus: 'failed',
+        templateId: 't2',
+        recipientListId: 'r2'
+      },
+      {
+        id: '3',
+        marketingManager: 'Sarah Davis',
+        groupName: 'East Zone',
+        mrName: 'Carol Brown',
+        templateName: 'Training Reminder',
+        recipientList: 'East Zone Q1 List',
+        date: '2024-01-13',
+        sendStatus: 'pending',
+        templateId: 't3',
+        recipientListId: 'r3'
+      },
+      {
+        id: '4',
+        marketingManager: 'John Smith',
+        groupName: 'North Zone',
+        mrName: 'David Lee',
+        templateName: 'Monthly Update Template',
+        recipientList: 'North Zone Q1 List',
+        date: '2024-01-12',
+        sendStatus: 'success',
+        templateId: 't1',
+        recipientListId: 'r1'
+      },
+      {
+        id: '5',
+        marketingManager: 'Sarah Davis',
+        groupName: 'West Zone',
+        mrName: 'Eva Martinez',
+        templateName: 'Product Launch Template',
+        recipientList: 'West Zone Q1 List',
+        date: '2024-01-11',
+        sendStatus: 'success',
+        templateId: 't2',
+        recipientListId: 'r4'
+      }
+    ];
+
+    setCampaigns(mockCampaigns);
+    setFilteredCampaigns(mockCampaigns);
   }, []);
 
-  const fetchDashboardStats = async () => {
-    try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        console.log('No auth token found, redirecting to login');
-        setLoading(false);
-        return;
-      }
+  // Filter and sort campaigns
+  useEffect(() => {
+    let filtered = campaigns.filter(campaign => {
+      const matchesSearch = 
+        campaign.marketingManager.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        campaign.groupName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        campaign.mrName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        campaign.templateName.toLowerCase().includes(searchTerm.toLowerCase());
       
-      console.log('Fetching dashboard stats with token:', token.substring(0, 20) + '...');
+      const matchesStatus = statusFilter === 'all' || campaign.sendStatus === statusFilter;
+      const matchesManager = managerFilter === 'all' || campaign.marketingManager === managerFilter;
+      const matchesGroup = groupFilter === 'all' || campaign.groupName === groupFilter;
+
+      return matchesSearch && matchesStatus && matchesManager && matchesGroup;
+    });
+
+    // Sort campaigns
+    filtered.sort((a, b) => {
+      const aValue = a[sortField] || '';
+      const bValue = b[sortField] || '';
       
-      // Fetch dashboard stats and recent campaigns
-      const [statsResponse, campaignsResponse, groupsResponse] = await Promise.all([
-        api.get('/reports/dashboard'),
-        api.get('/messages/campaigns'),
-        api.get('/groups')
-      ]);
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
 
-      const statsData = statsResponse.data.stats || {};
-      const campaigns = campaignsResponse.data.data || [];
-      const groups = groupsResponse.data.data || [];
+    setFilteredCampaigns(filtered);
+  }, [campaigns, searchTerm, statusFilter, managerFilter, groupFilter, sortField, sortDirection]);
 
-      // Transform data for dashboard display
-      const dashboardStats: DashboardStats = {
-        totalMRs: statsData.totalMRs || 0,
-        totalGroups: groups.length,
-        totalCampaigns: campaigns.length,
-        recentCampaigns: campaigns.slice(0, 5).map((campaign: any) => ({
-          id: campaign.id,
-          content: campaign.content,
-          status: campaign.status,
-          createdAt: campaign.createdAt,
-          targetGroups: campaign.targetGroups,
-          totalRecipients: campaign.totalRecipients,
-          sentCount: campaign.sentCount,
-          failedCount: campaign.failedCount
-        })),
-        groupStats: groups.map((group: any) => ({
-          groupName: group.groupName,
-          mrCount: group.mrCount || 0
-        }))
-      };
-
-      setStats(dashboardStats);
-    } catch (error: any) {
-      console.error('Error fetching dashboard stats:', error);
-      console.error('Error details:', {
-        status: error.response?.status,
-        message: error.message,
-        url: error.config?.url,
-        baseURL: error.config?.baseURL
-      });
-      
-      // Handle different error types
-      if (error.response?.status === 401) {
-        console.log('Unauthorized - redirecting to login');
-        // Don't show error for unauthorized users
-      } else if (error.response?.status === 500) {
-        console.error('Server error - check Railway backend logs');
-        // You might want to show a user-friendly message here
-      } else {
-        console.error('Dashboard API error:', error);
-      }
-    } finally {
-      setLoading(false);
+  const handleSort = (field: keyof CampaignRecord) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
     }
   };
 
-  const navItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: BarChart3, active: true },
-    { path: '/simple-tool', label: 'DMak Tool', icon: BarChart3 },
-    { path: '/groups', label: 'Groups', icon: Users },
-    { path: '/mrs', label: 'Medical Items', icon: FileText },
-    { path: '/campaigns', label: 'Campaigns', icon: MessageSquare },
-    { path: '/templates', label: 'Templates', icon: FileText },
-    { path: '/super-admin', label: 'Manager', icon: Shield },
-    { path: '/reports', label: 'Reports', icon: Activity },
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'success':
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case 'failed':
+        return <XCircle className="h-4 w-4 text-red-600" />;
+      case 'pending':
+        return <Clock className="h-4 w-4 text-yellow-600" />;
+      default:
+        return <Clock className="h-4 w-4 text-gray-600" />;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'success':
+        return 'text-green-600';
+      case 'failed':
+        return 'text-red-600';
+      case 'pending':
+        return 'text-yellow-600';
+      default:
+        return 'text-gray-600';
+    }
+  };
+
+  const handleSidebarNavigation = (route: string) => {
+    navigate(route);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+    navigate('/login');
+  };
+
+  const exportToCSV = () => {
+    const csvContent = [
+      'Marketing Manager,Group Name,MR Name,Template Name,Recipient List,Date,Send Status',
+      ...filteredCampaigns.map(campaign => 
+        `${campaign.marketingManager},${campaign.groupName},${campaign.mrName},${campaign.templateName},${campaign.recipientList},${campaign.date},${campaign.sendStatus}`
+      )
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'campaign_dashboard.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const exportToPDF = () => {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      const tableContent = `
+        <html>
+          <head>
+            <title>Campaign Dashboard Report</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 20px; }
+              h1 { color: #333; text-align: center; }
+              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+              th { background-color: #f2f2f2; }
+              .success { color: green; }
+              .failed { color: red; }
+              .pending { color: orange; }
+              @media print { body { margin: 0; } }
+            </style>
+          </head>
+          <body>
+            <h1>Campaign Dashboard Report</h1>
+            <p>Generated on: ${new Date().toLocaleDateString()}</p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Marketing Manager</th>
+                  <th>Group Name</th>
+                  <th>MR Name</th>
+                  <th>Template Name</th>
+                  <th>Recipient List</th>
+                  <th>Date</th>
+                  <th>Send Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${filteredCampaigns.map(campaign => `
+                  <tr>
+                    <td>${campaign.marketingManager}</td>
+                    <td>${campaign.groupName}</td>
+                    <td>${campaign.mrName}</td>
+                    <td>${campaign.templateName}</td>
+                    <td>${campaign.recipientList}</td>
+                    <td>${campaign.date}</td>
+                    <td class="${campaign.sendStatus}">${campaign.sendStatus}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </body>
+        </html>
+      `;
+      printWindow.document.write(tableContent);
+      printWindow.document.close();
+      printWindow.print();
+    }
+  };
+
+  const summaryItems = [
+    {
+      title: 'Total Campaigns',
+      value: campaigns.length,
+      icon: <MessageSquare className="h-6 w-6 text-blue-600" />,
+      color: 'bg-blue-100'
+    },
+    {
+      title: 'Successful Sends',
+      value: campaigns.filter(c => c.sendStatus === 'success').length,
+      icon: <CheckCircle className="h-6 w-6 text-green-600" />,
+      color: 'bg-green-100'
+    },
+    {
+      title: 'Failed Sends',
+      value: campaigns.filter(c => c.sendStatus === 'failed').length,
+      icon: <XCircle className="h-6 w-6 text-red-600" />,
+      color: 'bg-red-100'
+    },
+    {
+      title: 'Success Rate',
+      value: campaigns.length > 0 ? `${Math.round((campaigns.filter(c => c.sendStatus === 'success').length / campaigns.length) * 100)}%` : '0%',
+      icon: <BarChart3 className="h-6 w-6 text-purple-600" />,
+      color: 'bg-purple-100'
+    }
   ];
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex">
-        <div className="w-64 bg-gradient-to-b from-purple-900 to-blue-900"></div>
-        <div className="flex-1 animate-pulse">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 p-8">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="bg-white rounded-lg h-32 border border-gray-200"></div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const uniqueManagers = [...new Set(campaigns.map(c => c.marketingManager))];
+  const uniqueGroups = [...new Set(campaigns.map(c => c.groupName))];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-100">
       {/* Sidebar */}
-      <div className="w-64 dmak-sidebar text-white relative">
-        <div className="p-6">
-          <div className="dmak-logo">
-            <div className="dmak-logo-icon">
-              <BarChart3 className="h-5 w-5 text-purple-900" />
-            </div>
-            <span className="dmak-logo-text">DMak</span>
-          </div>
-          
-          <nav className="space-y-2">
-            {navItems.map(({ path, label, icon: Icon, active }) => (
-              <Link
-                key={path}
-                to={path}
-                className={`dmak-nav-item ${active ? 'active' : ''}`}
-              >
-                <Icon className="h-5 w-5" />
-                <span>{label}</span>
-              </Link>
-            ))}
-          </nav>
-        </div>
-        
-        <div className="absolute bottom-6 left-6">
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => logout()}
-              className="flex items-center space-x-2 px-4 py-2 text-gray-300 hover:text-white transition-colors"
-            >
-              <LogOut className="h-4 w-4" />
-              <span>Logout</span>
-            </button>
-          </div>
-        </div>
-        
-        <div className="absolute bottom-6 right-6">
-          <img 
-            src="/dvk-simple.svg" 
-            alt="DVK" 
-            className="w-22 h-20"
-            style={{ width: '68px', height: '57px' }}
-            onError={(e) => {
-              console.error('Failed to load DVK logo:', e);
-              e.currentTarget.style.display = 'none';
-            }}
-          />
-        </div>
-      </div>
+      <Sidebar 
+        activePage="dashboard"
+        onNavigate={handleSidebarNavigation}
+        onLogout={handleLogout}
+        userName="Marketing Manager"
+      />
 
       {/* Main Content */}
-      <div className="flex-1">
+      <div className="ml-24 p-8">
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-8 py-6 relative">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="dmak-main-title">DMak</h1>
-              <p className="dmak-subtitle">
-                Digital - Marketing, Automate And Konnect.
-              </p>
-              <p className="dmak-description">
-                Manage your Medical Representatives and messaging campaigns efficiently.
-              </p>
-            </div>
-            <div className="flex space-x-4">
-              <Link to="/campaigns">
-                <button className="dmak-button-primary">
-                  New Campaign
-                </button>
-              </Link>
-              <Link to="/mrs">
-                <button className="dmak-button-primary">
-                  Add Medical Representative
-                </button>
-              </Link>
-            </div>
-          </div>
+        <Header 
+          title="Dashboard"
+          subtitle="Campaign delivery status and analytics"
+          onExportCSV={exportToCSV}
+          onExportPDF={exportToPDF}
+          showExportButtons={true}
+        />
 
-            {/* Glenmark Logo */}
-            <div className="absolute top-6 right-8">
-              <img 
-                src="/glenmark-simple.svg" 
-                alt="Glenmark" 
-                className="w-35 h-20"
-                style={{ width: '140px', height: '79px' }}
-                onError={(e) => {
-                  console.error('Failed to load Glenmark logo:', e);
-                  e.currentTarget.style.display = 'none';
-                  // Show fallback text
-                  const fallback = document.createElement('div');
-                  fallback.textContent = 'Glenmark';
-                  fallback.style.cssText = 'color: #000; font-weight: bold; font-size: 14px;';
-                  e.currentTarget.parentNode?.appendChild(fallback);
-                }}
-              />
-            </div>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="p-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="dmak-stats-card">
-              <h3 className="dmak-stats-title">Total Medical Representatives</h3>
-              <p className="dmak-stats-value">{stats?.totalMRs || 5}</p>
-            </div>
-            <div className="dmak-stats-card">
-              <h3 className="dmak-stats-title">Total Groups</h3>
-              <p className="dmak-stats-value">{stats?.totalGroups || 3}</p>
-            </div>
-            <div className="dmak-stats-card">
-              <h3 className="dmak-stats-title">Total Campaigns</h3>
-              <p className="dmak-stats-value">{stats?.totalCampaigns || 6}</p>
-            </div>
-            <div className="dmak-stats-card">
-              <h3 className="dmak-stats-title">Growth Rate</h3>
-              <p className="dmak-stats-value">5%</p>
-            </div>
-          </div>
-
-          {/* Bottom Sections */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Recent Campaigns */}
-            <div className="dmak-section-card">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="dmak-section-title">Recent Campaigns</h2>
-                <div className="flex space-x-2">
-                  <Link to="/campaigns">
-                    <button className="dmak-button-secondary">
-                      Create New
-                    </button>
-                  </Link>
-                </div>
-              </div>
-              <div className="space-y-3">
-                {stats?.recentCampaigns && stats.recentCampaigns.length > 0 ? (
-                  stats.recentCampaigns.slice(0, 3).map((campaign) => (
-                    <div key={campaign.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900">
-                          {campaign.content.slice(0, 40)}...
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {new Date(campaign.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        campaign.status === 'completed' ? 'bg-green-100 text-green-800' :
-                        campaign.status === 'sending' ? 'bg-blue-100 text-blue-800' :
-                        campaign.status === 'failed' ? 'bg-red-100 text-red-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {campaign.status}
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8">
-                    <MessageSquare className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">No campaigns yet</p>
+        {/* Main Content Area */}
+        <CommonFeatures
+          summaryItems={summaryItems}
+          onExportCSV={exportToCSV}
+          onExportPDF={exportToPDF}
+        >
+          <div className="space-y-6">
+            {/* Filters */}
+            <div className="bg-white bg-opacity-60 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Filters</h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                  <div className="relative">
+                    <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search campaigns..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 pr-4 py-2 w-full rounded-lg border-0 bg-gray-100"
+                    />
                   </div>
-                )}
-              </div>
-              <div className="mt-4">
-                <Link to="/campaigns">
-                  <button className="dmak-button-secondary">
-                    View All
-                  </button>
-                </Link>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border-0 bg-gray-100"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="success">Success</option>
+                    <option value="failed">Failed</option>
+                    <option value="pending">Pending</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Manager</label>
+                  <select
+                    value={managerFilter}
+                    onChange={(e) => setManagerFilter(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border-0 bg-gray-100"
+                  >
+                    <option value="all">All Managers</option>
+                    {uniqueManagers.map(manager => (
+                      <option key={manager} value={manager}>{manager}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Group</label>
+                  <select
+                    value={groupFilter}
+                    onChange={(e) => setGroupFilter(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border-0 bg-gray-100"
+                  >
+                    <option value="all">All Groups</option>
+                    {uniqueGroups.map(group => (
+                      <option key={group} value={group}>{group}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
-            {/* Group Statistics */}
-            <div className="dmak-section-card">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="dmak-section-title">Group Statistics</h2>
-                <div className="flex space-x-2">
-                  <Link to="/groups">
-                    <button className="dmak-button-secondary">
-                      Create New
-                    </button>
-                  </Link>
+            {/* Campaigns Table */}
+            <div className="bg-white bg-opacity-60 rounded-lg">
+              <div className="p-6 border-b bg-indigo-50">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-bold text-gray-900">Campaign Records</h2>
+                  <span className="text-sm text-gray-700 font-bold">
+                    {filteredCampaigns.length} Records
+                  </span>
                 </div>
               </div>
-              <div className="space-y-3">
-                {stats?.groupStats && stats.groupStats.length > 0 ? (
-                  stats.groupStats.slice(0, 3).map((group, index) => (
-                    <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
-                      <span className="text-sm font-medium text-gray-900">{group.groupName}</span>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm text-gray-500">{group.mrCount} MRs</span>
-                        <div className="w-16 bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-blue-600 h-2 rounded-full"
-                            style={{
-                              width: `${Math.min(100, (group.mrCount / (stats?.totalMRs || 1)) * 100)}%`
-                            }}
-                          />
+              
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-indigo-50 border-b">
+                      <th 
+                        className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                        onClick={() => handleSort('marketingManager')}
+                      >
+                        <div className="flex items-center justify-center">
+                          Marketing Manager
+                          {sortField === 'marketingManager' && (
+                            <span className="ml-1">
+                              {sortDirection === 'asc' ? '↑' : '↓'}
+                            </span>
+                          )}
                         </div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8">
-                    <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">No groups yet</p>
-                  </div>
-                )}
-              </div>
-              <div className="mt-4">
-                <Link to="/groups">
-                  <button className="dmak-button-secondary">
-                    View All
-                  </button>
-                </Link>
+                      </th>
+                      <th 
+                        className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                        onClick={() => handleSort('groupName')}
+                      >
+                        <div className="flex items-center justify-center">
+                          Group Name
+                          {sortField === 'groupName' && (
+                            <span className="ml-1">
+                              {sortDirection === 'asc' ? '↑' : '↓'}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                        onClick={() => handleSort('mrName')}
+                      >
+                        <div className="flex items-center justify-center">
+                          MR Name
+                          {sortField === 'mrName' && (
+                            <span className="ml-1">
+                              {sortDirection === 'asc' ? '↑' : '↓'}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                        onClick={() => handleSort('templateName')}
+                      >
+                        <div className="flex items-center justify-center">
+                          Template Name
+                          {sortField === 'templateName' && (
+                            <span className="ml-1">
+                              {sortDirection === 'asc' ? '↑' : '↓'}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                        onClick={() => handleSort('recipientList')}
+                      >
+                        <div className="flex items-center justify-center">
+                          Recipient List
+                          {sortField === 'recipientList' && (
+                            <span className="ml-1">
+                              {sortDirection === 'asc' ? '↑' : '↓'}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                        onClick={() => handleSort('date')}
+                      >
+                        <div className="flex items-center justify-center">
+                          Date
+                          {sortField === 'date' && (
+                            <span className="ml-1">
+                              {sortDirection === 'asc' ? '↑' : '↓'}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                        onClick={() => handleSort('sendStatus')}
+                      >
+                        <div className="flex items-center justify-center">
+                          Send Status
+                          {sortField === 'sendStatus' && (
+                            <span className="ml-1">
+                              {sortDirection === 'asc' ? '↑' : '↓'}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+                      <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredCampaigns.length > 0 ? (
+                      filteredCampaigns.map(campaign => (
+                        <tr key={campaign.id} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-6 text-sm text-gray-900 text-center">{campaign.marketingManager}</td>
+                          <td className="py-3 px-6 text-sm text-gray-900 text-center">{campaign.groupName}</td>
+                          <td className="py-3 px-6 text-sm text-gray-900 text-center">{campaign.mrName}</td>
+                          <td className="py-3 px-6 text-sm text-gray-900 text-center">
+                            <button 
+                              className="text-blue-600 hover:text-blue-800 underline"
+                              onClick={() => alert(`Viewing template: ${campaign.templateName}`)}
+                            >
+                              {campaign.templateName}
+                            </button>
+                          </td>
+                          <td className="py-3 px-6 text-sm text-gray-900 text-center">
+                            <button 
+                              className="text-blue-600 hover:text-blue-800 underline"
+                              onClick={() => alert(`Viewing recipient list: ${campaign.recipientList}`)}
+                            >
+                              {campaign.recipientList}
+                            </button>
+                          </td>
+                          <td className="py-3 px-6 text-sm text-gray-900 text-center">{campaign.date}</td>
+                          <td className="py-3 px-6 text-sm text-center">
+                            <div className="flex items-center justify-center">
+                              {getStatusIcon(campaign.sendStatus)}
+                              <span className={`ml-2 ${getStatusColor(campaign.sendStatus)}`}>
+                                {campaign.sendStatus}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-6 text-sm text-center">
+                            <button
+                              onClick={() => alert(`Viewing details for campaign: ${campaign.id}`)}
+                              className="text-indigo-600 hover:text-indigo-800"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={8} className="text-center py-12">
+                          <div className="flex flex-col items-center">
+                            <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4">
+                              <MessageSquare className="h-12 w-12 text-gray-400" />
+                            </div>
+                            <h3 className="text-lg font-bold mb-2 text-indigo-600">
+                              No Campaign Records Found
+                            </h3>
+                            <p className="text-sm text-indigo-600">
+                              No campaigns match your current filters
+                            </p>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
-        </div>
+        </CommonFeatures>
       </div>
     </div>
   );
