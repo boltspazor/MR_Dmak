@@ -447,10 +447,23 @@ export class MRService {
         const data = mrData[i];
         try {
           // Find group ID by group name
-          const groupId = groupMap.get(data.groupName);
+          let groupId = groupMap.get(data.groupName);
+          
+          // If group doesn't exist, create it (especially for "Default Group")
           if (!groupId) {
-            results.errors.push(`Row ${i + 1}: Group "${data.groupName}" not found`);
-            continue;
+            try {
+              const newGroup = await Group.create({
+                groupName: data.groupName,
+                description: `Auto-created group for bulk upload`,
+                createdBy: userId
+              });
+              groupId = newGroup._id;
+              groupMap.set(data.groupName, groupId);
+              logger.info(`Created new group: ${data.groupName}`, { groupId, userId });
+            } catch (groupError: any) {
+              results.errors.push(`Row ${i + 1}: Failed to create group "${data.groupName}": ${groupError.message}`);
+              continue;
+            }
           }
 
           // Check if MR ID already exists
