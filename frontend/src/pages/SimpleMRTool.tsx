@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Users, 
   MessageSquare, 
@@ -101,6 +102,7 @@ const mockApi = {
 };
 
 const SimpleMRTool: React.FC = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'contacts' | 'messages' | 'dashboard'>('contacts');
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
@@ -458,15 +460,15 @@ const SimpleMRTool: React.FC = () => {
 
   const stats = getTotalStats();
 
-  // Navigation functions (mock implementations)
+  // Navigation functions
   const handleSidebarNavigation = (route: string) => {
-    console.log(`Navigate to: ${route}`);
-    alert(`Would navigate to: ${route}`);
+    navigate(route);
   };
 
   const handleLogout = () => {
-    console.log('Logout clicked');
-    alert('Logout functionality would be implemented here');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+    navigate('/login');
   };
 
   return (
