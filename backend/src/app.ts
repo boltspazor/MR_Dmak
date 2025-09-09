@@ -23,6 +23,9 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust proxy for Railway deployment (fixes rate limiting issue)
+app.set('trust proxy', 1);
+
 // Create necessary directories
 const dirs = ['uploads', 'logs'];
 dirs.forEach(dir => {

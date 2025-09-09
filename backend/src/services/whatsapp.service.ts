@@ -93,12 +93,25 @@ export class WhatsAppService {
   async verifyWebhook(mode: string, token: string, challenge: string): Promise<string | null> {
     const verifyToken = whatsappConfig.verifyToken;
     
+    // Log verification attempt for debugging
+    logger.info('Webhook verification attempt', { 
+      mode, 
+      token: token ? `${token.substring(0, 4)}...` : 'undefined',
+      hasVerifyToken: !!verifyToken,
+      challenge: challenge ? `${challenge.substring(0, 4)}...` : 'undefined'
+    });
+    
+    if (!verifyToken) {
+      logger.error('WHATSAPP_VERIFY_TOKEN environment variable not set');
+      return null;
+    }
+    
     if (mode === 'subscribe' && token === verifyToken) {
       logger.info('Webhook verified successfully');
       return challenge;
     }
     
-    logger.warn('Webhook verification failed', { mode, token });
+    logger.warn('Webhook verification failed', { mode, token: token ? `${token.substring(0, 4)}...` : 'undefined' });
     return null;
   }
 
