@@ -11,11 +11,11 @@ import {
   ExternalLink,
   BarChart3,
   ChevronDown,
-  LogOut,
-  Shield,
-  Activity,
   X
 } from 'lucide-react';
+import Sidebar from '../components/Sidebar';
+import Header from '../components/Header';
+import CommonFeatures from '../components/CommonFeatures';
 
 interface Contact {
   id: string;
@@ -112,6 +112,8 @@ const SimpleMRTool: React.FC = () => {
   const [message, setMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sortField, setSortField] = useState<keyof Contact>('mrId');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // Form states
   const [newContact, setNewContact] = useState({
@@ -333,6 +335,57 @@ const SimpleMRTool: React.FC = () => {
     window.URL.revokeObjectURL(url);
   };
 
+  const exportContactsToPDF = () => {
+    // Simple PDF generation using browser's print functionality
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      const tableContent = `
+        <html>
+          <head>
+            <title>MR Contacts Report</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 20px; }
+              h1 { color: #333; text-align: center; }
+              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+              th { background-color: #f2f2f2; }
+              @media print { body { margin: 0; } }
+            </style>
+          </head>
+          <body>
+            <h1>MR Contacts Report</h1>
+            <p>Generated on: ${new Date().toLocaleDateString()}</p>
+            <table>
+              <thead>
+                <tr>
+                  <th>MR ID</th>
+                  <th>Name</th>
+                  <th>Phone</th>
+                  <th>Group</th>
+                  <th>Comments</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${contacts.map(contact => `
+                  <tr>
+                    <td>${contact.mrId}</td>
+                    <td>${contact.firstName} ${contact.lastName}</td>
+                    <td>${contact.phone}</td>
+                    <td>${contact.group}</td>
+                    <td>${contact.comments || '-'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </body>
+        </html>
+      `;
+      printWindow.document.write(tableContent);
+      printWindow.document.close();
+      printWindow.print();
+    }
+  };
+
   const downloadCSVTemplate = () => {
     const template = 'MR ID,First Name,Last Name,Phone,Group,Comments\nMR001,John,Doe,+919876543210,North Zone,Senior MR\nMR002,Jane,Smith,+919876543211,South Zone,';
     const blob = new Blob([template], { type: 'text/csv' });
@@ -442,12 +495,30 @@ const SimpleMRTool: React.FC = () => {
     });
   };
 
-  const filteredContacts = contacts.filter(contact =>
-    contact.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    contact.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    contact.mrId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    contact.group.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredContacts = contacts
+    .filter(contact =>
+      contact.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      contact.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      contact.mrId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      contact.group.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => {
+      const aValue = a[sortField] || '';
+      const bValue = b[sortField] || '';
+      
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+  const handleSort = (field: keyof Contact) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
 
   const getTotalStats = () => {
     return {
@@ -471,131 +542,80 @@ const SimpleMRTool: React.FC = () => {
     navigate('/login');
   };
 
+  const summaryItems = [
+    {
+      title: 'Total Contacts',
+      value: contacts.length,
+      icon: <Users className="h-6 w-6 text-blue-600" />,
+      color: 'bg-blue-100'
+    },
+    {
+      title: 'Total Groups',
+      value: groups.length,
+      icon: <FileText className="h-6 w-6 text-green-600" />,
+      color: 'bg-green-100'
+    },
+    {
+      title: 'Messages Sent',
+      value: messageLogs.length,
+      icon: <MessageSquare className="h-6 w-6 text-purple-600" />,
+      color: 'bg-purple-100'
+    },
+    {
+      title: 'Engagement Rate',
+      value: `${stats.engagementRate}%`,
+      icon: <BarChart3 className="h-6 w-6 text-orange-600" />,
+      color: 'bg-orange-100'
+    }
+  ];
+
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Sidebar */}
-      <div className="fixed left-0 top-0 w-23 h-screen bg-indigo-900" style={{ width: '92px' }}>
-        <div className="flex flex-col items-center py-4 space-y-2">
-          {/* Dashboard */}
-          <button 
-            onClick={() => handleSidebarNavigation('/dashboard')}
-            className="flex flex-col items-center p-2 rounded-lg w-16 h-16 hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
-          >
-            <BarChart3 className="h-7 w-7 text-white mb-1" />
-            <span className="text-xs text-white text-center">Dashboard</span>
-          </button>
-          
-          {/* DMak Tool - Active */}
-          <div className="flex flex-col items-center p-2 rounded-lg w-16 h-16 border border-gray-200 bg-white bg-opacity-10">
-            <BarChart3 className="h-7 w-7 text-white mb-1" />
-            <span className="text-xs text-white text-center">DMak Tool</span>
-          </div>
-          
-          {/* Groups */}
-          <button
-            onClick={() => handleSidebarNavigation('/groups')}
-            className="flex flex-col items-center p-2 rounded-lg w-16 h-16 hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
-          >
-            <Users className="h-7 w-7 text-white mb-1" />
-            <span className="text-xs text-white text-center">Groups</span>
-          </button>
-          
-          {/* Other navigation items */}
-          <button 
-            onClick={() => handleSidebarNavigation('/mrs')}
-            className="flex flex-col items-center p-2 rounded-lg w-16 h-16 hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
-          >
-            <FileText className="h-7 w-7 text-white mb-1" />
-            <span className="text-xs text-white text-center">Medical Items</span>
-          </button>
-          
-          <button 
-            onClick={() => handleSidebarNavigation('/campaigns')}
-            className="flex flex-col items-center p-2 rounded-lg w-16 h-16 hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
-          >
-            <MessageSquare className="h-7 w-7 text-white mb-1" />
-            <span className="text-xs text-white text-center">Campaigns</span>
-          </button>
-          
-          <button 
-            onClick={() => handleSidebarNavigation('/templates')}
-            className="flex flex-col items-center p-2 rounded-lg w-16 h-16 hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
-          >
-            <FileText className="h-7 w-7 text-white mb-1" />
-            <span className="text-xs text-white text-center">Templates</span>
-          </button>
-          
-          <button 
-            onClick={() => handleSidebarNavigation('/super-admin')}
-            className="flex flex-col items-center p-2 rounded-lg w-16 h-16 hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
-          >
-            <Shield className="h-7 w-7 text-white mb-1" />
-            <span className="text-xs text-white text-center">Manager</span>
-          </button>
-          
-          <button 
-            onClick={() => handleSidebarNavigation('/reports')}
-            className="flex flex-col items-center p-2 rounded-lg w-16 h-16 hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
-          >
-            <Activity className="h-7 w-7 text-white mb-1" />
-            <span className="text-xs text-white text-center">Reports</span>
-          </button>
-          
-          {/* Logout */}
-          <button 
-            onClick={handleLogout}
-            className="flex flex-col items-center p-2 rounded-lg w-16 h-16 mt-auto hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
-          >
-            <LogOut className="h-7 w-7 text-white mb-1" />
-            <span className="text-xs text-white text-center">Logout</span>
-          </button>
-        </div>
-      </div>
+      <Sidebar 
+        activePage="dmak"
+        onNavigate={handleSidebarNavigation}
+        onLogout={handleLogout}
+        userName="User Name"
+      />
 
       {/* Main Content */}
       <div className="ml-24 p-8">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">DMak Tool</h1>
-              <p className="text-lg text-gray-600">
-                Simple tool for managing Medical Representatives and sending Whatsapp messages
-              </p>
-            </div>
-          </div>
-          
-          {/* Tabs */}
-          <div className="flex space-x-8 mt-6">
-            {['contacts', 'messages', 'dashboard'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab as any)}
-                className={`pb-2 border-b-2 text-lg font-medium capitalize ${
-                  activeTab === tab 
-                    ? 'border-indigo-600 text-gray-900' 
-                    : 'border-transparent text-gray-600'
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-            
-            {/* Export Data Button */}
+        <Header 
+          title="DMak"
+          subtitle="Simple tool for managing Medical Representatives and sending Whatsapp messages"
+          onExportCSV={exportContactsToCSV}
+          onExportPDF={exportContactsToPDF}
+          showExportButtons={true}
+        />
+        
+        {/* Tabs */}
+        <div className="flex space-x-8 mt-6">
+          {['contacts', 'messages', 'dashboard'].map((tab) => (
             <button
-              onClick={exportContactsToCSV}
-              className="ml-auto px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
+              key={tab}
+              onClick={() => setActiveTab(tab as any)}
+              className={`pb-2 border-b-2 text-lg font-medium capitalize ${
+                activeTab === tab 
+                  ? 'border-indigo-600 text-gray-900' 
+                  : 'border-transparent text-gray-600'
+              }`}
             >
-              Export Data
+              {tab}
             </button>
-          </div>
+          ))}
         </div>
 
         {/* Main Content Area */}
-        <div className="bg-white bg-opacity-60 backdrop-blur-sm rounded-xl p-6 min-h-96">
-          {/* Contacts Tab */}
-          {activeTab === 'contacts' && (
+        {activeTab === 'contacts' && (
+          <CommonFeatures
+            summaryItems={summaryItems}
+            onExportCSV={exportContactsToCSV}
+            onExportPDF={exportContactsToPDF}
+          >
             <div className="space-y-8">
+
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Left Column - Add New Contact */}
                 <div className="bg-white bg-opacity-40 rounded-lg p-6">
@@ -778,10 +798,58 @@ const SimpleMRTool: React.FC = () => {
                   <table className="w-full">
                     <thead>
                       <tr className="bg-indigo-50 border-b">
-                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">MR ID</th>
-                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Name</th>
-                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Phone No.</th>
-                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Group</th>
+                        <th 
+                          className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                          onClick={() => handleSort('mrId')}
+                        >
+                          <div className="flex items-center justify-center">
+                            MR ID
+                            {sortField === 'mrId' && (
+                              <span className="ml-1">
+                                {sortDirection === 'asc' ? '↑' : '↓'}
+                              </span>
+                            )}
+                          </div>
+                        </th>
+                        <th 
+                          className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                          onClick={() => handleSort('firstName')}
+                        >
+                          <div className="flex items-center justify-center">
+                            Name
+                            {sortField === 'firstName' && (
+                              <span className="ml-1">
+                                {sortDirection === 'asc' ? '↑' : '↓'}
+                              </span>
+                            )}
+                          </div>
+                        </th>
+                        <th 
+                          className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                          onClick={() => handleSort('phone')}
+                        >
+                          <div className="flex items-center justify-center">
+                            Phone No.
+                            {sortField === 'phone' && (
+                              <span className="ml-1">
+                                {sortDirection === 'asc' ? '↑' : '↓'}
+                              </span>
+                            )}
+                          </div>
+                        </th>
+                        <th 
+                          className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                          onClick={() => handleSort('group')}
+                        >
+                          <div className="flex items-center justify-center">
+                            Group
+                            {sortField === 'group' && (
+                              <span className="ml-1">
+                                {sortDirection === 'asc' ? '↑' : '↓'}
+                              </span>
+                            )}
+                          </div>
+                        </th>
                         <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Comments</th>
                         <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Actions</th>
                       </tr>
@@ -829,10 +897,12 @@ const SimpleMRTool: React.FC = () => {
                 </div>
               </div>
             </div>
-          )}
+          </CommonFeatures>
+        )}
 
-          {/* Messages Tab */}
-          {activeTab === 'messages' && (
+        {/* Messages Tab */}
+        {activeTab === 'messages' && (
+          <div className="bg-white bg-opacity-60 backdrop-blur-sm rounded-xl p-6 min-h-96">
             <div className="space-y-6">
               {loading ? (
                 <div className="text-center py-12">
@@ -972,10 +1042,12 @@ const SimpleMRTool: React.FC = () => {
                 </>
               )}
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Dashboard Tab */}
-          {activeTab === 'dashboard' && (
+        {/* Dashboard Tab */}
+        {activeTab === 'dashboard' && (
+          <div className="bg-white bg-opacity-60 backdrop-blur-sm rounded-xl p-6 min-h-96">
             <div className="space-y-6">
               {/* Statistics Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -1102,8 +1174,8 @@ const SimpleMRTool: React.FC = () => {
                 </div>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
