@@ -6,7 +6,11 @@ import {
   Trash2, 
   Search,
   FileText,
-  BarChart3
+  BarChart3,
+  X,
+  Upload,
+  Send,
+  Image as ImageIcon
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
@@ -107,6 +111,10 @@ const SimpleMRTool: React.FC = () => {
   const [sortField, setSortField] = useState<keyof Contact>('mrId');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [isAddMRDialogOpen, setIsAddMRDialogOpen] = useState(false);
+  const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
+  const [message, setMessage] = useState('');
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
 
   // Form states
   const [newGroup, setNewGroup] = useState({
@@ -408,6 +416,66 @@ const SimpleMRTool: React.FC = () => {
   };
 
   // Message functions
+  const handleGroupSelection = (groupName: string) => {
+    if (selectedGroups.includes(groupName)) {
+      setSelectedGroups(selectedGroups.filter(g => g !== groupName));
+    } else {
+      setSelectedGroups([...selectedGroups, groupName]);
+    }
+  };
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setSelectedImage(null);
+    setImagePreview('');
+  };
+
+  const sendMessage = () => {
+    if (!message.trim() && !selectedImage) {
+      alert('Please enter a message or select an image');
+      return;
+    }
+
+    if (selectedGroups.length === 0) {
+      alert('Please select at least one group');
+      return;
+    }
+
+    const targetContacts = contacts.filter(contact => 
+      selectedGroups.includes(contact.group)
+    );
+
+    if (targetContacts.length === 0) {
+      alert('No contacts found in selected groups');
+      return;
+    }
+
+    const messageLog: MessageLog = {
+      id: Date.now().toString(),
+      message: message.trim() || (selectedImage ? `Image: ${selectedImage.name}` : ''),
+      groups: selectedGroups,
+      sentAt: new Date().toISOString(),
+      contactCount: targetContacts.length
+    };
+
+    setMessageLogs([messageLog, ...messageLogs]);
+    setMessage('');
+    setSelectedGroups([]);
+    setSelectedImage(null);
+    setImagePreview('');
+    alert(`Message logged for ${targetContacts.length} contacts in ${selectedGroups.length} groups!`);
+  };
 
   const filteredContacts = contacts
     .filter(contact =>
@@ -710,6 +778,137 @@ const SimpleMRTool: React.FC = () => {
             onExportPDF={exportContactsToPDF}
           >
             <div className="space-y-6">
+              {/* Message Sending Section */}
+              <div className="bg-white bg-opacity-40 rounded-lg p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">Send Messages to Groups</h2>
+                
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Left Side - Group Selection */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Groups</h3>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {groups.length > 0 ? (
+                        groups.map(group => (
+                          <div
+                            key={group.id}
+                            className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                              selectedGroups.includes(group.name)
+                                ? 'border-indigo-500 bg-indigo-50'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                            onClick={() => handleGroupSelection(group.name)}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                                selectedGroups.includes(group.name)
+                                  ? 'border-indigo-500 bg-indigo-500'
+                                  : 'border-gray-300'
+                              }`}>
+                                {selectedGroups.includes(group.name) && (
+                                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                                )}
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900">{group.name}</p>
+                                <p className="text-sm text-gray-500">{group.contactCount} contacts</p>
+                              </div>
+                            </div>
+                            {selectedGroups.includes(group.name) && (
+                              <X 
+                                className="h-4 w-4 text-indigo-500 hover:text-indigo-700"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleGroupSelection(group.name);
+                                }}
+                              />
+                            )}
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-gray-500 text-center py-4">No groups available</p>
+                      )}
+                    </div>
+                    
+                    {selectedGroups.length > 0 && (
+                      <div className="mt-4 p-3 bg-indigo-50 rounded-lg">
+                        <p className="text-sm text-indigo-700">
+                          <strong>Selected Groups:</strong> {selectedGroups.join(', ')}
+                        </p>
+                        <p className="text-sm text-indigo-600 mt-1">
+                          Total contacts: {contacts.filter(c => selectedGroups.includes(c.group)).length}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Right Side - Message Composition */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Compose Message</h3>
+                    
+                    <div className="space-y-4">
+                      {/* Message Input */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Message</label>
+                        <textarea
+                          value={message}
+                          onChange={(e) => setMessage(e.target.value)}
+                          placeholder="Type your message here..."
+                          rows={4}
+                          className="w-full px-3 py-3 rounded-lg border-0 bg-gray-100 resize-none"
+                        />
+                      </div>
+
+                      {/* Image Upload */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Image (Optional)</label>
+                        <div className="space-y-2">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            className="hidden"
+                            id="image-upload"
+                          />
+                          <label
+                            htmlFor="image-upload"
+                            className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-indigo-400 transition-colors"
+                          >
+                            <Upload className="h-5 w-5 text-gray-400 mr-2" />
+                            <span className="text-sm text-gray-600">Click to upload image</span>
+                          </label>
+                          
+                          {imagePreview && (
+                            <div className="relative">
+                              <img
+                                src={imagePreview}
+                                alt="Preview"
+                                className="w-full h-32 object-cover rounded-lg"
+                              />
+                              <button
+                                onClick={removeImage}
+                                className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Send Button */}
+                      <button
+                        onClick={sendMessage}
+                        disabled={(!message.trim() && !selectedImage) || selectedGroups.length === 0}
+                        className="w-full flex items-center justify-center px-4 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Send className="h-5 w-5 mr-2" />
+                        Send Message
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Groups Management */}
               <div className="bg-white bg-opacity-40 rounded-lg p-6">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Groups Management</h2>
