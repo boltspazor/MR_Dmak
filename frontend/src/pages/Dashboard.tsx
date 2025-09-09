@@ -96,6 +96,7 @@ const Dashboard: React.FC = () => {
     { path: '/groups', label: 'Groups', icon: Users },
     { path: '/mrs', label: 'Medical Items', icon: FileText },
     { path: '/campaigns', label: 'Campaigns', icon: MessageSquare },
+    { path: '/templates', label: 'Templates', icon: FileText },
     { path: '/super-admin', label: 'Manager', icon: Shield },
     { path: '/reports', label: 'Reports', icon: Activity },
   ];

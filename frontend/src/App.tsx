@@ -10,6 +10,7 @@ import SimpleMRTool from './pages/SimpleMRTool';
 import Groups from './pages/Groups';
 import MedicalReps from './pages/MedicalReps';
 import Campaigns from './pages/Campaigns';
+import Templates from './pages/Templates';
 import Reports from './pages/Reports';
 import SuperAdmin from './pages/SuperAdmin';
 
@@ -50,6 +51,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Campaigns />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/templates"
+              element={
+                <ProtectedRoute>
+                  <Templates />
                 </ProtectedRoute>
               }
             />

@@ -366,6 +366,15 @@ const SimpleMRTool: React.FC = () => {
             <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>Campaigns</span>
           </button>
           
+          {/* Templates */}
+          <button 
+            onClick={() => handleSidebarNavigation('/templates')}
+            className="flex flex-col items-center p-2 rounded-lg w-16 h-16 hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
+          >
+            <FileText className="h-7 w-7 text-white mb-1" />
+            <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>Templates</span>
+          </button>
+          
           {/* Manager */}
           <button 
             onClick={() => handleSidebarNavigation('/super-admin')}

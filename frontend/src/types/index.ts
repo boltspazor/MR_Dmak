@@ -89,3 +89,28 @@ export interface PaginatedResponse<T> {
     totalPages: number;
   };
 }
+
+export interface Template {
+  _id: string;
+  name: string;
+  content: string;
+  type: 'html' | 'text' | 'image';
+  imageUrl?: string;
+  parameters: string[];
+  createdBy: {
+    _id: string;
+    name: string;
+    email: string;
+  };
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TemplateStats {
+  totalTemplates: number;
+  htmlTemplates: number;
+  textTemplates: number;
+  imageTemplates: number;
+  avgParameters: number;
+}
