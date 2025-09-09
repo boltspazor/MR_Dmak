@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { Campaign, Group } from '../types';
+import Sidebar from '../components/Sidebar';
 
 const Campaigns: React.FC = () => {
   const navigate = useNavigate();
@@ -284,101 +285,17 @@ const Campaigns: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: '#ECEAE2', width: '1440px', height: '1024px' }}>
+    <div className="min-h-screen bg-gray-100">
       {/* Sidebar */}
-      <div className="fixed left-0 top-0 w-23 h-screen" style={{ background: '#2C2696', width: '92px' }}>
-        <div className="flex flex-col items-center py-4 space-y-2">
-          {/* Dashboard */}
-          <button 
-            onClick={() => handleSidebarNavigation('/dashboard')}
-            className="flex flex-col items-center p-2 rounded-lg w-16 h-16 hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
-          >
-            <BarChart3 className="h-7 w-7 text-white mb-1" />
-            <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>Dashboard</span>
-          </button>
-          
-          {/* DMak Tool */}
-          <button 
-            onClick={() => handleSidebarNavigation('/simple-tool')}
-            className="flex flex-col items-center p-2 rounded-lg w-16 h-16 hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
-          >
-            <BarChart3 className="h-7 w-7 text-white mb-1" />
-            <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>DMak Tool</span>
-          </button>
-          
-          {/* Groups */}
-          <button 
-            onClick={() => handleSidebarNavigation('/groups')}
-            className="flex flex-col items-center p-2 rounded-lg w-16 h-16 hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
-          >
-            <Users className="h-7 w-7 text-white mb-1" />
-            <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>Groups</span>
-          </button>
-          
-          {/* Medical Items */}
-          <button 
-            onClick={() => handleSidebarNavigation('/mrs')}
-            className="flex flex-col items-center p-2 rounded-lg w-16 h-16 hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
-          >
-            <FileText className="h-7 w-7 text-white mb-1" />
-            <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>Medical Items</span>
-          </button>
-          
-          {/* Campaigns - Active */}
-          <div className="flex flex-col items-center p-2 rounded-lg w-16 h-16 border border-gray-200" style={{ background: 'rgba(236, 234, 226, 0.1)' }}>
-            <MessageSquare className="h-7 w-7 text-white mb-1" />
-            <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>Campaigns</span>
-          </div>
-          
-          {/* Templates */}
-          <button 
-            onClick={() => handleSidebarNavigation('/templates')}
-            className="flex flex-col items-center p-2 rounded-lg w-16 h-16 hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
-          >
-            <FileText className="h-7 w-7 text-white mb-1" />
-            <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>Templates</span>
-          </button>
-          
-          {/* Manager */}
-          <button 
-            onClick={() => handleSidebarNavigation('/super-admin')}
-            className="flex flex-col items-center p-2 rounded-lg w-16 h-16 hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
-          >
-            <Shield className="h-7 w-7 text-white mb-1" />
-            <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>Manager</span>
-          </button>
-          
-          {/* Reports */}
-          <button 
-            onClick={() => handleSidebarNavigation('/reports')}
-            className="flex flex-col items-center p-2 rounded-lg w-16 h-16 hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
-          >
-            <Activity className="h-7 w-7 text-white mb-1" />
-            <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>Reports</span>
-          </button>
-          
-          {/* Logout */}
-          <button 
-            onClick={handleLogout}
-            className="flex flex-col items-center p-2 rounded-lg w-16 h-16 mt-auto hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
-          >
-            <LogOut className="h-7 w-7 text-white mb-1" />
-            <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>Logout</span>
-          </button>
-          
-          {/* DVK Logo */}
-          <div className="mt-4">
-            <img 
-              src="/dvk-simple.svg" 
-              alt="DVK" 
-              style={{ width: '68px', height: '57px' }}
-            />
-          </div>
-        </div>
-      </div>
+      <Sidebar 
+        activePage="campaigns"
+        onNavigate={handleSidebarNavigation}
+        onLogout={handleLogout}
+        userName="Marketing Manager"
+      />
 
       {/* Main Content */}
-      <div className="ml-23" style={{ marginLeft: '102px', padding: '65px 102px 0 0' }}>
+      <div className="ml-24 p-8">
         {/* Header */}
         <div className="relative mb-8" style={{ marginBottom: '32px' }}>
           <div className="flex justify-between items-start">

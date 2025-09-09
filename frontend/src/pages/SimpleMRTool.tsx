@@ -398,6 +398,7 @@ const SimpleMRTool: React.FC = () => {
       
       alert(`Bulk upload completed!\n\nCreated: ${created} MRs\nTotal Processed: ${lines.length - 1}${errors.length > 0 ? `\n\nErrors (${errors.length}):\n${errors.slice(0, 5).join('\n')}` : ''}`);
       
+
       // Reset file input
       event.target.value = '';
     } catch (error: any) {
