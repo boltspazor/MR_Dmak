@@ -12,6 +12,7 @@ import groupRoutes from './routes/group.routes';
 import messageRoutes from './routes/message.routes';
 import reportRoutes from './routes/report.routes';
 import superAdminRoutes from './routes/super-admin.routes';
+import templateRoutes from './routes/template.routes';
 
 import logger from './utils/logger';
 import { WhatsAppService } from './services/whatsapp.service';
@@ -79,6 +80,7 @@ app.use('/api/groups', groupRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/super-admin', superAdminRoutes);
+app.use('/api/templates', templateRoutes);
 
 // WhatsApp Webhook
 const whatsappService = new WhatsAppService();
@@ -96,10 +98,6 @@ app.get('/api/webhook', async (req, res) => {
       token as string, 
       challenge as string
     );
-<<<<<<< Updated upstream
-=======
-    
->>>>>>> Stashed changes
 
     console.log('Webhook verification result:', result);
 

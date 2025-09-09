@@ -5,3 +5,4 @@ export { default as Message, IMessage } from './Message';
 export { default as MessageCampaign, IMessageCampaign } from './MessageCampaign';
 export { default as MessageLog, IMessageLog } from './MessageLog';
 export { default as GroupActivity, IGroupActivity } from './GroupActivity';
+export { default as Template, ITemplate } from './Template';
