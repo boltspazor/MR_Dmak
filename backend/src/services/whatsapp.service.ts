@@ -91,14 +91,16 @@ export class WhatsAppService {
   }
 
   async verifyWebhook(mode: string, token: string, challenge: string): Promise<string | null> {
-    const verifyToken = whatsappConfig.verifyToken;
+    const verifyToken = whatsappConfig.verifyToken || 'token1234'; // Fallback for testing
     
     // Log verification attempt for debugging
     logger.info('Webhook verification attempt', { 
       mode, 
       token: token ? `${token.substring(0, 4)}...` : 'undefined',
       hasVerifyToken: !!verifyToken,
-      challenge: challenge ? `${challenge.substring(0, 4)}...` : 'undefined'
+      verifyTokenValue: verifyToken ? `${verifyToken.substring(0, 4)}...` : 'undefined',
+      challenge: challenge ? `${challenge.substring(0, 4)}...` : 'undefined',
+      tokensMatch: token === verifyToken
     });
     
     if (!verifyToken) {
@@ -111,7 +113,16 @@ export class WhatsAppService {
       return challenge;
     }
     
+<<<<<<< HEAD
     logger.warn('Webhook verification failed', { mode, token: token ? `${token.substring(0, 4)}...` : 'undefined' });
+=======
+    logger.warn('Webhook verification failed', { 
+      mode, 
+      token: token ? `${token.substring(0, 4)}...` : 'undefined',
+      expectedToken: verifyToken ? `${verifyToken.substring(0, 4)}...` : 'undefined',
+      tokensMatch: token === verifyToken
+    });
+>>>>>>> origin/main
     return null;
   }
 
@@ -146,5 +157,6 @@ export class WhatsAppService {
         // Update message log status in database
       });
     }
+    
   }
 }

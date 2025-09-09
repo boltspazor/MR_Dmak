@@ -83,21 +83,30 @@ app.use('/api/super-admin', superAdminRoutes);
 // WhatsApp Webhook
 const whatsappService = new WhatsAppService();
 
-app.get('/api/webhook', (req, res) => {
+app.get('/api/webhook', async (req, res) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
 
-  const result = whatsappService.verifyWebhook(
-    mode as string, 
-    token as string, 
-    challenge as string
-  );
+  console.log('Webhook GET request:', { mode, token, challenge });
 
-  if (result) {
-    return res.status(200).send(result);
-  } else {
-    return res.status(403).send('Forbidden');
+  try {
+    const result = await whatsappService.verifyWebhook(
+      mode as string, 
+      token as string, 
+      challenge as string
+    );
+
+    console.log('Webhook verification result:', result);
+
+    if (result) {
+      return res.status(200).send(result);
+    } else {
+      return res.status(403).send('Forbidden');
+    }
+  } catch (error) {
+    console.error('Webhook verification error:', error);
+    return res.status(500).send('Internal Server Error');
   }
 });
 
