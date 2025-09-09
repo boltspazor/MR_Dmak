@@ -16,6 +16,7 @@ import {
   Activity,
   X
 } from 'lucide-react';
+import { api } from '../lib/api';
 
 interface Contact {
   id: string;
@@ -66,44 +67,65 @@ const SimpleMRTool: React.FC = () => {
     name: ''
   });
 
-  // Load data from localStorage on component mount
+  // Load data from backend API on component mount
   useEffect(() => {
-    const savedContacts = localStorage.getItem('mr_contacts');
-    const savedGroups = localStorage.getItem('mr_groups');
+    fetchContactsFromBackend();
+    fetchGroupsFromBackend();
+    
+    // Load message logs from localStorage (these are local to DMak Tool)
     const savedMessageLogs = localStorage.getItem('mr_message_logs');
-
-    if (savedContacts) {
-      setContacts(JSON.parse(savedContacts));
-    }
-    if (savedGroups) {
-      setGroups(JSON.parse(savedGroups));
-    }
     if (savedMessageLogs) {
       setMessageLogs(JSON.parse(savedMessageLogs));
     }
-
-    // Initialize default groups if none exist
-    if (!savedGroups) {
-      const defaultGroups = [
-        { id: '1', name: 'North Zone', contactCount: 0 },
-        { id: '2', name: 'South Zone', contactCount: 0 },
-        { id: '3', name: 'East Zone', contactCount: 0 },
-        { id: '4', name: 'West Zone', contactCount: 0 }
-      ];
-      setGroups(defaultGroups);
-      localStorage.setItem('mr_groups', JSON.stringify(defaultGroups));
-    }
   }, []);
 
-  // Save data to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem('mr_contacts', JSON.stringify(contacts));
-  }, [contacts]);
+  const fetchContactsFromBackend = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
 
-  useEffect(() => {
-    localStorage.setItem('mr_groups', JSON.stringify(groups));
-  }, [groups]);
+      const response = await api.get('/mrs');
+      const mrs = response.data.data || [];
+      
+      // Transform backend MR data to Contact format
+      const transformedContacts: Contact[] = mrs.map((mr: any) => ({
+        id: mr.id,
+        mrId: mr.mrId,
+        firstName: mr.firstName,
+        lastName: mr.lastName,
+        phone: mr.phone,
+        group: mr.group?.groupName || 'Default Group',
+        comments: mr.comments || ''
+      }));
+      
+      setContacts(transformedContacts);
+    } catch (error: any) {
+      console.error('Error fetching contacts from backend:', error);
+    }
+  };
 
+  const fetchGroupsFromBackend = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      const response = await api.get('/groups');
+      const backendGroups = response.data.data || [];
+      
+      // Transform backend group data to Group format
+      const transformedGroups: Group[] = backendGroups.map((group: any) => ({
+        id: group.id,
+        name: group.groupName,
+        contactCount: group.mrCount || 0
+      }));
+      
+      setGroups(transformedGroups);
+    } catch (error: any) {
+      console.error('Error fetching groups from backend:', error);
+    }
+  };
+
+  // Save message logs to localStorage (these are local to DMak Tool)
   useEffect(() => {
     localStorage.setItem('mr_message_logs', JSON.stringify(messageLogs));
   }, [messageLogs]);
@@ -118,35 +140,65 @@ const SimpleMRTool: React.FC = () => {
   }, [contacts]);
 
   // Contact management functions
-  const addContact = () => {
+  const addContact = async () => {
     if (!newContact.mrId || !newContact.firstName || !newContact.lastName || !newContact.phone || !newContact.group) {
       alert('Please fill in all required fields');
       return;
     }
 
-    const contact: Contact = {
-      id: Date.now().toString(),
-      ...newContact
-    };
+    try {
+      // Find the group ID by name
+      const selectedGroup = groups.find(g => g.name === newContact.group);
+      if (!selectedGroup) {
+        alert('Selected group not found');
+        return;
+      }
 
-    setContacts([...contacts, contact]);
-    setNewContact({
-      mrId: '',
-      firstName: '',
-      lastName: '',
-      phone: '',
-      group: '',
-      comments: ''
-    });
-  };
+      await api.post('/mrs', {
+        mrId: newContact.mrId,
+        firstName: newContact.firstName,
+        lastName: newContact.lastName,
+        phone: newContact.phone,
+        groupId: selectedGroup.id,
+        comments: newContact.comments
+      });
 
-  const deleteContact = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this contact?')) {
-      setContacts(contacts.filter(contact => contact.id !== id));
+      // Refresh contacts from backend
+      await fetchContactsFromBackend();
+      
+      setNewContact({
+        mrId: '',
+        firstName: '',
+        lastName: '',
+        phone: '',
+        group: '',
+        comments: ''
+      });
+      
+      alert('Contact added successfully!');
+    } catch (error: any) {
+      console.error('Error adding contact:', error);
+      alert(error.response?.data?.error || 'Failed to add contact');
     }
   };
 
-  const addGroup = () => {
+  const deleteContact = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this contact?')) {
+      return;
+    }
+
+    try {
+      await api.delete(`/mrs/${id}`);
+      // Refresh contacts from backend
+      await fetchContactsFromBackend();
+      alert('Contact deleted successfully!');
+    } catch (error: any) {
+      console.error('Error deleting contact:', error);
+      alert(error.response?.data?.error || 'Failed to delete contact');
+    }
+  };
+
+  const addGroup = async () => {
     if (!newGroup.name.trim()) {
       alert('Please enter a group name');
       return;
@@ -157,14 +209,20 @@ const SimpleMRTool: React.FC = () => {
       return;
     }
 
-    const group: Group = {
-      id: Date.now().toString(),
-      name: newGroup.name.trim(),
-      contactCount: 0
-    };
+    try {
+      await api.post('/groups', {
+        groupName: newGroup.name.trim(),
+        description: 'Group created from DMak Tool'
+      });
 
-    setGroups([...groups, group]);
-    setNewGroup({ name: '' });
+      // Refresh groups from backend
+      await fetchGroupsFromBackend();
+      setNewGroup({ name: '' });
+      alert('Group created successfully!');
+    } catch (error: any) {
+      console.error('Error creating group:', error);
+      alert(error.response?.data?.error || 'Failed to create group');
+    }
   };
 
 
@@ -197,45 +255,43 @@ const SimpleMRTool: React.FC = () => {
     window.URL.revokeObjectURL(url);
   };
 
-  const handleCSVImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCSVImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
-      const lines = text.split('\n');
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await api.post('/mrs/bulk-upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      const { created, errors, totalProcessed, success } = response.data;
       
-      const importedContacts: Contact[] = [];
-      
-      for (let i = 1; i < lines.length; i++) {
-        if (lines[i].trim()) {
-          const values = lines[i].split(',');
-          const contact: Contact = {
-            id: Date.now().toString() + i,
-            mrId: values[0]?.trim() || '',
-            firstName: values[1]?.trim() || '',
-            lastName: values[2]?.trim() || '',
-            phone: values[3]?.trim() || '',
-            group: values[4]?.trim() || '',
-            comments: values[5]?.trim() || ''
-          };
-          
-          if (contact.mrId && contact.firstName && contact.lastName && contact.phone && contact.group) {
-            importedContacts.push(contact);
+      if (success) {
+        let message = `Bulk upload completed!\n\nCreated: ${created} MRs\nTotal Processed: ${totalProcessed}`;
+        if (errors && errors.length > 0) {
+          message += `\n\nErrors (${errors.length}):\n${errors.slice(0, 5).join('\n')}`;
+          if (errors.length > 5) {
+            message += `\n... and ${errors.length - 5} more errors`;
           }
         }
-      }
-
-      if (importedContacts.length > 0) {
-        setContacts([...contacts, ...importedContacts]);
-        alert(`Successfully imported ${importedContacts.length} contacts`);
+        alert(message);
+        
+        // Refresh contacts and groups from backend
+        await fetchContactsFromBackend();
+        await fetchGroupsFromBackend();
         setSelectedFile(null);
       } else {
-        alert('No valid contacts found in CSV file');
+        alert(`Upload failed. Errors:\n${errors.join('\n')}`);
       }
-    };
-    reader.readAsText(file);
+    } catch (error: any) {
+      console.error('Error uploading file:', error);
+      alert(error.response?.data?.error || 'Failed to upload file');
+    }
   };
 
 
