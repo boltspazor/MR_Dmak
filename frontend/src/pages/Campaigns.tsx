@@ -14,7 +14,9 @@ import {
   X,
   FileText,
   BarChart3,
-  Users
+  Users,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { Campaign, Group, Template } from '../types';
@@ -33,11 +35,17 @@ const CampaignsNew: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'with-template' | 'without-template'>('with-template');
+  
+  // Sorting states
+  const [sortField, setSortField] = useState<keyof Campaign>('createdAt');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   // With Template Tab States
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [showTemplatePreview, setShowTemplatePreview] = useState(false);
+  const [selectedGroupDropdown, setSelectedGroupDropdown] = useState<string>('');
+  const [selectedTemplateDropdown, setSelectedTemplateDropdown] = useState<string>('');
 
   // Without Template Tab States
   const [messageContent, setMessageContent] = useState('');
@@ -96,6 +104,19 @@ const CampaignsNew: React.FC = () => {
     }
   };
 
+  const handleGroupDropdownChange = (groupName: string) => {
+    setSelectedGroupDropdown(groupName);
+    if (groupName && !selectedGroups.includes(groupName)) {
+      setSelectedGroups([...selectedGroups, groupName]);
+    }
+  };
+
+  const handleTemplateDropdownChange = (templateId: string) => {
+    setSelectedTemplateDropdown(templateId);
+    const template = templates.find(t => t._id === templateId);
+    setSelectedTemplate(template || null);
+  };
+
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -149,13 +170,13 @@ const CampaignsNew: React.FC = () => {
   const handleWithoutTemplateSubmit = async () => {
     if (!messageContent.trim() && !selectedImage) {
       alert('Please enter a message or select an image');
-      return;
-    }
-
+        return;
+      }
+      
     if (selectedGroups.length === 0) {
       alert('Please select at least one group');
-      return;
-    }
+        return;
+      }
 
     try {
       let imageUrl = '';
@@ -184,7 +205,7 @@ const CampaignsNew: React.FC = () => {
       // Reset form
       setMessageContent('');
       setSelectedImage(null);
-      setImagePreview('');
+    setImagePreview('');
       setSelectedGroups([]);
       
       alert('Campaign created successfully!');
@@ -205,16 +226,43 @@ const CampaignsNew: React.FC = () => {
     }
   };
 
-  const filteredCampaigns = campaigns.filter(campaign => {
+  const handleSort = (field: keyof Campaign) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const filteredCampaigns = campaigns
+    .filter(campaign => {
     const matchesSearch = 
       campaign.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      campaign.campaignId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        campaign.campaignId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       campaign.targetGroups.some(group => group.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesStatus = !selectedStatus || campaign.status === selectedStatus;
     
     return matchesSearch && matchesStatus;
-  });
+    })
+    .sort((a, b) => {
+      let aValue: any = a[sortField];
+      let bValue: any = b[sortField];
+      
+      // Handle special cases for sorting
+      if (sortField === 'targetGroups') {
+        aValue = a.targetGroups.join(', ');
+        bValue = b.targetGroups.join(', ');
+      } else if (sortField === 'createdAt') {
+        aValue = new Date(a.createdAt).getTime();
+        bValue = new Date(b.createdAt).getTime();
+      }
+      
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
 
   // Calculate success rate
   const getSuccessRate = () => {
@@ -305,7 +353,7 @@ const CampaignsNew: React.FC = () => {
                 { key: 'with-template', label: 'With Template' },
                 { key: 'without-template', label: 'Without Template' }
               ].map((tab) => (
-                <button
+            <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key as any)}
                   className={`pb-2 border-b-2 text-lg font-medium capitalize ${
@@ -315,84 +363,98 @@ const CampaignsNew: React.FC = () => {
                   }`}
                 >
                   {tab.label}
-                </button>
+            </button>
               ))}
-            </div>
+        </div>
 
             {/* With Template Tab */}
             {activeTab === 'with-template' && (
               <div className="space-y-6">
-                {/* Group Selection */}
+                {/* Group Selection Dropdown */}
                 <div className="bg-white bg-opacity-40 rounded-lg p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Groups</h3>
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {groups.length > 0 ? (
-                      groups.map(group => (
-                        <div
-                          key={group.id}
-                          className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-colors ${
-                            selectedGroups.includes(group.name)
-                              ? 'border-indigo-500 bg-indigo-50'
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                          onClick={() => handleGroupSelection(group.name)}
-                        >
-                          <div className="flex items-center space-x-3">
-                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
-                              selectedGroups.includes(group.name)
-                                ? 'border-indigo-500 bg-indigo-500'
-                                : 'border-gray-300'
-                            }`}>
-                              {selectedGroups.includes(group.name) && (
-                                <div className="w-2 h-2 bg-white rounded-full"></div>
-                              )}
+                  <div className="space-y-4">
+                    <div className="relative">
+                      <select
+                        value={selectedGroupDropdown}
+                        onChange={(e) => handleGroupDropdownChange(e.target.value)}
+                        className="w-full px-3 py-2 pr-10 rounded-lg border-0 bg-gray-100 appearance-none cursor-pointer"
+                      >
+                        <option value="">Select a group to add</option>
+                        {groups.map(group => (
+                          <option key={group.id} value={group.name}>
+                            {group.name} ({group.mrCount || 0} contacts)
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="h-5 w-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+                    </div>
+                    
+                    {/* Selected Groups Display */}
+                    {selectedGroups.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-gray-700">Selected Groups:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedGroups.map(groupName => (
+                            <div
+                              key={groupName}
+                              className="flex items-center space-x-2 bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm"
+                            >
+                              <span>{groupName}</span>
+                              <button
+                                onClick={() => handleGroupSelection(groupName)}
+                                className="text-indigo-600 hover:text-indigo-800"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
                             </div>
-                            <div>
-                              <p className="font-medium text-gray-900">{group.name}</p>
-                              <p className="text-sm text-gray-500">{group.mrCount || 0} contacts</p>
-                            </div>
-                          </div>
+                          ))}
                         </div>
-                      ))
-                    ) : (
-                      <p className="text-gray-500 text-center py-4">No groups available</p>
+                      </div>
                     )}
                   </div>
                 </div>
 
-                {/* Template Selection */}
+                {/* Template Selection Dropdown */}
                 <div className="bg-white bg-opacity-40 rounded-lg p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Template</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {templates.length > 0 ? (
-                      templates.map(template => (
-                        <div
-                          key={template._id}
-                          className={`p-4 rounded-lg border-2 cursor-pointer transition-colors ${
-                            selectedTemplate?._id === template._id
-                              ? 'border-indigo-500 bg-indigo-50'
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                          onClick={() => setSelectedTemplate(template)}
-                        >
-                          <h4 className="font-medium text-gray-900 mb-2">{template.name}</h4>
-                          <p className="text-sm text-gray-600 mb-2 line-clamp-2">{template.content}</p>
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-gray-500">{template.type}</span>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setShowTemplatePreview(true);
-                              }}
-                              className="text-indigo-600 hover:text-indigo-800 text-xs"
-                            >
-                              Preview
-                            </button>
-                          </div>
+                  <div className="space-y-4">
+                    <div className="relative">
+                      <select
+                        value={selectedTemplateDropdown}
+                        onChange={(e) => handleTemplateDropdownChange(e.target.value)}
+                        className="w-full px-3 py-2 pr-10 rounded-lg border-0 bg-gray-100 appearance-none cursor-pointer"
+                      >
+                        <option value="">Select a template</option>
+                        {templates.map(template => (
+                          <option key={template._id} value={template._id}>
+                            {template.name} ({template.type})
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="h-5 w-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+                    </div>
+                    
+                    {/* Selected Template Preview */}
+                    {selectedTemplate && (
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-medium text-gray-900">{selectedTemplate.name}</h4>
+                          <button
+                            onClick={() => setShowTemplatePreview(true)}
+                            className="text-indigo-600 hover:text-indigo-800 text-sm"
+                          >
+                            Full Preview
+                          </button>
                         </div>
-                      ))
-                    ) : (
-                      <p className="text-gray-500 text-center py-4 col-span-full">No templates available</p>
+                        <p className="text-sm text-gray-600 line-clamp-3">{selectedTemplate.content}</p>
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="text-xs text-gray-500">{selectedTemplate.type}</span>
+                          <span className="text-xs text-gray-500">
+                            {selectedTemplate.parameters.length} parameters
+                          </span>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -405,49 +467,56 @@ const CampaignsNew: React.FC = () => {
                     className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                   >
                     <Send className="h-5 w-5 mr-2" />
-                    Create Campaign
+                    Send Messages & Create Campaign
                   </button>
                 </div>
-              </div>
+                    </div>
             )}
 
             {/* Without Template Tab */}
             {activeTab === 'without-template' && (
               <div className="space-y-6">
-                {/* Group Selection */}
+                {/* Group Selection Dropdown */}
                 <div className="bg-white bg-opacity-40 rounded-lg p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Groups</h3>
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {groups.length > 0 ? (
-                      groups.map(group => (
-                        <div
-                          key={group.id}
-                          className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-colors ${
-                            selectedGroups.includes(group.name)
-                              ? 'border-indigo-500 bg-indigo-50'
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                          onClick={() => handleGroupSelection(group.name)}
-                        >
-                          <div className="flex items-center space-x-3">
-                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
-                              selectedGroups.includes(group.name)
-                                ? 'border-indigo-500 bg-indigo-500'
-                                : 'border-gray-300'
-                            }`}>
-                              {selectedGroups.includes(group.name) && (
-                                <div className="w-2 h-2 bg-white rounded-full"></div>
-                              )}
+                  <div className="space-y-4">
+                    <div className="relative">
+                      <select
+                        value={selectedGroupDropdown}
+                        onChange={(e) => handleGroupDropdownChange(e.target.value)}
+                        className="w-full px-3 py-2 pr-10 rounded-lg border-0 bg-gray-100 appearance-none cursor-pointer"
+                      >
+                        <option value="">Select a group to add</option>
+                        {groups.map(group => (
+                          <option key={group.id} value={group.name}>
+                            {group.name} ({group.mrCount || 0} contacts)
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="h-5 w-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+                    </div>
+                    
+                    {/* Selected Groups Display */}
+                    {selectedGroups.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-gray-700">Selected Groups:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedGroups.map(groupName => (
+                            <div
+                              key={groupName}
+                              className="flex items-center space-x-2 bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm"
+                            >
+                              <span>{groupName}</span>
+                              <button
+                                onClick={() => handleGroupSelection(groupName)}
+                                className="text-indigo-600 hover:text-indigo-800"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
                             </div>
-                            <div>
-                              <p className="font-medium text-gray-900">{group.name}</p>
-                              <p className="text-sm text-gray-500">{group.mrCount || 0} contacts</p>
-                            </div>
-                          </div>
+                          ))}
                         </div>
-                      ))
-                    ) : (
-                      <p className="text-gray-500 text-center py-4">No groups available</p>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -458,51 +527,51 @@ const CampaignsNew: React.FC = () => {
                   
                   <div className="space-y-4">
                     {/* Message Input */}
-                    <div>
+              <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Message</label>
-                      <textarea
+                <textarea
                         value={messageContent}
                         onChange={(e) => setMessageContent(e.target.value)}
                         placeholder="Type your message here..."
-                        rows={4}
+                  rows={4}
                         className="w-full px-3 py-3 rounded-lg border-0 bg-gray-100 resize-none"
-                      />
-                    </div>
+                />
+              </div>
 
                     {/* Image Upload */}
-                    <div>
+              <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Image (Optional)</label>
-                      <div className="space-y-2">
-                        <input
-                          type="file"
-                          accept="image/*"
+                    <div className="space-y-2">
+                          <input
+                            type="file"
+                            accept="image/*"
                           onChange={handleImageUpload}
-                          className="hidden"
-                          id="image-upload"
-                        />
-                        <label
-                          htmlFor="image-upload"
+                            className="hidden"
+                            id="image-upload"
+                          />
+                          <label 
+                            htmlFor="image-upload"
                           className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-indigo-400 transition-colors"
-                        >
+                          >
                           <Upload className="h-5 w-5 text-gray-400 mr-2" />
                           <span className="text-sm text-gray-600">Click to upload image</span>
-                        </label>
+                          </label>
                         
-                        {imagePreview && (
-                          <div className="relative">
-                            <img
-                              src={imagePreview}
-                              alt="Preview"
+                    {imagePreview && (
+                      <div className="relative">
+                        <img
+                          src={imagePreview}
+                          alt="Preview"
                               className="w-full h-32 object-cover rounded-lg"
-                            />
-                            <button
-                              onClick={removeImage}
+                        />
+                        <button
+                          onClick={removeImage}
                               className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                            >
+                        >
                               <X className="h-4 w-4" />
-                            </button>
-                          </div>
-                        )}
+                        </button>
+                      </div>
+                    )}
                       </div>
                     </div>
                   </div>
@@ -516,11 +585,11 @@ const CampaignsNew: React.FC = () => {
                     className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                   >
                     <Send className="h-5 w-5 mr-2" />
-                    Send Message
+                    Send Messages & Create Campaign
                   </button>
                 </div>
-              </div>
-            )}
+                      </div>
+                    )}
 
             {/* Campaigns List */}
             <div className="bg-white bg-opacity-40 rounded-lg">
@@ -531,13 +600,13 @@ const CampaignsNew: React.FC = () => {
                   <span className="text-sm text-gray-700 font-bold">
                     {filteredCampaigns.length} Campaigns
                   </span>
-                </div>
+                  </div>
                 
                 {/* Search and Filter Controls */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="relative">
                     <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                    <input
+                  <input
                       type="text"
                       placeholder="Search campaigns..."
                       value={searchTerm}
@@ -561,18 +630,90 @@ const CampaignsNew: React.FC = () => {
                   </div>
                 </div>
               </div>
-              
+
               {/* Table */}
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="bg-indigo-50 border-b">
-                      <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Campaign ID</th>
-                      <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Content</th>
-                      <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Target Groups</th>
-                      <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Status</th>
-                      <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Progress</th>
-                      <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Created</th>
+                      <th 
+                        className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                        onClick={() => handleSort('campaignId')}
+                      >
+                        <div className="flex items-center justify-center">
+                          Campaign ID
+                          {sortField === 'campaignId' && (
+                            <span className="ml-1">
+                              {sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                        onClick={() => handleSort('content')}
+                      >
+                        <div className="flex items-center justify-center">
+                          Content
+                          {sortField === 'content' && (
+                            <span className="ml-1">
+                              {sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                        onClick={() => handleSort('targetGroups')}
+                      >
+                        <div className="flex items-center justify-center">
+                          Target Groups
+                          {sortField === 'targetGroups' && (
+                            <span className="ml-1">
+                              {sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                        onClick={() => handleSort('status')}
+                      >
+                        <div className="flex items-center justify-center">
+                          Status
+                          {sortField === 'status' && (
+                            <span className="ml-1">
+                              {sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                        onClick={() => handleSort('sentCount')}
+                      >
+                        <div className="flex items-center justify-center">
+                          Progress
+                          {sortField === 'sentCount' && (
+                            <span className="ml-1">
+                              {sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                        onClick={() => handleSort('createdAt')}
+                      >
+                        <div className="flex items-center justify-center">
+                          Created
+                          {sortField === 'createdAt' && (
+                            <span className="ml-1">
+                              {sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                            </span>
+                          )}
+                        </div>
+                      </th>
                       <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Actions</th>
                     </tr>
                   </thead>
@@ -615,14 +756,14 @@ const CampaignsNew: React.FC = () => {
                           </td>
                           <td className="py-3 px-6 text-sm text-center">
                             <div className="flex items-center justify-center space-x-2">
-                              <button
+                <button
                                 onClick={() => handleDelete(campaign.id)}
                                 className="text-red-600 hover:text-red-800"
                                 title="Delete Campaign"
                               >
                                 <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
+                </button>
+              </div>
                           </td>
                         </tr>
                       ))
@@ -632,14 +773,14 @@ const CampaignsNew: React.FC = () => {
                           <div className="flex flex-col items-center">
                             <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4">
                               <MessageSquare className="h-12 w-12 text-gray-400" />
-                            </div>
+          </div>
                             <h3 className="text-lg font-bold mb-2 text-indigo-600">
                               No Campaigns Found
                             </h3>
                             <p className="text-sm text-indigo-600">
                               Create your first campaign using the tabs above
                             </p>
-                          </div>
+        </div>
                         </td>
                       </tr>
                     )}
