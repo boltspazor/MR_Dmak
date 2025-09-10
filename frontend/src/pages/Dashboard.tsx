@@ -8,7 +8,8 @@ import {
   Eye,
   CheckCircle,
   XCircle,
-  Clock
+  Clock,
+  X
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
@@ -16,15 +17,24 @@ import CommonFeatures from '../components/CommonFeatures';
 
 interface CampaignRecord {
   id: string;
-  marketingManager: string;
-  groupName: string;
-  mrName: string;
-  templateName: string;
-  recipientList: string;
+  campaignName: string;
+  campaignId: string;
+  template: string;
+  recipientList: string[];
   date: string;
   sendStatus: 'success' | 'failed' | 'pending';
-  templateId: string;
-  recipientListId: string;
+  totalRecipients: number;
+  sentCount: number;
+  failedCount: number;
+}
+
+interface GroupMember {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  group: string;
+  status: 'active' | 'inactive';
 }
 
 const Dashboard: React.FC = () => {
@@ -34,73 +44,78 @@ const Dashboard: React.FC = () => {
   const [filteredCampaigns, setFilteredCampaigns] = useState<CampaignRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [managerFilter, setManagerFilter] = useState<string>('all');
-  const [groupFilter, setGroupFilter] = useState<string>('all');
   const [sortField, setSortField] = useState<keyof CampaignRecord>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  
+  // Recipient list popup states
+  const [showRecipientPopup, setShowRecipientPopup] = useState(false);
+  const [selectedRecipients, setSelectedRecipients] = useState<GroupMember[]>([]);
+  const [recipientSearchTerm, setRecipientSearchTerm] = useState('');
+  const [recipientStatusFilter, setRecipientStatusFilter] = useState<string>('all');
+  const [recipientGroupFilter, setRecipientGroupFilter] = useState<string>('all');
 
   // Mock data for demonstration
   useEffect(() => {
     const mockCampaigns: CampaignRecord[] = [
       {
         id: '1',
-        marketingManager: 'John Smith',
-        groupName: 'North Zone',
-        mrName: 'Alice Johnson',
-        templateName: 'Monthly Update Template',
-        recipientList: 'North Zone Q1 List',
+        campaignName: 'Q1 Product Launch',
+        campaignId: 'CAMP-001',
+        template: 'Product Launch Template',
+        recipientList: ['North Zone', 'South Zone'],
         date: '2024-01-15',
         sendStatus: 'success',
-        templateId: 't1',
-        recipientListId: 'r1'
+        totalRecipients: 150,
+        sentCount: 145,
+        failedCount: 5
       },
       {
         id: '2',
-        marketingManager: 'John Smith',
-        groupName: 'South Zone',
-        mrName: 'Bob Wilson',
-        templateName: 'Product Launch Template',
-        recipientList: 'South Zone Q1 List',
+        campaignName: 'Monthly Training Update',
+        campaignId: 'CAMP-002',
+        template: 'Training Reminder Template',
+        recipientList: ['East Zone', 'West Zone'],
         date: '2024-01-14',
         sendStatus: 'failed',
-        templateId: 't2',
-        recipientListId: 'r2'
+        totalRecipients: 200,
+        sentCount: 120,
+        failedCount: 80
       },
       {
         id: '3',
-        marketingManager: 'Sarah Davis',
-        groupName: 'East Zone',
-        mrName: 'Carol Brown',
-        templateName: 'Training Reminder',
-        recipientList: 'East Zone Q1 List',
+        campaignName: 'Q1 Sales Review',
+        campaignId: 'CAMP-003',
+        template: 'Sales Review Template',
+        recipientList: ['Central Zone'],
         date: '2024-01-13',
         sendStatus: 'pending',
-        templateId: 't3',
-        recipientListId: 'r3'
+        totalRecipients: 75,
+        sentCount: 0,
+        failedCount: 0
       },
       {
         id: '4',
-        marketingManager: 'John Smith',
-        groupName: 'North Zone',
-        mrName: 'David Lee',
-        templateName: 'Monthly Update Template',
-        recipientList: 'North Zone Q1 List',
+        campaignName: 'New Product Announcement',
+        campaignId: 'CAMP-004',
+        template: 'Product Announcement Template',
+        recipientList: ['North Zone', 'East Zone'],
         date: '2024-01-12',
         sendStatus: 'success',
-        templateId: 't1',
-        recipientListId: 'r1'
+        totalRecipients: 180,
+        sentCount: 175,
+        failedCount: 5
       },
       {
         id: '5',
-        marketingManager: 'Sarah Davis',
-        groupName: 'West Zone',
-        mrName: 'Eva Martinez',
-        templateName: 'Product Launch Template',
-        recipientList: 'West Zone Q1 List',
+        campaignName: 'Holiday Campaign',
+        campaignId: 'CAMP-005',
+        template: 'Holiday Special Template',
+        recipientList: ['South Zone', 'West Zone', 'Central Zone'],
         date: '2024-01-11',
         sendStatus: 'success',
-        templateId: 't2',
-        recipientListId: 'r4'
+        totalRecipients: 300,
+        sentCount: 295,
+        failedCount: 5
       }
     ];
 
@@ -112,16 +127,14 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     let filtered = campaigns.filter(campaign => {
       const matchesSearch = 
-        campaign.marketingManager.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        campaign.groupName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        campaign.mrName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        campaign.templateName.toLowerCase().includes(searchTerm.toLowerCase());
+        campaign.campaignName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        campaign.campaignId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        campaign.template.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        campaign.recipientList.some(group => group.toLowerCase().includes(searchTerm.toLowerCase()));
       
       const matchesStatus = statusFilter === 'all' || campaign.sendStatus === statusFilter;
-      const matchesManager = managerFilter === 'all' || campaign.marketingManager === managerFilter;
-      const matchesGroup = groupFilter === 'all' || campaign.groupName === groupFilter;
 
-      return matchesSearch && matchesStatus && matchesManager && matchesGroup;
+      return matchesSearch && matchesStatus;
     });
 
     // Sort campaigns
@@ -135,7 +148,7 @@ const Dashboard: React.FC = () => {
     });
 
     setFilteredCampaigns(filtered);
-  }, [campaigns, searchTerm, statusFilter, managerFilter, groupFilter, sortField, sortDirection]);
+  }, [campaigns, searchTerm, statusFilter, sortField, sortDirection]);
 
   const handleSort = (field: keyof CampaignRecord) => {
     if (sortField === field) {
@@ -182,11 +195,99 @@ const Dashboard: React.FC = () => {
     navigate('/login');
   };
 
+  const handleRecipientListClick = (recipientGroups: string[]) => {
+    // Mock data for group members
+    const mockGroupMembers: GroupMember[] = [
+      { id: '1', name: 'John Smith', phone: '+1234567890', email: 'john@example.com', group: 'North Zone', status: 'active' },
+      { id: '2', name: 'Jane Doe', phone: '+1234567891', email: 'jane@example.com', group: 'North Zone', status: 'active' },
+      { id: '3', name: 'Bob Wilson', phone: '+1234567892', email: 'bob@example.com', group: 'South Zone', status: 'active' },
+      { id: '4', name: 'Alice Johnson', phone: '+1234567893', email: 'alice@example.com', group: 'South Zone', status: 'inactive' },
+      { id: '5', name: 'Charlie Brown', phone: '+1234567894', email: 'charlie@example.com', group: 'East Zone', status: 'active' },
+      { id: '6', name: 'Diana Prince', phone: '+1234567895', email: 'diana@example.com', group: 'West Zone', status: 'active' },
+      { id: '7', name: 'Eva Martinez', phone: '+1234567896', email: 'eva@example.com', group: 'Central Zone', status: 'active' },
+    ];
+
+    // Filter members based on selected groups
+    const filteredMembers = mockGroupMembers.filter(member => 
+      recipientGroups.includes(member.group)
+    );
+    
+    setSelectedRecipients(filteredMembers);
+    setShowRecipientPopup(true);
+  };
+
+  const exportRecipientsToCSV = () => {
+    const csvContent = [
+      'Name,Phone,Email,Group,Status',
+      ...selectedRecipients.map(member => 
+        `${member.name},${member.phone},${member.email || ''},${member.group},${member.status}`
+      )
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'recipient_list.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const exportRecipientsToPDF = () => {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      const tableContent = `
+        <html>
+          <head>
+            <title>Recipient List Report</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 20px; }
+              h1 { color: #333; text-align: center; }
+              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+              th { background-color: #f2f2f2; }
+              @media print { body { margin: 0; } }
+            </style>
+          </head>
+          <body>
+            <h1>Recipient List Report</h1>
+            <p>Generated on: ${new Date().toLocaleDateString()}</p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Phone</th>
+                  <th>Email</th>
+                  <th>Group</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${selectedRecipients.map(member => `
+                  <tr>
+                    <td>${member.name}</td>
+                    <td>${member.phone}</td>
+                    <td>${member.email || '-'}</td>
+                    <td>${member.group}</td>
+                    <td>${member.status}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </body>
+        </html>
+      `;
+      printWindow.document.write(tableContent);
+      printWindow.document.close();
+      printWindow.print();
+    }
+  };
+
   const exportToCSV = () => {
     const csvContent = [
-      'Marketing Manager,Group Name,MR Name,Template Name,Recipient List,Date,Send Status',
+      'Campaign Name,Campaign ID,Template,Recipient List,Date,Send Status,Total Recipients,Sent Count,Failed Count',
       ...filteredCampaigns.map(campaign => 
-        `${campaign.marketingManager},${campaign.groupName},${campaign.mrName},${campaign.templateName},${campaign.recipientList},${campaign.date},${campaign.sendStatus}`
+        `${campaign.campaignName},${campaign.campaignId},${campaign.template},${campaign.recipientList.join(';')},${campaign.date},${campaign.sendStatus},${campaign.totalRecipients},${campaign.sentCount},${campaign.failedCount}`
       )
     ].join('\n');
 
@@ -224,25 +325,29 @@ const Dashboard: React.FC = () => {
             <table>
               <thead>
                 <tr>
-                  <th>Marketing Manager</th>
-                  <th>Group Name</th>
-                  <th>MR Name</th>
-                  <th>Template Name</th>
+                  <th>Campaign Name</th>
+                  <th>Campaign ID</th>
+                  <th>Template</th>
                   <th>Recipient List</th>
                   <th>Date</th>
                   <th>Send Status</th>
+                  <th>Total Recipients</th>
+                  <th>Sent Count</th>
+                  <th>Failed Count</th>
                 </tr>
               </thead>
               <tbody>
                 ${filteredCampaigns.map(campaign => `
                   <tr>
-                    <td>${campaign.marketingManager}</td>
-                    <td>${campaign.groupName}</td>
-                    <td>${campaign.mrName}</td>
-                    <td>${campaign.templateName}</td>
-                    <td>${campaign.recipientList}</td>
+                    <td>${campaign.campaignName}</td>
+                    <td>${campaign.campaignId}</td>
+                    <td>${campaign.template}</td>
+                    <td>${campaign.recipientList.join(', ')}</td>
                     <td>${campaign.date}</td>
                     <td class="${campaign.sendStatus}">${campaign.sendStatus}</td>
+                    <td>${campaign.totalRecipients}</td>
+                    <td>${campaign.sentCount}</td>
+                    <td>${campaign.failedCount}</td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -264,27 +369,18 @@ const Dashboard: React.FC = () => {
       color: 'bg-blue-100'
     },
     {
-      title: 'Successful Sends',
-      value: campaigns.filter(c => c.sendStatus === 'success').length,
-      icon: <CheckCircle className="h-6 w-6 text-green-600" />,
-      color: 'bg-green-100'
-    },
-    {
-      title: 'Failed Sends',
-      value: campaigns.filter(c => c.sendStatus === 'failed').length,
-      icon: <XCircle className="h-6 w-6 text-red-600" />,
-      color: 'bg-red-100'
-    },
-    {
       title: 'Success Rate',
-      value: campaigns.length > 0 ? `${Math.round((campaigns.filter(c => c.sendStatus === 'success').length / campaigns.length) * 100)}%` : '0%',
-      icon: <BarChart3 className="h-6 w-6 text-purple-600" />,
-      color: 'bg-purple-100'
+      value: (() => {
+        const totalMessages = campaigns.reduce((sum, c) => sum + c.totalRecipients, 0);
+        const sentMessages = campaigns.reduce((sum, c) => sum + c.sentCount, 0);
+        return totalMessages > 0 ? `${Math.round((sentMessages / totalMessages) * 100)}%` : '0%';
+      })(),
+      icon: <BarChart3 className="h-6 w-6 text-green-600" />,
+      color: 'bg-green-100'
     }
   ];
 
-  const uniqueManagers = [...new Set(campaigns.map(c => c.marketingManager))];
-  const uniqueGroups = [...new Set(campaigns.map(c => c.groupName))];
+  const uniqueGroups = [...new Set(campaigns.flatMap(c => c.recipientList))];
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -317,7 +413,7 @@ const Dashboard: React.FC = () => {
             {/* Filters */}
             <div className="bg-white bg-opacity-60 rounded-lg p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Filters</h3>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
                   <div className="relative">
@@ -345,34 +441,6 @@ const Dashboard: React.FC = () => {
                     <option value="pending">Pending</option>
                   </select>
                 </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Manager</label>
-                  <select
-                    value={managerFilter}
-                    onChange={(e) => setManagerFilter(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border-0 bg-gray-100"
-                  >
-                    <option value="all">All Managers</option>
-                    {uniqueManagers.map(manager => (
-                      <option key={manager} value={manager}>{manager}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Group</label>
-                  <select
-                    value={groupFilter}
-                    onChange={(e) => setGroupFilter(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border-0 bg-gray-100"
-                  >
-                    <option value="all">All Groups</option>
-                    {uniqueGroups.map(group => (
-                      <option key={group} value={group}>{group}</option>
-                    ))}
-                  </select>
-                </div>
               </div>
             </div>
 
@@ -393,11 +461,11 @@ const Dashboard: React.FC = () => {
                     <tr className="bg-indigo-50 border-b">
                       <th 
                         className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
-                        onClick={() => handleSort('marketingManager')}
+                        onClick={() => handleSort('campaignName')}
                       >
                         <div className="flex items-center justify-center">
-                          Marketing Manager
-                          {sortField === 'marketingManager' && (
+                          Campaign Name
+                          {sortField === 'campaignName' && (
                             <span className="ml-1">
                               {sortDirection === 'asc' ? '↑' : '↓'}
                             </span>
@@ -406,11 +474,11 @@ const Dashboard: React.FC = () => {
                       </th>
                       <th 
                         className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
-                        onClick={() => handleSort('groupName')}
+                        onClick={() => handleSort('campaignId')}
                       >
                         <div className="flex items-center justify-center">
-                          Group Name
-                          {sortField === 'groupName' && (
+                          Campaign ID
+                          {sortField === 'campaignId' && (
                             <span className="ml-1">
                               {sortDirection === 'asc' ? '↑' : '↓'}
                             </span>
@@ -419,24 +487,11 @@ const Dashboard: React.FC = () => {
                       </th>
                       <th 
                         className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
-                        onClick={() => handleSort('mrName')}
+                        onClick={() => handleSort('template')}
                       >
                         <div className="flex items-center justify-center">
-                          MR Name
-                          {sortField === 'mrName' && (
-                            <span className="ml-1">
-                              {sortDirection === 'asc' ? '↑' : '↓'}
-                            </span>
-                          )}
-                        </div>
-                      </th>
-                      <th 
-                        className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
-                        onClick={() => handleSort('templateName')}
-                      >
-                        <div className="flex items-center justify-center">
-                          Template Name
-                          {sortField === 'templateName' && (
+                          Template
+                          {sortField === 'template' && (
                             <span className="ml-1">
                               {sortDirection === 'asc' ? '↑' : '↓'}
                             </span>
@@ -489,23 +544,22 @@ const Dashboard: React.FC = () => {
                     {filteredCampaigns.length > 0 ? (
                       filteredCampaigns.map(campaign => (
                         <tr key={campaign.id} className="border-b hover:bg-gray-50">
-                          <td className="py-3 px-6 text-sm text-gray-900 text-center">{campaign.marketingManager}</td>
-                          <td className="py-3 px-6 text-sm text-gray-900 text-center">{campaign.groupName}</td>
-                          <td className="py-3 px-6 text-sm text-gray-900 text-center">{campaign.mrName}</td>
+                          <td className="py-3 px-6 text-sm text-gray-900 text-center font-medium">{campaign.campaignName}</td>
+                          <td className="py-3 px-6 text-sm text-gray-900 text-center">{campaign.campaignId}</td>
                           <td className="py-3 px-6 text-sm text-gray-900 text-center">
                             <button 
                               className="text-blue-600 hover:text-blue-800 underline"
-                              onClick={() => alert(`Viewing template: ${campaign.templateName}`)}
+                              onClick={() => alert(`Viewing template: ${campaign.template}`)}
                             >
-                              {campaign.templateName}
+                              {campaign.template}
                             </button>
                           </td>
                           <td className="py-3 px-6 text-sm text-gray-900 text-center">
                             <button 
                               className="text-blue-600 hover:text-blue-800 underline"
-                              onClick={() => alert(`Viewing recipient list: ${campaign.recipientList}`)}
+                              onClick={() => handleRecipientListClick(campaign.recipientList)}
                             >
-                              {campaign.recipientList}
+                              {campaign.recipientList.length} Groups
                             </button>
                           </td>
                           <td className="py-3 px-6 text-sm text-gray-900 text-center">{campaign.date}</td>
@@ -519,7 +573,7 @@ const Dashboard: React.FC = () => {
                           </td>
                           <td className="py-3 px-6 text-sm text-center">
                             <button
-                              onClick={() => alert(`Viewing details for campaign: ${campaign.id}`)}
+                              onClick={() => alert(`Viewing details for campaign: ${campaign.campaignId}`)}
                               className="text-indigo-600 hover:text-indigo-800"
                             >
                               <Eye className="h-4 w-4" />
@@ -529,7 +583,7 @@ const Dashboard: React.FC = () => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={8} className="text-center py-12">
+                        <td colSpan={7} className="text-center py-12">
                           <div className="flex flex-col items-center">
                             <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4">
                               <MessageSquare className="h-12 w-12 text-gray-400" />
@@ -550,6 +604,151 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
         </CommonFeatures>
+
+        {/* Recipient List Popup Modal */}
+        {showRecipientPopup && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Recipient List Details
+                </h2>
+                <button
+                  onClick={() => setShowRecipientPopup(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              
+              {/* Filters for Recipient List */}
+              <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Filters</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                    <div className="relative">
+                      <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Search recipients..."
+                        value={recipientSearchTerm}
+                        onChange={(e) => setRecipientSearchTerm(e.target.value)}
+                        className="pl-10 pr-4 py-2 w-full rounded-lg border-0 bg-white"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                    <select
+                      value={recipientStatusFilter}
+                      onChange={(e) => setRecipientStatusFilter(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg border-0 bg-white"
+                    >
+                      <option value="all">All Status</option>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Group</label>
+                    <select
+                      value={recipientGroupFilter}
+                      onChange={(e) => setRecipientGroupFilter(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg border-0 bg-white"
+                    >
+                      <option value="all">All Groups</option>
+                      {uniqueGroups.map(group => (
+                        <option key={group} value={group}>{group}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Export Buttons */}
+              <div className="flex justify-end space-x-4 mb-4">
+                <button
+                  onClick={exportRecipientsToCSV}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700"
+                >
+                  Export CSV
+                </button>
+                <button
+                  onClick={exportRecipientsToPDF}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700"
+                >
+                  Export PDF
+                </button>
+              </div>
+
+              {/* Recipients Table */}
+              <div className="bg-white rounded-lg border">
+                <div className="p-4 border-b bg-indigo-50">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-lg font-semibold text-gray-900">Recipients</h3>
+                    <span className="text-sm text-gray-700 font-bold">
+                      {selectedRecipients.filter(member => {
+                        const matchesSearch = 
+                          member.name.toLowerCase().includes(recipientSearchTerm.toLowerCase()) ||
+                          member.phone.toLowerCase().includes(recipientSearchTerm.toLowerCase()) ||
+                          (member.email && member.email.toLowerCase().includes(recipientSearchTerm.toLowerCase()));
+                        const matchesStatus = recipientStatusFilter === 'all' || member.status === recipientStatusFilter;
+                        const matchesGroup = recipientGroupFilter === 'all' || member.group === recipientGroupFilter;
+                        return matchesSearch && matchesStatus && matchesGroup;
+                      }).length} Recipients
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-indigo-50 border-b">
+                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Name</th>
+                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Phone</th>
+                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Email</th>
+                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Group</th>
+                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedRecipients
+                        .filter(member => {
+                          const matchesSearch = 
+                            member.name.toLowerCase().includes(recipientSearchTerm.toLowerCase()) ||
+                            member.phone.toLowerCase().includes(recipientSearchTerm.toLowerCase()) ||
+                            (member.email && member.email.toLowerCase().includes(recipientSearchTerm.toLowerCase()));
+                          const matchesStatus = recipientStatusFilter === 'all' || member.status === recipientStatusFilter;
+                          const matchesGroup = recipientGroupFilter === 'all' || member.group === recipientGroupFilter;
+                          return matchesSearch && matchesStatus && matchesGroup;
+                        })
+                        .map(member => (
+                          <tr key={member.id} className="border-b hover:bg-gray-50">
+                            <td className="py-3 px-6 text-sm text-gray-900 text-center">{member.name}</td>
+                            <td className="py-3 px-6 text-sm text-gray-900 text-center">{member.phone}</td>
+                            <td className="py-3 px-6 text-sm text-gray-900 text-center">{member.email || '-'}</td>
+                            <td className="py-3 px-6 text-sm text-gray-900 text-center">{member.group}</td>
+                            <td className="py-3 px-6 text-sm text-center">
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                member.status === 'active' 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {member.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
