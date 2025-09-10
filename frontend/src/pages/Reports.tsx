@@ -186,6 +186,9 @@ const Reports: React.FC = () => {
           </div>
         </div>
 
+        {/* Separator Line */}
+        <div className="border-b border-gray-300 my-6"></div>
+
         {/* Overall Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card>

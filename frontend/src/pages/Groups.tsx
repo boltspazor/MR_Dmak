@@ -227,6 +227,9 @@ const Groups: React.FC = () => {
           </div>
         </div>
 
+        {/* Separator Line */}
+        <div className="border-b border-gray-300 my-6" style={{ marginLeft: '100px', marginRight: '100px' }}></div>
+
         {/* Main Content Area */}
         <div className="relative" style={{ width: '1308px', height: '935px', marginLeft: '100px' }}>
           {/* Background with blur effect */}

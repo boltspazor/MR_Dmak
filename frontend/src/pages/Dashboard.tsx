@@ -415,6 +415,9 @@ const Dashboard: React.FC = () => {
           onExportPDF={exportToPDF}
           showExportButtons={true}
         />
+        
+        {/* Separator Line */}
+        <div className="border-b border-gray-300 my-6"></div>
 
         {/* Main Content Area */}
         <CommonFeatures
