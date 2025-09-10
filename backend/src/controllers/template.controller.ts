@@ -145,15 +145,21 @@ export class TemplateController {
         }
       }
 
-      const template = await Template.create({
+      const templateData: any = {
         name: name.trim(),
         content,
         type: type || 'text',
-        imageUrl,
-        footerImageUrl,
+        imageUrl: imageUrl || '',
         parameters: extractedParameters,
         createdBy: userId
-      });
+      };
+
+      // Only add footerImageUrl if it exists (for backward compatibility)
+      if (footerImageUrl) {
+        templateData.footerImageUrl = footerImageUrl;
+      }
+
+      const template = await Template.create(templateData);
 
       const populatedTemplate = await Template.findById(template._id)
         .populate('createdBy', 'name email');
@@ -171,9 +177,11 @@ export class TemplateController {
       });
     } catch (error) {
       logger.error('Error creating template:', error);
+      console.error('Template creation error details:', error);
       res.status(500).json({ 
         success: false, 
-        error: 'Failed to create template' 
+        error: 'Failed to create template',
+        details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   }
@@ -226,16 +234,22 @@ export class TemplateController {
         }
       }
 
+      const updateData: any = {
+        name: name ? name.trim() : template.name,
+        content: content || template.content,
+        type: type || template.type,
+        imageUrl: imageUrl !== undefined ? imageUrl : template.imageUrl,
+        parameters: extractedParameters
+      };
+
+      // Only update footerImageUrl if it exists (for backward compatibility)
+      if (footerImageUrl !== undefined) {
+        updateData.footerImageUrl = footerImageUrl;
+      }
+
       const updatedTemplate = await Template.findByIdAndUpdate(
         id,
-        {
-          name: name ? name.trim() : template.name,
-          content: content || template.content,
-          type: type || template.type,
-          imageUrl: imageUrl !== undefined ? imageUrl : template.imageUrl,
-          footerImageUrl: footerImageUrl !== undefined ? footerImageUrl : template.footerImageUrl,
-          parameters: extractedParameters
-        },
+        updateData,
         { new: true }
       ).populate('createdBy', 'name email');
 
