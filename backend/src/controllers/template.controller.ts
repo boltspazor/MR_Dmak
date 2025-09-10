@@ -119,7 +119,7 @@ export class TemplateController {
   async createTemplate(req: Request, res: Response): Promise<void> {
     try {
       const userId = (req as any).user.id;
-      const { name, content, type, parameters } = req.body;
+      const { name, content, type, parameters, imageUrl, footerImageUrl } = req.body;
 
       // Check if template name already exists
       const existingTemplate = await Template.findOne({ 
@@ -149,6 +149,8 @@ export class TemplateController {
         name: name.trim(),
         content,
         type: type || 'text',
+        imageUrl,
+        footerImageUrl,
         parameters: extractedParameters,
         createdBy: userId
       });
@@ -181,7 +183,7 @@ export class TemplateController {
     try {
       const { id } = req.params;
       const userId = (req as any).user.id;
-      const { name, content, type, parameters } = req.body;
+      const { name, content, type, parameters, imageUrl, footerImageUrl } = req.body;
 
       const template = await Template.findOne({ 
         _id: id, 
@@ -230,6 +232,8 @@ export class TemplateController {
           name: name ? name.trim() : template.name,
           content: content || template.content,
           type: type || template.type,
+          imageUrl: imageUrl !== undefined ? imageUrl : template.imageUrl,
+          footerImageUrl: footerImageUrl !== undefined ? footerImageUrl : template.footerImageUrl,
           parameters: extractedParameters
         },
         { new: true }

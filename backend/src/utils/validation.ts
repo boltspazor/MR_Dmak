@@ -65,6 +65,7 @@ export const schemas = {
       type: Joi.string().valid('html', 'text', 'image').default('text'),
       parameters: Joi.array().items(Joi.string().min(1).max(50)).default([]),
       imageUrl: Joi.string().uri().allow('', null),
+      footerImageUrl: Joi.string().uri().allow('', null),
     }),
     update: Joi.object({
       name: Joi.string().min(2).max(100),
@@ -72,6 +73,7 @@ export const schemas = {
       type: Joi.string().valid('html', 'text', 'image'),
       parameters: Joi.array().items(Joi.string().min(1).max(50)),
       imageUrl: Joi.string().uri().allow('', null),
+      footerImageUrl: Joi.string().uri().allow('', null),
     })
   }
 };
