@@ -126,29 +126,48 @@ const Templates: React.FC = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('authToken');
-      if (!token) return;
+      console.log('Auth token:', token ? 'Present' : 'Missing');
+      if (!token) {
+        alert('Please log in to create templates');
+        return;
+      }
 
       let imageUrl = formData.imageUrl;
       let footerImageUrl = formData.footerImageUrl;
 
-      // Upload images if they exist
-      if (headerImage) {
-        imageUrl = await uploadImage(headerImage, 'header');
-      }
-      if (footerImage) {
-        footerImageUrl = await uploadImage(footerImage, 'footer');
+      // Skip image uploads for now to test basic template creation
+      // TODO: Re-enable image uploads once basic template creation works
+      console.log('Skipping image uploads for now');
+      imageUrl = '';
+      footerImageUrl = '';
+
+      // Extract parameters from content if not provided
+      let extractedParameters = formData.parameters || [];
+      if (!formData.parameters && formData.content) {
+        const paramMatches = formData.content.match(/#[A-Za-z0-9_]+/g);
+        if (paramMatches) {
+          extractedParameters = [...new Set(paramMatches.map((param: string) => param.substring(1)))];
+        }
       }
 
       const templateData = {
-        ...formData,
-        imageUrl,
-        footerImageUrl,
-        parameters: formData.parameters
+        name: formData.name,
+        content: formData.content,
+        type: formData.type,
+        imageUrl: imageUrl || '',
+        footerImageUrl: footerImageUrl || '',
+        parameters: extractedParameters
       };
 
+      console.log('Creating template with data:', templateData);
+      console.log('API base URL:', api.defaults.baseURL);
+      console.log('Request headers:', api.defaults.headers);
+
       if (editingTemplate) {
+        console.log('Updating template:', editingTemplate.name);
         await api.put(`/templates/${editingTemplate.name}`, templateData);
       } else {
+        console.log('Creating new template...');
         await api.post('/templates', templateData);
       }
 
@@ -165,12 +184,16 @@ const Templates: React.FC = () => {
       });
       
       // Reset file states
-      setHeaderImage(null);
-      setFooterImage(null);
+      // setHeaderImage(null);
+      // setFooterImage(null);
       setHeaderImagePreview('');
       setFooterImagePreview('');
+      
+      alert('Template created successfully!');
     } catch (error: any) {
       console.error('Error saving template:', error);
+      console.error('Error details:', error.response?.data);
+      alert(`Failed to create template: ${error.response?.data?.error || error.message}`);
     }
   };
 
