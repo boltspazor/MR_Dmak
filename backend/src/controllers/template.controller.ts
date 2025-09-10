@@ -7,7 +7,7 @@ export class TemplateController {
   // Get all templates for a marketing manager
   async getTemplates(req: Request, res: Response) {
     try {
-      const userId = (req as any).user.id;
+      const userId = (req as any).user.userId;
       const { search, type, page = 1, limit = 10 } = req.query;
 
       const query: any = { 
@@ -86,7 +86,7 @@ export class TemplateController {
   async getTemplateById(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const userId = (req as any).user.id;
+      const userId = (req as any).user.userId;
 
       const template = await Template.findOne({ 
         _id: id, 
@@ -118,7 +118,7 @@ export class TemplateController {
   // Create a new template
   async createTemplate(req: Request, res: Response): Promise<void> {
     try {
-      const userId = (req as any).user.id;
+      const userId = (req as any).user.userId;
       const { name, content, type, parameters, imageUrl, footerImageUrl } = req.body;
 
       // Check if template name already exists
@@ -190,7 +190,7 @@ export class TemplateController {
   async updateTemplate(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const userId = (req as any).user.id;
+      const userId = (req as any).user.userId;
       const { name, content, type, parameters, imageUrl, footerImageUrl } = req.body;
 
       const template = await Template.findOne({ 
@@ -276,7 +276,7 @@ export class TemplateController {
   async deleteTemplate(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const userId = (req as any).user.id;
+      const userId = (req as any).user.userId;
 
       const template = await Template.findOne({ 
         _id: id, 
@@ -328,7 +328,7 @@ export class TemplateController {
 
       logger.info('Template image uploaded successfully', { 
         filename: req.file.filename,
-        uploadedBy: (req as any).user.id 
+        uploadedBy: (req as any).user.userId 
       });
 
       res.json({
@@ -348,7 +348,7 @@ export class TemplateController {
   // Get template statistics
   async getTemplateStats(req: Request, res: Response): Promise<void> {
     try {
-      const userId = (req as any).user.id;
+      const userId = (req as any).user.userId;
 
       const stats = await Template.aggregate([
         { $match: { createdBy: userId, isActive: true } },
@@ -394,7 +394,7 @@ export class TemplateController {
   // Export templates to CSV
   async exportTemplates(req: Request, res: Response): Promise<void> {
     try {
-      const userId = (req as any).user.id;
+      const userId = (req as any).user.userId;
       const { type } = req.query;
 
       const query: any = { 
