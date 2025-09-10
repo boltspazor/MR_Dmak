@@ -8,7 +8,10 @@ import {
   Code,
   Type,
   Eye,
-  Copy
+  Copy,
+  Upload,
+  Download,
+  X
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { Template } from '../types';
@@ -35,8 +38,15 @@ const Templates: React.FC = () => {
     content: '',
     type: 'text' as 'html' | 'text' | 'image',
     imageUrl: '',
+    footerImageUrl: '',
     parameters: [] as string[]
   });
+
+  // File upload states
+  const [headerImage, setHeaderImage] = useState<File | null>(null);
+  const [footerImage, setFooterImage] = useState<File | null>(null);
+  const [headerImagePreview, setHeaderImagePreview] = useState<string>('');
+  const [footerImagePreview, setFooterImagePreview] = useState<string>('');
 
 
   useEffect(() => {
@@ -57,6 +67,60 @@ const Templates: React.FC = () => {
     }
   };
 
+  // File upload functions
+  const handleHeaderImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setHeaderImage(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setHeaderImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleFooterImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setFooterImage(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setFooterImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeHeaderImage = () => {
+    setHeaderImage(null);
+    setHeaderImagePreview('');
+  };
+
+  const removeFooterImage = () => {
+    setFooterImage(null);
+    setFooterImagePreview('');
+  };
+
+  // Upload image to server
+  const uploadImage = async (file: File, type: 'header' | 'footer') => {
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('type', type);
+
+    try {
+      const response = await api.post('/templates/upload-image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data.imageUrl;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      throw error;
+    }
+  };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,8 +128,21 @@ const Templates: React.FC = () => {
       const token = localStorage.getItem('authToken');
       if (!token) return;
 
+      let imageUrl = formData.imageUrl;
+      let footerImageUrl = formData.footerImageUrl;
+
+      // Upload images if they exist
+      if (headerImage) {
+        imageUrl = await uploadImage(headerImage, 'header');
+      }
+      if (footerImage) {
+        footerImageUrl = await uploadImage(footerImage, 'footer');
+      }
+
       const templateData = {
         ...formData,
+        imageUrl,
+        footerImageUrl,
         parameters: formData.parameters
       };
 
@@ -83,8 +160,15 @@ const Templates: React.FC = () => {
         content: '',
         type: 'text',
         imageUrl: '',
+        footerImageUrl: '',
         parameters: []
       });
+      
+      // Reset file states
+      setHeaderImage(null);
+      setFooterImage(null);
+      setHeaderImagePreview('');
+      setFooterImagePreview('');
     } catch (error: any) {
       console.error('Error saving template:', error);
     }
@@ -97,6 +181,7 @@ const Templates: React.FC = () => {
       content: template.content,
       type: template.type,
       imageUrl: template.imageUrl || '',
+      footerImageUrl: template.footerImageUrl || '',
       parameters: template.parameters
     });
     setShowCreateForm(true);
@@ -128,9 +213,132 @@ const Templates: React.FC = () => {
       content: template.content,
       type: template.type,
       imageUrl: template.imageUrl || '',
+      footerImageUrl: template.footerImageUrl || '',
       parameters: template.parameters
     });
     setShowCreateForm(true);
+  };
+
+  // Export template as PNG
+  const exportTemplateAsPNG = async (template: Template) => {
+    try {
+      // Create a canvas element
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      // Set canvas size
+      canvas.width = 800;
+      canvas.height = 600;
+
+      // Fill background
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Add border
+      ctx.strokeStyle = '#e5e7eb';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+      let yPosition = 50;
+
+      // Add template name
+      ctx.fillStyle = '#1f2937';
+      ctx.font = 'bold 24px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(template.name, canvas.width / 2, yPosition);
+      yPosition += 40;
+
+      // Add header image if exists
+      if (template.imageUrl) {
+        const headerImg = new Image();
+        headerImg.crossOrigin = 'anonymous';
+        headerImg.onload = () => {
+          const imgHeight = 200;
+          const imgWidth = Math.min(400, (headerImg.width * imgHeight) / headerImg.height);
+          const x = (canvas.width - imgWidth) / 2;
+          ctx.drawImage(headerImg, x, yPosition, imgWidth, imgHeight);
+          yPosition += imgHeight + 20;
+          
+          // Add content
+          ctx.fillStyle = '#374151';
+          ctx.font = '16px Arial';
+          ctx.textAlign = 'left';
+          const lines = template.content.split('\n');
+          lines.forEach((line, index) => {
+            if (yPosition + (index + 1) * 20 < canvas.height - 100) {
+              ctx.fillText(line, 50, yPosition + (index + 1) * 20);
+            }
+          });
+          yPosition += lines.length * 20 + 20;
+
+          // Add footer image if exists
+          if (template.footerImageUrl) {
+            const footerImg = new Image();
+            footerImg.crossOrigin = 'anonymous';
+            footerImg.onload = () => {
+              const footerHeight = 100;
+              const footerWidth = Math.min(300, (footerImg.width * footerHeight) / footerImg.height);
+              const footerX = (canvas.width - footerWidth) / 2;
+              ctx.drawImage(footerImg, footerX, yPosition, footerWidth, footerHeight);
+              
+              // Download the image
+              const link = document.createElement('a');
+              link.download = `${template.name.replace(/\s+/g, '_')}.png`;
+              link.href = canvas.toDataURL();
+              link.click();
+            };
+            footerImg.src = template.footerImageUrl;
+          } else {
+            // Download without footer image
+            const link = document.createElement('a');
+            link.download = `${template.name.replace(/\s+/g, '_')}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+          }
+        };
+        headerImg.src = template.imageUrl;
+      } else {
+        // No header image, just add content
+        ctx.fillStyle = '#374151';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'left';
+        const lines = template.content.split('\n');
+        lines.forEach((line, index) => {
+          if (yPosition + (index + 1) * 20 < canvas.height - 100) {
+            ctx.fillText(line, 50, yPosition + (index + 1) * 20);
+          }
+        });
+        yPosition += lines.length * 20 + 20;
+
+        // Add footer image if exists
+        if (template.footerImageUrl) {
+          const footerImg = new Image();
+          footerImg.crossOrigin = 'anonymous';
+          footerImg.onload = () => {
+            const footerHeight = 100;
+            const footerWidth = Math.min(300, (footerImg.width * footerHeight) / footerImg.height);
+            const footerX = (canvas.width - footerWidth) / 2;
+            ctx.drawImage(footerImg, footerX, yPosition, footerWidth, footerHeight);
+            
+            // Download the image
+            const link = document.createElement('a');
+            link.download = `${template.name.replace(/\s+/g, '_')}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+          };
+          footerImg.src = template.footerImageUrl;
+        } else {
+          // Download without footer image
+          const link = document.createElement('a');
+          link.download = `${template.name.replace(/\s+/g, '_')}.png`;
+          link.href = canvas.toDataURL();
+          link.click();
+        }
+      }
+    } catch (error) {
+      console.error('Error exporting template as PNG:', error);
+    }
   };
 
   const filteredTemplates = templates.filter(template => {
@@ -302,6 +510,7 @@ const Templates: React.FC = () => {
                       content: '',
                       type: 'text',
                       imageUrl: '',
+                      footerImageUrl: '',
                       parameters: []
                     });
                   }}
@@ -356,11 +565,8 @@ const Templates: React.FC = () => {
                 <table className="w-full">
                   <thead>
                     <tr className="bg-indigo-50 border-b">
-                      <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Name</th>
-                      <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Type</th>
-                      <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Parameters</th>
-                      <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Content</th>
-                      <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Created</th>
+                      <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Template Name</th>
+                      <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Date Created</th>
                       <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Actions</th>
                     </tr>
                   </thead>
@@ -368,35 +574,7 @@ const Templates: React.FC = () => {
                     {filteredTemplates.length > 0 ? (
                       filteredTemplates.map((template, index) => (
                         <tr key={index} className="border-b hover:bg-gray-50">
-                          <td className="py-3 px-6 text-sm text-gray-900 text-center">{template.name}</td>
-                          <td className="py-3 px-6 text-sm text-gray-900 text-center">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                              {template.type}
-                            </span>
-                          </td>
-                          <td className="py-3 px-6 text-sm text-gray-900 text-center">
-                            {template.parameters.length > 0 ? (
-                              <div className="flex flex-wrap gap-1 justify-center">
-                                {template.parameters.slice(0, 2).map((param, index) => (
-                                  <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
-                                    #{param}
-                                  </span>
-                                ))}
-                                {template.parameters.length > 2 && (
-                                  <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
-                                    +{template.parameters.length - 2}
-                                  </span>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="text-gray-400">-</span>
-                            )}
-                          </td>
-                          <td className="py-3 px-6 text-sm text-gray-900 text-center">
-                            <div className="max-w-xs truncate">
-                              {template.content.substring(0, 50)}...
-                            </div>
-                          </td>
+                          <td className="py-3 px-6 text-sm text-gray-900 text-center font-medium">{template.name}</td>
                           <td className="py-3 px-6 text-sm text-gray-900 text-center">
                             {new Date(template.createdAt).toLocaleDateString()}
                           </td>
@@ -404,39 +582,50 @@ const Templates: React.FC = () => {
                             <div className="flex items-center justify-center space-x-2">
                               <button
                                 onClick={() => handlePreview(template)}
-                                className="text-blue-600 hover:text-blue-800"
+                                className="text-blue-600 hover:text-blue-800 p-1 rounded"
                                 title="Preview Template"
                               >
                                 <Eye className="h-4 w-4" />
                               </button>
                               <button
-                                onClick={() => handleEdit(template)}
-                                className="text-green-600 hover:text-green-800"
-                                title="Edit Template"
+                                onClick={() => exportTemplateAsPNG(template)}
+                                className="text-green-600 hover:text-green-800 p-1 rounded"
+                                title="Export as PNG"
                               >
-                                <Edit className="h-4 w-4" />
+                                <Download className="h-4 w-4" />
                               </button>
-                              <button
-                                onClick={() => duplicateTemplate(template)}
-                                className="text-purple-600 hover:text-purple-800"
-                                title="Duplicate Template"
-                              >
-                                <Copy className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDelete(template.name)}
-                                className="text-red-600 hover:text-red-800"
-                                title="Delete Template"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
+                              {user?.role === 'super-admin' && (
+                                <>
+                                  <button
+                                    onClick={() => handleEdit(template)}
+                                    className="text-orange-600 hover:text-orange-800 p-1 rounded"
+                                    title="Edit Template"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => duplicateTemplate(template)}
+                                    className="text-purple-600 hover:text-purple-800 p-1 rounded"
+                                    title="Duplicate Template"
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDelete(template.name)}
+                                    className="text-red-600 hover:text-red-800 p-1 rounded"
+                                    title="Delete Template"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </>
+                              )}
                             </div>
                           </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={6} className="text-center py-12">
+                        <td colSpan={3} className="text-center py-12">
                           <div className="flex flex-col items-center">
                             <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4">
                               <FileText className="h-12 w-12 text-gray-400" />
@@ -461,13 +650,29 @@ const Templates: React.FC = () => {
         {/* Create/Edit Form Modal */}
         {showCreateForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-96 max-h-[90vh] overflow-y-auto">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                {editingTemplate ? 'Edit Template' : 'Create New Template'}
-              </h2>
-              <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  {editingTemplate ? 'Edit Template' : 'Create New Template'}
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowCreateForm(false);
+                    setEditingTemplate(null);
+                    setHeaderImage(null);
+                    setFooterImage(null);
+                    setHeaderImagePreview('');
+                    setFooterImagePreview('');
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Template Name */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Template Name *
                   </label>
                   <input
@@ -475,43 +680,54 @@ const Templates: React.FC = () => {
                     required
                     value={formData.name}
                     onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     placeholder="Enter template name"
                   />
                 </div>
-                
+
+                {/* Header Image Upload */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Template Type *
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Header Image (Optional)
                   </label>
-                  <select
-                    value={formData.type}
-                    onChange={(e) => setFormData({...formData, type: e.target.value as 'html' | 'text' | 'image'})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    <option value="text">Text</option>
-                    <option value="html">HTML</option>
-                    <option value="image">Image</option>
-                  </select>
+                  <div className="space-y-2">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleHeaderImageUpload}
+                      className="hidden"
+                      id="header-image-upload"
+                    />
+                    <label
+                      htmlFor="header-image-upload"
+                      className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-indigo-400 transition-colors"
+                    >
+                      <Upload className="h-5 w-5 text-gray-400 mr-2" />
+                      <span className="text-sm text-gray-600">Click to upload header image</span>
+                    </label>
+                    
+                    {headerImagePreview && (
+                      <div className="relative">
+                        <img
+                          src={headerImagePreview}
+                          alt="Header preview"
+                          className="w-full h-32 object-cover rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={removeHeaderImage}
+                          className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {formData.type === 'image' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Image URL
-                    </label>
-                    <input
-                      type="url"
-                      value={formData.imageUrl}
-                      onChange={(e) => setFormData({...formData, imageUrl: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      placeholder="Enter image URL"
-                    />
-                  </div>
-                )}
-
+                {/* Template Content */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Template Content *
                   </label>
                   <textarea
@@ -519,28 +735,72 @@ const Templates: React.FC = () => {
                     value={formData.content}
                     onChange={(e) => setFormData({...formData, content: e.target.value})}
                     rows={6}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Enter template content..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="Enter template content with parameters like #FirstName, #LastName, #MRId..."
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     Use #ParameterName for dynamic parameters (e.g., #FirstName, #LastName, #MRId)
                   </p>
                 </div>
 
-                <div className="flex space-x-3">
+                {/* Footer Image Upload */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Footer Image (Optional)
+                  </label>
+                  <div className="space-y-2">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFooterImageUpload}
+                      className="hidden"
+                      id="footer-image-upload"
+                    />
+                    <label
+                      htmlFor="footer-image-upload"
+                      className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-indigo-400 transition-colors"
+                    >
+                      <Upload className="h-5 w-5 text-gray-400 mr-2" />
+                      <span className="text-sm text-gray-600">Click to upload footer image</span>
+                    </label>
+                    
+                    {footerImagePreview && (
+                      <div className="relative">
+                        <img
+                          src={footerImagePreview}
+                          alt="Footer preview"
+                          className="w-full h-32 object-cover rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={removeFooterImage}
+                          className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex space-x-3 pt-4">
                   <button
                     type="button"
                     onClick={() => {
                       setShowCreateForm(false);
                       setEditingTemplate(null);
+                      setHeaderImage(null);
+                      setFooterImage(null);
+                      setHeaderImagePreview('');
+                      setFooterImagePreview('');
                     }}
-                    className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300"
+                    className="px-6 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                    className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
                   >
                     {editingTemplate ? 'Update Template' : 'Create Template'}
                   </button>
@@ -553,54 +813,93 @@ const Templates: React.FC = () => {
         {/* Preview Modal */}
         {showPreview && previewTemplate && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-96 max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Template Preview
+            <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Template Preview: {previewTemplate.name}
                 </h2>
                 <button
                   onClick={() => setShowPreview(false)}
                   className="text-gray-400 hover:text-gray-600"
                 >
-                  <Trash2 className="h-5 w-5" />
+                  <X className="h-6 w-6" />
                 </button>
               </div>
               
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-medium text-gray-900 mb-2">
-                    {previewTemplate.name}
-                  </h3>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    {previewTemplate.type === 'image' && previewTemplate.imageUrl ? (
-                      <img 
-                        src={previewTemplate.imageUrl} 
-                        alt={previewTemplate.name}
-                        className="w-full h-48 object-cover rounded"
-                      />
-                    ) : (
-                      <pre className="whitespace-pre-wrap text-sm">
+              <div className="space-y-6">
+                {/* Template Preview */}
+                <div className="border-2 border-gray-200 rounded-lg p-6 bg-white">
+                  <div className="space-y-4">
+                    {/* Header Image */}
+                    {previewTemplate.imageUrl && (
+                      <div className="text-center">
+                        <img 
+                          src={previewTemplate.imageUrl} 
+                          alt="Header"
+                          className="max-w-full h-48 object-contain mx-auto rounded"
+                        />
+                      </div>
+                    )}
+                    
+                    {/* Content */}
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <pre className="whitespace-pre-wrap text-sm text-gray-800">
                         {previewTemplate.content}
                       </pre>
+                    </div>
+                    
+                    {/* Footer Image */}
+                    {previewTemplate.footerImageUrl && (
+                      <div className="text-center">
+                        <img 
+                          src={previewTemplate.footerImageUrl} 
+                          alt="Footer"
+                          className="max-w-full h-32 object-contain mx-auto rounded"
+                        />
+                      </div>
                     )}
                   </div>
                 </div>
                 
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">
-                    Parameters:
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {previewTemplate.parameters.map((param, index) => (
-                      <span 
-                        key={index}
-                        className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
-                      >
-                        #{param}
-                      </span>
-                    ))}
+                {/* Template Details */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">
+                      Template Type:
+                    </h4>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                      {previewTemplate.type}
+                    </span>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">
+                      Created:
+                    </h4>
+                    <span className="text-sm text-gray-600">
+                      {new Date(previewTemplate.createdAt).toLocaleDateString()}
+                    </span>
                   </div>
                 </div>
+                
+                {/* Parameters */}
+                {previewTemplate.parameters.length > 0 && (
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">
+                      Parameters:
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {previewTemplate.parameters.map((param, index) => (
+                        <span 
+                          key={index}
+                          className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
+                        >
+                          #{param}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
