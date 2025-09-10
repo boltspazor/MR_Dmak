@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   Users, 
-  MessageSquare, 
   Trash2, 
   Search,
   FileText,
@@ -11,7 +10,8 @@ import {
   X,
   Upload,
   Send,
-  Edit
+  Edit,
+  ChevronDown
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
@@ -106,7 +106,7 @@ const mockApi = {
 const SimpleMRTool: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'contacts' | 'groups' | 'reports'>('contacts');
+  const [activeTab, setActiveTab] = useState<'contacts' | 'groups'>('contacts');
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [messageLogs, setMessageLogs] = useState<MessageLog[]>([]);
@@ -523,15 +523,11 @@ const SimpleMRTool: React.FC = () => {
         contact.mrId.toLowerCase().includes(searchTerm.toLowerCase()) ||
         contact.group.toLowerCase().includes(searchTerm.toLowerCase());
       
-      // Name filter
-      const matchesName = !nameFilter || 
-        contact.firstName.toLowerCase().includes(nameFilter.toLowerCase()) ||
-        contact.lastName.toLowerCase().includes(nameFilter.toLowerCase()) ||
-        contact.mrId.toLowerCase().includes(nameFilter.toLowerCase());
+      // Name filter (exact match for dropdown)
+      const matchesName = !nameFilter || contact.firstName === nameFilter;
       
-      // Group filter
-      const matchesGroup = !groupFilter || 
-        contact.group.toLowerCase().includes(groupFilter.toLowerCase());
+      // Group filter (exact match for dropdown)
+      const matchesGroup = !groupFilter || contact.group === groupFilter;
       
       return matchesSearch && matchesName && matchesGroup;
     })
@@ -619,7 +615,7 @@ const SimpleMRTool: React.FC = () => {
         
         {/* Tabs */}
         <div className="flex space-x-8 mt-6">
-          {['contacts', 'groups', 'reports'].map((tab) => (
+          {['contacts', 'groups'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab as any)}
@@ -707,25 +703,35 @@ const SimpleMRTool: React.FC = () => {
                     </div>
                     
                     <div className="relative">
-                      <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="Filter by Name/MR ID..."
+                      <select
                         value={nameFilter}
                         onChange={(e) => setNameFilter(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 rounded-lg border-0 bg-gray-100"
-                      />
+                        className="w-full px-3 py-2 pr-10 rounded-lg border-0 bg-gray-100 appearance-none cursor-pointer"
+                      >
+                        <option value="">All Names/MR IDs</option>
+                        {contacts.map(contact => (
+                          <option key={contact.id} value={contact.firstName}>
+                            {contact.firstName} {contact.lastName} ({contact.mrId})
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="h-5 w-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
                     </div>
                     
                     <div className="relative">
-                      <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="Filter by Group..."
+                      <select
                         value={groupFilter}
                         onChange={(e) => setGroupFilter(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 rounded-lg border-0 bg-gray-100"
-                      />
+                        className="w-full px-3 py-2 pr-10 rounded-lg border-0 bg-gray-100 appearance-none cursor-pointer"
+                      >
+                        <option value="">All Groups</option>
+                        {groups.map(group => (
+                          <option key={group.id} value={group.name}>
+                            {group.name}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="h-5 w-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
                     </div>
                   </div>
                 </div>
@@ -849,12 +855,7 @@ const SimpleMRTool: React.FC = () => {
 
         {/* Groups Tab */}
         {activeTab === 'groups' && (
-          <CommonFeatures
-            summaryItems={summaryItems}
-            onExportCSV={exportContactsToCSV}
-            onExportPDF={exportContactsToPDF}
-          >
-            <div className="space-y-6">
+          <div className="space-y-6">
               {/* Message Sending Section */}
               <div className="bg-white bg-opacity-40 rounded-lg p-6">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Send Messages to Groups</h2>
@@ -1066,53 +1067,8 @@ const SimpleMRTool: React.FC = () => {
                 </div>
               </div>
             </div>
-          </CommonFeatures>
         )}
 
-        {/* Reports Tab */}
-        {activeTab === 'reports' && (
-          <CommonFeatures
-            summaryItems={summaryItems}
-            onExportCSV={exportContactsToCSV}
-            onExportPDF={exportContactsToPDF}
-          >
-            <div className="space-y-6">
-              {/* Message Reports */}
-              <div className="bg-white bg-opacity-40 rounded-lg">
-                <div className="p-6 border-b bg-indigo-50">
-                  <h2 className="text-2xl font-bold text-gray-900">Message Reports</h2>
-                </div>
-                <div className="p-6">
-                  {messageLogs.length > 0 ? (
-                    <div className="space-y-4">
-                      {messageLogs.map(log => (
-                        <div key={log.id} className="border border-gray-200 rounded-lg p-4">
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-gray-900">{log.message}</p>
-                              <p className="text-xs text-gray-500 mt-1">
-                                Sent to {log.groups.join(', ')} ({log.contactCount} contacts)
-                              </p>
-                            </div>
-                            <span className="text-xs text-gray-500">
-                              {new Date(log.sentAt).toLocaleDateString()}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-12">
-                      <MessageSquare className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500">No message reports available</p>
-                      <p className="text-sm text-gray-400">Send messages to see reports here</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </CommonFeatures>
-        )}
 
         {/* Add MR Dialog */}
         <AddMRDialog
