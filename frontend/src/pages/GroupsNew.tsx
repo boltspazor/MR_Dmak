@@ -213,18 +213,21 @@ const Groups: React.FC = () => {
             <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>Reports</span>
           </button>
           
-          {/* Logout */}
-          <button 
-            onClick={handleLogout}
-            className="flex flex-col items-center p-2 rounded-lg w-16 h-16 mt-auto hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
-          >
-            <LogOut className="h-7 w-7 text-white mb-1" />
-            <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>Logout</span>
-          </button>
-          
-          {/* DVK Logo */}
-          <div className="mt-4">
-            <div className="text-white text-xs font-bold" style={{ fontFamily: 'Jura' }}>DVK</div>
+          {/* Bottom Section */}
+          <div className="mt-auto flex flex-col items-center space-y-2">
+            {/* Logout */}
+            <button 
+              onClick={handleLogout}
+              className="flex flex-col items-center p-2 rounded-lg w-16 h-16 hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
+            >
+              <LogOut className="h-7 w-7 text-white mb-1" />
+              <span className="text-xs text-white text-center" style={{ fontFamily: 'Jura', fontSize: '12.72px' }}>Logout</span>
+            </button>
+            
+            {/* DVK Logo */}
+            <div className="mt-2">
+              <div className="text-white text-xs font-bold" style={{ fontFamily: 'Jura' }}>DVK</div>
+            </div>
           </div>
         </div>
       </div>

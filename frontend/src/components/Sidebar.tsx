@@ -39,49 +39,55 @@ const Sidebar: React.FC<SidebarProps> = ({
         background: 'linear-gradient(180deg, #3B82F6 0%, #ffffff 100%)'
       }}
     >
-      <div className="flex flex-col items-center py-4 space-y-2">
-        {/* User Name */}
-        <div className="text-white text-xs font-semibold mb-4 text-center px-2">
-          <div className="text-xs font-medium">{userName}</div>
-        </div>
+      <div className="flex flex-col h-full">
+        {/* Top Section */}
+        <div className="flex flex-col items-center py-4 space-y-2">
+          {/* User Name */}
+          <div className="text-white text-xs font-semibold mb-4 text-center px-2">
+            <div className="text-xs font-medium">{userName}</div>
+          </div>
 
-        {/* Menu Items */}
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activePage === item.id;
+          {/* Menu Items */}
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activePage === item.id;
+            
+            return (
+              <button
+                key={item.id}
+                onClick={() => onNavigate(item.route)}
+                className={`flex flex-col items-center p-2 rounded-lg w-16 h-16 transition-colors cursor-pointer ${
+                  isActive 
+                    ? 'border border-gray-200 bg-white bg-opacity-10' 
+                    : 'hover:bg-white hover:bg-opacity-10'
+                }`}
+              >
+                <Icon className="h-7 w-7 text-white mb-1" />
+                <span className="text-xs text-white text-center">{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+        
+        {/* Bottom Section */}
+        <div className="mt-auto flex flex-col items-center space-y-2 pb-4">
+          {/* Logout */}
+          <button 
+            onClick={onLogout}
+            className="flex flex-col items-center p-2 rounded-lg w-16 h-16 hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
+          >
+            <LogOut className="h-7 w-7 text-white mb-1" />
+            <span className="text-xs text-white text-center">Logout</span>
+          </button>
           
-          return (
-            <button
-              key={item.id}
-              onClick={() => onNavigate(item.route)}
-              className={`flex flex-col items-center p-2 rounded-lg w-16 h-16 transition-colors cursor-pointer ${
-                isActive 
-                  ? 'border border-gray-200 bg-white bg-opacity-10' 
-                  : 'hover:bg-white hover:bg-opacity-10'
-              }`}
-            >
-              <Icon className="h-7 w-7 text-white mb-1" />
-              <span className="text-xs text-white text-center">{item.label}</span>
-            </button>
-          );
-        })}
-        
-        {/* Logout */}
-        <button 
-          onClick={onLogout}
-          className="flex flex-col items-center p-2 rounded-lg w-16 h-16 hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
-        >
-          <LogOut className="h-7 w-7 text-white mb-1" />
-          <span className="text-xs text-white text-center">Logout</span>
-        </button>
-        
-        {/* DVK Logo */}
-        <div className="mt-auto mb-4">
-          <img 
-            src="/dvk-simple.svg" 
-            alt="DVK" 
-            className="w-12 h-10"
-          />
+          {/* DVK Logo */}
+          <div className="mt-2">
+            <img 
+              src="/dvk-simple.svg" 
+              alt="DVK" 
+              className="w-12 h-10"
+            />
+          </div>
         </div>
       </div>
     </div>
