@@ -16,7 +16,8 @@ import {
   BarChart3,
   Users,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Eye
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { Campaign, Group, Template } from '../types';
@@ -46,6 +47,11 @@ const CampaignsNew: React.FC = () => {
   const [showTemplatePreview, setShowTemplatePreview] = useState(false);
   const [selectedGroupDropdown, setSelectedGroupDropdown] = useState<string>('');
   const [selectedTemplateDropdown, setSelectedTemplateDropdown] = useState<string>('');
+  
+  // Preview states
+  const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
+  const [previewGroup, setPreviewGroup] = useState<Group | null>(null);
+  const [showGroupPreview, setShowGroupPreview] = useState(false);
 
   // Without Template Tab States
   const [messageContent, setMessageContent] = useState('');
@@ -115,6 +121,16 @@ const CampaignsNew: React.FC = () => {
     setSelectedTemplateDropdown(templateId);
     const template = templates.find(t => t._id === templateId);
     setSelectedTemplate(template || null);
+  };
+
+  const handleTemplatePreview = (template: Template) => {
+    setPreviewTemplate(template);
+    setShowTemplatePreview(true);
+  };
+
+  const handleGroupPreview = (group: Group) => {
+    setPreviewGroup(group);
+    setShowGroupPreview(true);
   };
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -374,20 +390,33 @@ const CampaignsNew: React.FC = () => {
                 <div className="bg-white bg-opacity-40 rounded-lg p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Groups</h3>
                   <div className="space-y-4">
-                    <div className="relative">
-                      <select
-                        value={selectedGroupDropdown}
-                        onChange={(e) => handleGroupDropdownChange(e.target.value)}
-                        className="w-full px-3 py-2 pr-10 rounded-lg border-0 bg-gray-100 appearance-none cursor-pointer"
+                    <div className="flex space-x-2">
+                      <div className="relative flex-1">
+                        <select
+                          value={selectedGroupDropdown}
+                          onChange={(e) => handleGroupDropdownChange(e.target.value)}
+                          className="w-full px-3 py-2 pr-10 rounded-lg border-0 bg-gray-100 appearance-none cursor-pointer"
+                        >
+                          <option value="">Select a group to add</option>
+                          {groups.map(group => (
+                            <option key={group.id} value={group.name}>
+                              {group.name} ({group.mrCount || 0} contacts)
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="h-5 w-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+                      </div>
+                      <button
+                        onClick={() => {
+                          const group = groups.find(g => g.name === selectedGroupDropdown);
+                          if (group) handleGroupPreview(group);
+                        }}
+                        disabled={!selectedGroupDropdown}
+                        className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                       >
-                        <option value="">Select a group to add</option>
-                        {groups.map(group => (
-                          <option key={group.id} value={group.name}>
-                            {group.name} ({group.mrCount || 0} contacts)
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="h-5 w-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+                        <Eye className="h-4 w-4 mr-1" />
+                        Preview
+                      </button>
                     </div>
                     
                     {/* Selected Groups Display */}
@@ -419,20 +448,33 @@ const CampaignsNew: React.FC = () => {
                 <div className="bg-white bg-opacity-40 rounded-lg p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Template</h3>
                   <div className="space-y-4">
-                    <div className="relative">
-                      <select
-                        value={selectedTemplateDropdown}
-                        onChange={(e) => handleTemplateDropdownChange(e.target.value)}
-                        className="w-full px-3 py-2 pr-10 rounded-lg border-0 bg-gray-100 appearance-none cursor-pointer"
+                    <div className="flex space-x-2">
+                      <div className="relative flex-1">
+                        <select
+                          value={selectedTemplateDropdown}
+                          onChange={(e) => handleTemplateDropdownChange(e.target.value)}
+                          className="w-full px-3 py-2 pr-10 rounded-lg border-0 bg-gray-100 appearance-none cursor-pointer"
+                        >
+                          <option value="">Select a template</option>
+                          {templates.map(template => (
+                            <option key={template._id} value={template._id}>
+                              {template.name} ({template.type})
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="h-5 w-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+                      </div>
+                      <button
+                        onClick={() => {
+                          const template = templates.find(t => t._id === selectedTemplateDropdown);
+                          if (template) handleTemplatePreview(template);
+                        }}
+                        disabled={!selectedTemplateDropdown}
+                        className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                       >
-                        <option value="">Select a template</option>
-                        {templates.map(template => (
-                          <option key={template._id} value={template._id}>
-                            {template.name} ({template.type})
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="h-5 w-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+                        <Eye className="h-4 w-4 mr-1" />
+                        Preview
+                      </button>
                     </div>
                     
                     {/* Selected Template Preview */}
@@ -480,20 +522,33 @@ const CampaignsNew: React.FC = () => {
                 <div className="bg-white bg-opacity-40 rounded-lg p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Groups</h3>
                   <div className="space-y-4">
-                    <div className="relative">
-                      <select
-                        value={selectedGroupDropdown}
-                        onChange={(e) => handleGroupDropdownChange(e.target.value)}
-                        className="w-full px-3 py-2 pr-10 rounded-lg border-0 bg-gray-100 appearance-none cursor-pointer"
+                    <div className="flex space-x-2">
+                      <div className="relative flex-1">
+                        <select
+                          value={selectedGroupDropdown}
+                          onChange={(e) => handleGroupDropdownChange(e.target.value)}
+                          className="w-full px-3 py-2 pr-10 rounded-lg border-0 bg-gray-100 appearance-none cursor-pointer"
+                        >
+                          <option value="">Select a group to add</option>
+                          {groups.map(group => (
+                            <option key={group.id} value={group.name}>
+                              {group.name} ({group.mrCount || 0} contacts)
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="h-5 w-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+                      </div>
+                      <button
+                        onClick={() => {
+                          const group = groups.find(g => g.name === selectedGroupDropdown);
+                          if (group) handleGroupPreview(group);
+                        }}
+                        disabled={!selectedGroupDropdown}
+                        className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                       >
-                        <option value="">Select a group to add</option>
-                        {groups.map(group => (
-                          <option key={group.id} value={group.name}>
-                            {group.name} ({group.mrCount || 0} contacts)
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="h-5 w-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+                        <Eye className="h-4 w-4 mr-1" />
+                        Preview
+                      </button>
                     </div>
                     
                     {/* Selected Groups Display */}
@@ -790,6 +845,168 @@ const CampaignsNew: React.FC = () => {
             </div>
           </div>
         </CommonFeatures>
+
+        {/* Template Preview Modal */}
+        {showTemplatePreview && previewTemplate && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Template Preview: {previewTemplate.name}
+                </h2>
+                <button
+                  onClick={() => setShowTemplatePreview(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              
+              <div className="space-y-6">
+                {/* Template Preview */}
+                <div className="border-2 border-gray-200 rounded-lg p-6 bg-white">
+                  <div className="space-y-4">
+                    {/* Header Image */}
+                    {previewTemplate.imageUrl && (
+                      <div className="text-center">
+                        <img 
+                          src={previewTemplate.imageUrl} 
+                          alt="Header"
+                          className="max-w-full h-48 object-contain mx-auto rounded"
+                        />
+                      </div>
+                    )}
+                    
+                    {/* Content */}
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <pre className="whitespace-pre-wrap text-sm text-gray-800">
+                        {previewTemplate.content}
+                      </pre>
+                    </div>
+                    
+                    {/* Footer Image */}
+                    {previewTemplate.footerImageUrl && (
+                      <div className="text-center">
+                        <img 
+                          src={previewTemplate.footerImageUrl} 
+                          alt="Footer"
+                          className="max-w-full h-32 object-contain mx-auto rounded"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Template Details */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">
+                      Template Type:
+                    </h4>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                      {previewTemplate.type}
+                    </span>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">
+                      Created:
+                    </h4>
+                    <span className="text-sm text-gray-600">
+                      {new Date(previewTemplate.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Parameters */}
+                {previewTemplate.parameters.length > 0 && (
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">
+                      Parameters:
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {previewTemplate.parameters.map((param, index) => (
+                        <span 
+                          key={index}
+                          className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
+                        >
+                          #{param}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Group Preview Modal */}
+        {showGroupPreview && previewGroup && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Group Preview: {previewGroup.name}
+                </h2>
+                <button
+                  onClick={() => setShowGroupPreview(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              
+              <div className="space-y-6">
+                {/* Group Details */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-2">
+                        Group Name:
+                      </h4>
+                      <span className="text-sm text-gray-600">{previewGroup.name}</span>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-2">
+                        Contact Count:
+                      </h4>
+                      <span className="text-sm text-gray-600">{previewGroup.mrCount || 0} contacts</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Group Description */}
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">
+                    Description:
+                  </h4>
+                  <p className="text-sm text-gray-600">
+                    This group contains {previewGroup.mrCount || 0} medical representatives who will receive the campaign messages.
+                  </p>
+                </div>
+                
+                {/* Group Statistics */}
+                <div className="bg-indigo-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-gray-900 mb-2">
+                    Group Statistics:
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">Total Contacts:</span>
+                      <span className="ml-2 font-medium">{previewGroup.mrCount || 0}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Group Status:</span>
+                      <span className="ml-2 font-medium text-green-600">Active</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
