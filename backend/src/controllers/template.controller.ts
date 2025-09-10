@@ -324,7 +324,11 @@ export class TemplateController {
         return;
       }
 
-      const imageUrl = `/uploads/${req.file.filename}`;
+      // For production, we need to return the full URL
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://mrbackend-production-2ce3.up.railway.app'
+        : 'http://localhost:5000';
+      const imageUrl = `${baseUrl}/uploads/${req.file.filename}`;
 
       logger.info('Template image uploaded successfully', { 
         filename: req.file.filename,

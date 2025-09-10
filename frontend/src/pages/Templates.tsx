@@ -135,11 +135,18 @@ const Templates: React.FC = () => {
       let imageUrl = formData.imageUrl;
       let footerImageUrl = formData.footerImageUrl;
 
-      // Skip image uploads for now to test basic template creation
-      // TODO: Re-enable image uploads once basic template creation works
-      console.log('Skipping image uploads for now');
-      imageUrl = '';
-      footerImageUrl = '';
+      // Upload images if they exist
+      if (headerImage) {
+        console.log('Uploading header image...');
+        imageUrl = await uploadImage(headerImage, 'header');
+        console.log('Header image uploaded:', imageUrl);
+      }
+      
+      if (footerImage) {
+        console.log('Uploading footer image...');
+        footerImageUrl = await uploadImage(footerImage, 'footer');
+        console.log('Footer image uploaded:', footerImageUrl);
+      }
 
       // Extract parameters from content if not provided
       let extractedParameters = formData.parameters || [];
@@ -184,8 +191,8 @@ const Templates: React.FC = () => {
       });
       
       // Reset file states
-      // setHeaderImage(null);
-      // setFooterImage(null);
+      setHeaderImage(null);
+      setFooterImage(null);
       setHeaderImagePreview('');
       setFooterImagePreview('');
       
