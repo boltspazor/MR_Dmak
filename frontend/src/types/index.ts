@@ -50,6 +50,7 @@ export interface Group {
 
 export interface Campaign {
   id: string;
+  campaignId: string;
   userId: string;
   content: string;
   imageUrl?: string;

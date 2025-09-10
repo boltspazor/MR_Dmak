@@ -1,6 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IMessageCampaign extends Document {
+  campaignId: string;
   messageId: mongoose.Types.ObjectId;
   createdBy: mongoose.Types.ObjectId;
   targetGroups: string[];
@@ -14,6 +15,11 @@ export interface IMessageCampaign extends Document {
 }
 
 const messageCampaignSchema = new Schema<IMessageCampaign>({
+  campaignId: {
+    type: String,
+    required: true,
+    unique: true
+  },
   messageId: {
     type: Schema.Types.ObjectId,
     ref: 'Message',

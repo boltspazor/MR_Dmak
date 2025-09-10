@@ -18,8 +18,12 @@ export class MessageService {
         createdBy: userId,
       });
 
+      // Generate unique campaign ID
+      const campaignId = `CAMP-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+
       // Create campaign record
       const campaign = await MessageCampaign.create({
+        campaignId,
         messageId: message._id,
         targetGroups: payload.targetGroups, // Store group names for reference
         scheduledAt: payload.scheduledAt || new Date(),
@@ -213,6 +217,7 @@ export class MessageService {
       // Transform campaigns to include necessary fields
       const transformedCampaigns = campaigns.map((campaign: any) => ({
         id: campaign._id.toString(),
+        campaignId: campaign.campaignId,
         content: (campaign as any).messageId?.content || '',
         imageUrl: (campaign as any).messageId?.imageUrl || '',
         targetGroups: campaign.targetGroups || [],

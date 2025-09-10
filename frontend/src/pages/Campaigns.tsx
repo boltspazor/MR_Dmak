@@ -8,38 +8,46 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  Send,
+  Upload,
+  X,
+  FileText,
+  BarChart3,
+  Users
 } from 'lucide-react';
 import { api } from '../lib/api';
-import { Campaign, Group } from '../types';
+import { Campaign, Group, Template } from '../types';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import CommonFeatures from '../components/CommonFeatures';
 import { useAuth } from '../contexts/AuthContext';
 
-const Campaigns: React.FC = () => {
+const CampaignsNew: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
+  const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('');
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
+  const [activeTab, setActiveTab] = useState<'with-template' | 'without-template'>('with-template');
 
-  // Form states
-  const [formData, setFormData] = useState({
-    content: '',
-    targetGroups: [] as string[],
-    imageUrl: '',
-    scheduledAt: ''
-  });
+  // With Template Tab States
+  const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [showTemplatePreview, setShowTemplatePreview] = useState(false);
 
+  // Without Template Tab States
+  const [messageContent, setMessageContent] = useState('');
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
 
   useEffect(() => {
     fetchCampaigns();
     fetchGroups();
+    fetchTemplates();
   }, []);
 
   const fetchCampaigns = async () => {
@@ -58,6 +66,9 @@ const Campaigns: React.FC = () => {
 
   const fetchGroups = async () => {
     try {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
       const response = await api.get('/groups');
       setGroups(response.data.data || []);
     } catch (error: any) {
@@ -65,55 +76,128 @@ const Campaigns: React.FC = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const fetchTemplates = async () => {
     try {
       const token = localStorage.getItem('authToken');
       if (!token) return;
 
-      const campaignData = {
-        ...formData,
-        targetGroups: formData.targetGroups
-      };
-
-      if (editingCampaign) {
-        await api.put(`/messages/campaigns/${editingCampaign.id}`, campaignData);
-      } else {
-        await api.post('/messages/campaigns', campaignData);
-      }
-
-      await fetchCampaigns();
-      setShowCreateForm(false);
-      setEditingCampaign(null);
-      setFormData({
-        content: '',
-        targetGroups: [],
-        imageUrl: '',
-        scheduledAt: ''
-      });
+      const response = await api.get('/templates');
+      setTemplates(response.data.data || []);
     } catch (error: any) {
-      console.error('Error saving campaign:', error);
+      console.error('Error fetching templates:', error);
     }
   };
 
-  const handleEdit = (campaign: Campaign) => {
-    setEditingCampaign(campaign);
-    setFormData({
-      content: campaign.content,
-      targetGroups: campaign.targetGroups,
-      imageUrl: campaign.imageUrl || '',
-      scheduledAt: campaign.scheduledAt || ''
-    });
-    setShowCreateForm(true);
+  const handleGroupSelection = (groupName: string) => {
+    if (selectedGroups.includes(groupName)) {
+      setSelectedGroups(selectedGroups.filter(g => g !== groupName));
+    } else {
+      setSelectedGroups([...selectedGroups, groupName]);
+    }
+  };
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setSelectedImage(null);
+    setImagePreview('');
+  };
+
+  const handleWithTemplateSubmit = async () => {
+    if (!selectedTemplate) {
+      alert('Please select a template');
+      return;
+    }
+
+    if (selectedGroups.length === 0) {
+      alert('Please select at least one group');
+      return;
+    }
+
+    try {
+      const campaignData = {
+        content: selectedTemplate.content,
+        imageUrl: selectedTemplate.imageUrl || '',
+        targetGroups: selectedGroups,
+        templateId: selectedTemplate._id
+      };
+
+      await api.post('/messages/campaigns', campaignData);
+      await fetchCampaigns();
+      
+      // Reset form
+      setSelectedGroups([]);
+      setSelectedTemplate(null);
+      
+      alert('Campaign created successfully!');
+    } catch (error: any) {
+      console.error('Error creating campaign:', error);
+      alert('Failed to create campaign');
+    }
+  };
+
+  const handleWithoutTemplateSubmit = async () => {
+    if (!messageContent.trim() && !selectedImage) {
+      alert('Please enter a message or select an image');
+      return;
+    }
+
+    if (selectedGroups.length === 0) {
+      alert('Please select at least one group');
+      return;
+    }
+
+    try {
+      let imageUrl = '';
+      
+      // Upload image if selected
+      if (selectedImage) {
+        const formData = new FormData();
+        formData.append('image', selectedImage);
+        formData.append('type', 'campaign');
+        
+        const uploadResponse = await api.post('/messages/upload-image', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        imageUrl = uploadResponse.data.imageUrl;
+      }
+
+      const campaignData = {
+        content: messageContent,
+        imageUrl: imageUrl,
+        targetGroups: selectedGroups
+      };
+
+      await api.post('/messages/campaigns', campaignData);
+      await fetchCampaigns();
+      
+      // Reset form
+      setMessageContent('');
+      setSelectedImage(null);
+      setImagePreview('');
+      setSelectedGroups([]);
+      
+      alert('Campaign created successfully!');
+    } catch (error: any) {
+      console.error('Error creating campaign:', error);
+      alert('Failed to create campaign');
+    }
   };
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this campaign?')) return;
 
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) return;
-
       await api.delete(`/messages/campaigns/${id}`);
       await fetchCampaigns();
     } catch (error: any) {
@@ -121,116 +205,39 @@ const Campaigns: React.FC = () => {
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'sending':
-        return <Clock className="h-4 w-4 text-blue-600" />;
-      case 'failed':
-        return <XCircle className="h-4 w-4 text-red-600" />;
-      case 'pending':
-        return <AlertCircle className="h-4 w-4 text-yellow-600" />;
-      default:
-        return <AlertCircle className="h-4 w-4 text-gray-600" />;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'sending':
-        return 'bg-blue-100 text-blue-800';
-      case 'failed':
-        return 'bg-red-100 text-red-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const exportCampaignsToCSV = () => {
-    const csvContent = [
-      'Campaign ID,Content,Target Groups,Status,Total Recipients,Sent Count,Failed Count,Created At',
-      ...campaigns.map(campaign => 
-        `${campaign.id},${campaign.content.slice(0, 50)}...,${campaign.targetGroups.join('; ')},${campaign.status},${campaign.totalRecipients},${campaign.sentCount},${campaign.failedCount},${new Date(campaign.createdAt).toLocaleDateString()}`
-      )
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'campaigns.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
-
-  const exportCampaignsToPDF = () => {
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      const tableContent = `
-        <html>
-          <head>
-            <title>Campaigns Report</title>
-            <style>
-              body { font-family: Arial, sans-serif; margin: 20px; }
-              h1 { color: #333; text-align: center; }
-              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-              th { background-color: #f2f2f2; }
-              @media print { body { margin: 0; } }
-            </style>
-          </head>
-          <body>
-            <h1>Campaigns Report</h1>
-            <p>Generated on: ${new Date().toLocaleDateString()}</p>
-            <table>
-              <thead>
-                <tr>
-                  <th>Campaign ID</th>
-                  <th>Content</th>
-                  <th>Target Groups</th>
-                  <th>Status</th>
-                  <th>Total Recipients</th>
-                  <th>Sent Count</th>
-                  <th>Failed Count</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${campaigns.map(campaign => `
-                  <tr>
-                    <td>${campaign.id}</td>
-                    <td>${campaign.content.substring(0, 50)}...</td>
-                    <td>${campaign.targetGroups.join(', ')}</td>
-                    <td>${campaign.status}</td>
-                    <td>${campaign.totalRecipients}</td>
-                    <td>${campaign.sentCount}</td>
-                    <td>${campaign.failedCount}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </body>
-        </html>
-      `;
-      printWindow.document.write(tableContent);
-      printWindow.document.close();
-      printWindow.print();
-    }
-  };
-
   const filteredCampaigns = campaigns.filter(campaign => {
     const matchesSearch = 
       campaign.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      campaign.campaignId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       campaign.targetGroups.some(group => group.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesStatus = !selectedStatus || campaign.status === selectedStatus;
     
     return matchesSearch && matchesStatus;
   });
+
+  // Calculate success rate
+  const getSuccessRate = () => {
+    if (campaigns.length === 0) return 0;
+    const totalSent = campaigns.reduce((sum, campaign) => sum + campaign.sentCount, 0);
+    const totalRecipients = campaigns.reduce((sum, campaign) => sum + campaign.totalRecipients, 0);
+    return totalRecipients > 0 ? Math.round((totalSent / totalRecipients) * 100) : 0;
+  };
+
+  const summaryItems = [
+    {
+      title: 'Total Campaigns',
+      value: campaigns.length,
+      icon: <MessageSquare className="h-6 w-6 text-blue-600" />,
+      color: 'bg-blue-100'
+    },
+    {
+      title: 'Success Rate',
+      value: `${getSuccessRate()}%`,
+      icon: <BarChart3 className="h-6 w-6 text-green-600" />,
+      color: 'bg-green-100'
+    }
+  ];
 
   // Navigation functions
   const handleSidebarNavigation = (route: string) => {
@@ -243,34 +250,13 @@ const Campaigns: React.FC = () => {
     navigate('/login');
   };
 
-  const summaryItems = [
-    {
-      title: 'Total Campaigns',
-      value: campaigns.length,
-      icon: <MessageSquare className="h-6 w-6 text-blue-600" />,
-      color: 'bg-blue-100'
-    },
-    {
-      title: 'Completed',
-      value: campaigns.filter(c => c.status === 'completed').length,
-      icon: <CheckCircle className="h-6 w-6 text-green-600" />,
-      color: 'bg-green-100'
-    },
-    {
-      title: 'Pending',
-      value: campaigns.filter(c => c.status === 'pending').length,
-      icon: <Clock className="h-6 w-6 text-orange-600" />,
-      color: 'bg-orange-100'
-    }
-  ];
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100">
         <div className="animate-pulse space-y-6">
           <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[...Array(4)].map((_, i) => (
               <div key={i} className="bg-white rounded-lg h-32 border border-gray-200"></div>
             ))}
           </div>
@@ -293,10 +279,10 @@ const Campaigns: React.FC = () => {
       <div className="ml-24 p-8">
         {/* Header */}
         <Header 
-          title="Message Campaigns"
-          subtitle="Manage and track your messaging campaigns"
-          onExportCSV={exportCampaignsToCSV}
-          onExportPDF={exportCampaignsToPDF}
+          title="Campaign Management"
+          subtitle="Create and manage message campaigns with templates"
+          onExportCSV={() => {}}
+          onExportPDF={() => {}}
           showExportButtons={false}
         />
         
@@ -306,35 +292,237 @@ const Campaigns: React.FC = () => {
         {/* Main Content Area */}
         <CommonFeatures
           summaryItems={summaryItems}
-          onExportCSV={exportCampaignsToCSV}
-          onExportPDF={exportCampaignsToPDF}
+          onExportCSV={() => {}}
+          onExportPDF={() => {}}
         >
           <div className="space-y-8">
-            {/* Message Campaigns Header */}
-            <h2 className="text-2xl font-bold text-gray-900">Message Campaigns</h2>
+            {/* Campaign Management Header */}
+            <h2 className="text-2xl font-bold text-gray-900">Campaign Management</h2>
 
-            {/* Action Buttons */}
-            <div className="flex justify-between items-center">
-              <div className="flex space-x-4">
+            {/* Tabs */}
+            <div className="flex space-x-8 mt-6">
+              {[
+                { key: 'with-template', label: 'With Template' },
+                { key: 'without-template', label: 'Without Template' }
+              ].map((tab) => (
                 <button
-                  onClick={() => {
-                    setShowCreateForm(true);
-                    setEditingCampaign(null);
-                    setFormData({
-                      content: '',
-                      targetGroups: [],
-                      imageUrl: '',
-                      scheduledAt: ''
-                    });
-                  }}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key as any)}
+                  className={`pb-2 border-b-2 text-lg font-medium capitalize ${
+                    activeTab === tab.key 
+                      ? 'border-indigo-600 text-gray-900' 
+                      : 'border-transparent text-gray-600'
+                  }`}
                 >
-                  New Campaign
+                  {tab.label}
                 </button>
-              </div>
+              ))}
             </div>
 
-            {/* Campaigns Table */}
+            {/* With Template Tab */}
+            {activeTab === 'with-template' && (
+              <div className="space-y-6">
+                {/* Group Selection */}
+                <div className="bg-white bg-opacity-40 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Groups</h3>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {groups.length > 0 ? (
+                      groups.map(group => (
+                        <div
+                          key={group.id}
+                          className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                            selectedGroups.includes(group.name)
+                              ? 'border-indigo-500 bg-indigo-50'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                          onClick={() => handleGroupSelection(group.name)}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                              selectedGroups.includes(group.name)
+                                ? 'border-indigo-500 bg-indigo-500'
+                                : 'border-gray-300'
+                            }`}>
+                              {selectedGroups.includes(group.name) && (
+                                <div className="w-2 h-2 bg-white rounded-full"></div>
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">{group.name}</p>
+                              <p className="text-sm text-gray-500">{group.mrCount || 0} contacts</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-gray-500 text-center py-4">No groups available</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Template Selection */}
+                <div className="bg-white bg-opacity-40 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Template</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {templates.length > 0 ? (
+                      templates.map(template => (
+                        <div
+                          key={template._id}
+                          className={`p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                            selectedTemplate?._id === template._id
+                              ? 'border-indigo-500 bg-indigo-50'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                          onClick={() => setSelectedTemplate(template)}
+                        >
+                          <h4 className="font-medium text-gray-900 mb-2">{template.name}</h4>
+                          <p className="text-sm text-gray-600 mb-2 line-clamp-2">{template.content}</p>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-gray-500">{template.type}</span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowTemplatePreview(true);
+                              }}
+                              className="text-indigo-600 hover:text-indigo-800 text-xs"
+                            >
+                              Preview
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-gray-500 text-center py-4 col-span-full">No templates available</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Submit Button */}
+                <div className="flex justify-end">
+                  <button
+                    onClick={handleWithTemplateSubmit}
+                    disabled={!selectedTemplate || selectedGroups.length === 0}
+                    className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                  >
+                    <Send className="h-5 w-5 mr-2" />
+                    Create Campaign
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Without Template Tab */}
+            {activeTab === 'without-template' && (
+              <div className="space-y-6">
+                {/* Group Selection */}
+                <div className="bg-white bg-opacity-40 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Groups</h3>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {groups.length > 0 ? (
+                      groups.map(group => (
+                        <div
+                          key={group.id}
+                          className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                            selectedGroups.includes(group.name)
+                              ? 'border-indigo-500 bg-indigo-50'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                          onClick={() => handleGroupSelection(group.name)}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                              selectedGroups.includes(group.name)
+                                ? 'border-indigo-500 bg-indigo-500'
+                                : 'border-gray-300'
+                            }`}>
+                              {selectedGroups.includes(group.name) && (
+                                <div className="w-2 h-2 bg-white rounded-full"></div>
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">{group.name}</p>
+                              <p className="text-sm text-gray-500">{group.mrCount || 0} contacts</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-gray-500 text-center py-4">No groups available</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Message Composition */}
+                <div className="bg-white bg-opacity-40 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Compose Message</h3>
+                  
+                  <div className="space-y-4">
+                    {/* Message Input */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Message</label>
+                      <textarea
+                        value={messageContent}
+                        onChange={(e) => setMessageContent(e.target.value)}
+                        placeholder="Type your message here..."
+                        rows={4}
+                        className="w-full px-3 py-3 rounded-lg border-0 bg-gray-100 resize-none"
+                      />
+                    </div>
+
+                    {/* Image Upload */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Image (Optional)</label>
+                      <div className="space-y-2">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="hidden"
+                          id="image-upload"
+                        />
+                        <label
+                          htmlFor="image-upload"
+                          className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-indigo-400 transition-colors"
+                        >
+                          <Upload className="h-5 w-5 text-gray-400 mr-2" />
+                          <span className="text-sm text-gray-600">Click to upload image</span>
+                        </label>
+                        
+                        {imagePreview && (
+                          <div className="relative">
+                            <img
+                              src={imagePreview}
+                              alt="Preview"
+                              className="w-full h-32 object-cover rounded-lg"
+                            />
+                            <button
+                              onClick={removeImage}
+                              className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Submit Button */}
+                <div className="flex justify-end">
+                  <button
+                    onClick={handleWithoutTemplateSubmit}
+                    disabled={(!messageContent.trim() && !selectedImage) || selectedGroups.length === 0}
+                    className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                  >
+                    <Send className="h-5 w-5 mr-2" />
+                    Send Message
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Campaigns List */}
             <div className="bg-white bg-opacity-40 rounded-lg">
               {/* Table Header */}
               <div className="p-6 border-b bg-indigo-50">
@@ -379,10 +567,10 @@ const Campaigns: React.FC = () => {
                 <table className="w-full">
                   <thead>
                     <tr className="bg-indigo-50 border-b">
+                      <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Campaign ID</th>
                       <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Content</th>
                       <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Target Groups</th>
                       <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Status</th>
-                      <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Recipients</th>
                       <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Progress</th>
                       <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Created</th>
                       <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Actions</th>
@@ -390,48 +578,43 @@ const Campaigns: React.FC = () => {
                   </thead>
                   <tbody>
                     {filteredCampaigns.length > 0 ? (
-                      filteredCampaigns.map(campaign => (
-                        <tr key={campaign.id} className="border-b hover:bg-gray-50">
-                          <td className="py-3 px-6 text-sm text-gray-900">
-                            <div className="max-w-xs truncate">
-                              {campaign.content.substring(0, 50)}...
-                            </div>
-                          </td>
-                          <td className="py-3 px-6 text-sm text-gray-900 text-center">
-                            {campaign.targetGroups.join(', ')}
-                          </td>
+                      filteredCampaigns.map((campaign, index) => (
+                        <tr key={index} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-6 text-sm text-gray-900 text-center font-mono">{campaign.campaignId}</td>
+                          <td className="py-3 px-6 text-sm text-gray-900 text-center max-w-xs truncate">{campaign.content}</td>
+                          <td className="py-3 px-6 text-sm text-gray-900 text-center">{campaign.targetGroups.join(', ')}</td>
                           <td className="py-3 px-6 text-sm text-center">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(campaign.status)}`}>
-                              {getStatusIcon(campaign.status)}
-                              <span className="ml-1">{campaign.status}</span>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              campaign.status === 'completed' ? 'bg-green-100 text-green-800' :
+                              campaign.status === 'sending' ? 'bg-blue-100 text-blue-800' :
+                              campaign.status === 'failed' ? 'bg-red-100 text-red-800' :
+                              'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {campaign.status}
                             </span>
                           </td>
                           <td className="py-3 px-6 text-sm text-gray-900 text-center">
-                            {campaign.totalRecipients}
-                          </td>
-                          <td className="py-3 px-6 text-sm text-center">
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div 
-                                className="bg-indigo-600 h-2 rounded-full" 
-                                style={{ width: `${(campaign.sentCount / campaign.totalRecipients) * 100}%` }}
-                              ></div>
-                            </div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              {campaign.sentCount}/{campaign.totalRecipients}
-                            </div>
+                            {campaign.totalRecipients > 0 ? (
+                              <div className="flex items-center justify-center space-x-2">
+                                <div className="w-16 bg-gray-200 rounded-full h-2">
+                                  <div 
+                                    className="bg-indigo-600 h-2 rounded-full" 
+                                    style={{ width: `${(campaign.sentCount / campaign.totalRecipients) * 100}%` }}
+                                  ></div>
+                                </div>
+                                <span className="text-xs text-gray-600">
+                                  {campaign.sentCount}/{campaign.totalRecipients}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-gray-500">No recipients</span>
+                            )}
                           </td>
                           <td className="py-3 px-6 text-sm text-gray-900 text-center">
                             {new Date(campaign.createdAt).toLocaleDateString()}
                           </td>
                           <td className="py-3 px-6 text-sm text-center">
                             <div className="flex items-center justify-center space-x-2">
-                              <button
-                                onClick={() => handleEdit(campaign)}
-                                className="text-blue-600 hover:text-blue-800"
-                                title="Edit Campaign"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </button>
                               <button
                                 onClick={() => handleDelete(campaign.id)}
                                 className="text-red-600 hover:text-red-800"
@@ -454,7 +637,7 @@ const Campaigns: React.FC = () => {
                               No Campaigns Found
                             </h3>
                             <p className="text-sm text-indigo-600">
-                              Get started by creating your first campaign
+                              Create your first campaign using the tabs above
                             </p>
                           </div>
                         </td>
@@ -466,117 +649,9 @@ const Campaigns: React.FC = () => {
             </div>
           </div>
         </CommonFeatures>
-
-        {/* Create/Edit Form Modal */}
-        {showCreateForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-96 max-h-screen overflow-y-auto">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                {editingCampaign ? 'Edit Campaign' : 'Create New Campaign'}
-              </h2>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Message Content *
-                  </label>
-                  <textarea
-                    required
-                    value={formData.content}
-                    onChange={(e) => setFormData({...formData, content: e.target.value})}
-                    rows={4}
-                    maxLength={1000}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                    placeholder="Enter your message content..."
-                  />
-                  <div className="flex justify-between items-center mt-1">
-                    <span className={`text-sm ${formData.content.length > 900 ? 'text-red-600' : 'text-gray-500'}`}>
-                      {formData.content.length}/1000 characters
-                    </span>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Target Groups *
-                  </label>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {groups.map(group => (
-                      <label key={group.id} className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          checked={formData.targetGroups.includes(group.groupName)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setFormData({
-                                ...formData,
-                                targetGroups: [...formData.targetGroups, group.groupName]
-                              });
-                            } else {
-                              setFormData({
-                                ...formData,
-                                targetGroups: formData.targetGroups.filter(g => g !== group.groupName)
-                              });
-                            }
-                          }}
-                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                        />
-                        <span className="text-sm text-gray-700">{group.groupName}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Image URL
-                    </label>
-                    <input
-                      type="url"
-                      value={formData.imageUrl}
-                      onChange={(e) => setFormData({...formData, imageUrl: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      placeholder="Enter image URL..."
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Scheduled At
-                    </label>
-                    <input
-                      type="datetime-local"
-                      value={formData.scheduledAt}
-                      onChange={(e) => setFormData({...formData, scheduledAt: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex space-x-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowCreateForm(false);
-                      setEditingCampaign(null);
-                    }}
-                    className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-                  >
-                    {editingCampaign ? 'Update Campaign' : 'Create Campaign'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
 };
 
-export default Campaigns;
+export default CampaignsNew;
