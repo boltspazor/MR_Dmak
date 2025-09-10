@@ -153,7 +153,7 @@ const Dashboard: React.FC = () => {
   const handleSort = (field: keyof CampaignRecord) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
+      } else {
       setSortField(field);
       setSortDirection('asc');
     }
@@ -364,7 +364,7 @@ const Dashboard: React.FC = () => {
             <div className="bg-white bg-opacity-60 rounded-lg p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Filters</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+            <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
                   <div className="relative">
                     <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -374,10 +374,10 @@ const Dashboard: React.FC = () => {
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10 pr-4 py-2 w-full rounded-lg border-0 bg-gray-100"
-                    />
-                  </div>
-                </div>
-                
+              />
+            </div>
+        </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
                   <select
@@ -390,9 +390,9 @@ const Dashboard: React.FC = () => {
                     <option value="failed">Failed</option>
                     <option value="pending">Pending</option>
                   </select>
-                </div>
-              </div>
             </div>
+            </div>
+          </div>
 
             {/* Campaigns Table */}
             <div className="bg-white bg-opacity-60 rounded-lg">
@@ -485,7 +485,7 @@ const Dashboard: React.FC = () => {
                               {sortDirection === 'asc' ? '↑' : '↓'}
                             </span>
                           )}
-                        </div>
+                      </div>
                       </th>
                       <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Actions</th>
                     </tr>
@@ -518,8 +518,8 @@ const Dashboard: React.FC = () => {
                               {getStatusIcon(campaign.sendStatus)}
                               <span className={`ml-2 ${getStatusColor(campaign.sendStatus)}`}>
                                 {campaign.sendStatus}
-                              </span>
-                            </div>
+                      </span>
+                    </div>
                           </td>
                           <td className="py-3 px-6 text-sm text-center">
                             <button
@@ -530,8 +530,8 @@ const Dashboard: React.FC = () => {
                             </button>
                           </td>
                         </tr>
-                      ))
-                    ) : (
+                  ))
+                ) : (
                       <tr>
                         <td colSpan={7} className="text-center py-12">
                           <div className="flex flex-col items-center">
@@ -544,7 +544,7 @@ const Dashboard: React.FC = () => {
                             <p className="text-sm text-indigo-600">
                               No campaigns match your current filters
                             </p>
-                          </div>
+                  </div>
                         </td>
                       </tr>
                     )}
@@ -568,7 +568,7 @@ const Dashboard: React.FC = () => {
                   className="text-gray-400 hover:text-gray-600"
                 >
                   <X className="h-6 w-6" />
-                </button>
+                    </button>
               </div>
               
               {/* Filters for Recipient List */}
@@ -585,9 +585,9 @@ const Dashboard: React.FC = () => {
                         value={recipientSearchTerm}
                         onChange={(e) => setRecipientSearchTerm(e.target.value)}
                         className="pl-10 pr-4 py-2 w-full rounded-lg border-0 bg-white"
-                      />
-                    </div>
-                  </div>
+                          />
+                        </div>
+                      </div>
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
@@ -600,7 +600,7 @@ const Dashboard: React.FC = () => {
                       <option value="active">Active</option>
                       <option value="inactive">Inactive</option>
                     </select>
-                  </div>
+                    </div>
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Group</label>

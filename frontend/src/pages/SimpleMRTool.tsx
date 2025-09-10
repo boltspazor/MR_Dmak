@@ -308,7 +308,7 @@ const SimpleMRTool: React.FC = () => {
     try {
       await mockApi.post('/groups', {
         groupName: newGroup.name.trim(),
-        description: 'Group created from DMak Tool'
+        description: 'Group created from D-MAK'
       });
 
       // Add to local state
@@ -607,7 +607,7 @@ const SimpleMRTool: React.FC = () => {
         {/* Header */}
         <Header 
           title="D-MAK"
-          subtitle="Simple tool for managing Medical Representatives and sending Whatsapp messages"
+          subtitle="Digital - Marketing, Automate & Konnect"
           onExportCSV={exportContactsToCSV}
           onExportPDF={exportContactsToPDF}
           showExportButtons={false}
