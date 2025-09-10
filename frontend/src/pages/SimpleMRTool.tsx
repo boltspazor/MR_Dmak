@@ -308,7 +308,7 @@ const SimpleMRTool: React.FC = () => {
     try {
       await mockApi.post('/groups', {
         groupName: newGroup.name.trim(),
-        description: 'Group created from D-MAK'
+        description: 'Group created from MR'
       });
 
       // Add to local state
@@ -437,7 +437,7 @@ const SimpleMRTool: React.FC = () => {
           
           setContacts(prev => [...prev, newContact]);
           created++;
-        } else {
+      } else {
           errors.push(`Line ${i + 1}: Invalid format`);
         }
       }
@@ -606,17 +606,17 @@ const SimpleMRTool: React.FC = () => {
       <div className="ml-24 p-8">
         {/* Header */}
         <Header 
-          title="D-MAK"
+          title="MR"
           subtitle="Digital - Marketing, Automate & Konnect"
           onExportCSV={exportContactsToCSV}
           onExportPDF={exportContactsToPDF}
           showExportButtons={false}
         />
-        
-        {/* Tabs */}
+          
+          {/* Tabs */}
         <div className="flex space-x-8 mt-6">
           {['contacts', 'groups'].map((tab) => (
-            <button
+              <button
               key={tab}
               onClick={() => setActiveTab(tab as any)}
               className={`pb-2 border-b-2 text-lg font-medium capitalize ${
@@ -626,9 +626,9 @@ const SimpleMRTool: React.FC = () => {
               }`}
             >
               {tab}
-            </button>
+              </button>
           ))}
-        </div>
+      </div>
 
         {/* Separator Line */}
         <div className="border-b border-gray-300 my-6"></div>
@@ -647,38 +647,38 @@ const SimpleMRTool: React.FC = () => {
               {/* Action Buttons */}
               <div className="flex justify-between items-center">
                 <div className="flex space-x-4">
-                  <button
+              <button
                     onClick={() => setIsAddMRDialogOpen(true)}
                     className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
                   >
                     Add Individual MR
-                  </button>
+              </button>
                   
                   <div className="flex items-center space-x-2">
-                    <input
-                      type="file"
-                      accept=".csv"
+                <input
+                  type="file"
+                  accept=".csv"
                       onChange={handleCSVImport}
-                      className="hidden"
-                      id="csv-upload"
-                    />
-                    <label
-                      htmlFor="csv-upload"
+                          className="hidden"
+                          id="csv-upload"
+                        />
+                        <label
+                          htmlFor="csv-upload"
                       className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-semibold cursor-pointer hover:bg-indigo-200"
                     >
                       Import CSV
-                    </label>
-                    <button
-                      onClick={downloadCSVTemplate}
+                        </label>
+                <button
+                  onClick={downloadCSVTemplate}
                       className="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-semibold hover:bg-gray-900"
-                    >
-                      Download Template
-                    </button>
-                  </div>
-                </div>
+                      >
+                  Download Template
+                </button>
               </div>
+            </div>
+                      </div>
 
-              {/* Contacts Table */}
+            {/* Contacts Table */}
               <div className="bg-white bg-opacity-40 rounded-lg">
                 {/* Table Header */}
                 <div className="p-6 border-b bg-indigo-50">
@@ -692,7 +692,7 @@ const SimpleMRTool: React.FC = () => {
                   {/* Search and Filter Controls */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="relative">
-                      <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                        <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                       <input
                         type="text"
                         placeholder="Search all fields..."
@@ -732,9 +732,9 @@ const SimpleMRTool: React.FC = () => {
                         ))}
                       </select>
                       <ChevronDown className="h-5 w-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
-                    </div>
                   </div>
                 </div>
+              </div>
                 
                 {/* Table */}
                 <div className="overflow-x-auto">
@@ -795,8 +795,8 @@ const SimpleMRTool: React.FC = () => {
                         </th>
                         <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Comments</th>
                         <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Actions</th>
-                      </tr>
-                    </thead>
+                    </tr>
+                  </thead>
                     <tbody>
                       {filteredContacts.length > 0 ? (
                         filteredContacts.map(contact => (
@@ -817,16 +817,16 @@ const SimpleMRTool: React.FC = () => {
                                 >
                                   <Edit className="h-4 w-4" />
                                 </button>
-                                <button
-                                  onClick={() => deleteContact(contact.id)}
-                                  className="text-red-600 hover:text-red-800"
+                          <button
+                            onClick={() => deleteContact(contact.id)}
+                                className="text-red-600 hover:text-red-800"
                                   title="Delete Contact"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                               </div>
-                            </td>
-                          </tr>
+                        </td>
+                      </tr>
                         ))
                       ) : (
                         <tr>
@@ -845,10 +845,10 @@ const SimpleMRTool: React.FC = () => {
                           </td>
                         </tr>
                       )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+                  </tbody>
+                </table>
+            </div>
+          </div>
             </div>
           </CommonFeatures>
         )}
@@ -865,8 +865,8 @@ const SimpleMRTool: React.FC = () => {
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Groups</h3>
                     <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {groups.length > 0 ? (
-                        groups.map(group => (
+                        {groups.length > 0 ? (
+                          groups.map(group => (
                           <div
                             key={group.id}
                             className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-colors ${
@@ -901,11 +901,11 @@ const SimpleMRTool: React.FC = () => {
                               />
                             )}
                           </div>
-                        ))
-                      ) : (
+                          ))
+                        ) : (
                         <p className="text-gray-500 text-center py-4">No groups available</p>
-                      )}
-                    </div>
+                        )}
+              </div>
                     
                     {selectedGroups.length > 0 && (
                       <div className="mt-4 p-3 bg-indigo-50 rounded-lg">
@@ -917,7 +917,7 @@ const SimpleMRTool: React.FC = () => {
                         </p>
                       </div>
                     )}
-                  </div>
+            </div>
 
                   {/* Right Side - Message Composition */}
                   <div>
@@ -927,14 +927,14 @@ const SimpleMRTool: React.FC = () => {
                       {/* Message Input */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Message</label>
-                        <textarea
-                          value={message}
-                          onChange={(e) => setMessage(e.target.value)}
-                          placeholder="Type your message here..."
+              <textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Type your message here..."
                           rows={4}
                           className="w-full px-3 py-3 rounded-lg border-0 bg-gray-100 resize-none"
                         />
-                      </div>
+            </div>
 
                       {/* Image Upload */}
                       <div>
@@ -962,36 +962,36 @@ const SimpleMRTool: React.FC = () => {
                                 alt="Preview"
                                 className="w-full h-32 object-cover rounded-lg"
                               />
-                              <button
+                  <button
                                 onClick={removeImage}
                                 className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
                               >
                                 <X className="h-4 w-4" />
-                              </button>
-                            </div>
+                  </button>
+                </div>
                           )}
                         </div>
-                      </div>
+                </div>
 
                       {/* Send Button */}
-                      <button
-                        onClick={sendMessage}
+                <button
+                  onClick={sendMessage}
                         disabled={(!message.trim() && !selectedImage) || selectedGroups.length === 0}
                         className="w-full flex items-center justify-center px-4 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Send className="h-5 w-5 mr-2" />
                         Send Message
-                      </button>
+                </button>
                     </div>
                   </div>
                 </div>
               </div>
-
+              
               {/* Groups Management */}
               <div className="bg-white bg-opacity-40 rounded-lg p-6">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Groups Management</h2>
                 
-                <div className="space-y-4">
+                  <div className="space-y-4">
                   <div className="flex items-center space-x-4">
                     <input
                       type="text"
@@ -1000,21 +1000,21 @@ const SimpleMRTool: React.FC = () => {
                       className="flex-1 px-3 py-3 rounded-lg border-0 bg-gray-100"
                       placeholder="Enter group name"
                     />
-                    <button
+                  <button
                       onClick={addGroup}
                       className="px-4 py-3 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
-                    >
+                  >
                       Add Group
-                    </button>
+                  </button>
                   </div>
                 </div>
-              </div>
-
+                </div>
+                
               {/* Groups List */}
               <div className="bg-white bg-opacity-40 rounded-lg">
                 <div className="p-6 border-b bg-indigo-50">
                   <h2 className="text-2xl font-bold text-gray-900">All Groups</h2>
-                </div>
+                  </div>
                 
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -1032,8 +1032,8 @@ const SimpleMRTool: React.FC = () => {
                             <td className="py-3 px-6 text-sm text-gray-900 text-center">{group.name}</td>
                             <td className="py-3 px-6 text-sm text-gray-900 text-center">{group.contactCount}</td>
                             <td className="py-3 px-6 text-sm text-center">
-                              <button
-                                onClick={() => {
+                  <button
+                    onClick={() => {
                                   if (window.confirm('Are you sure you want to delete this group?')) {
                                     setGroups(groups.filter(g => g.id !== group.id));
                                   }
@@ -1041,7 +1041,7 @@ const SimpleMRTool: React.FC = () => {
                                 className="text-red-600 hover:text-red-800"
                               >
                                 <Trash2 className="h-4 w-4" />
-                              </button>
+                  </button>
                             </td>
                           </tr>
                         ))
@@ -1051,7 +1051,7 @@ const SimpleMRTool: React.FC = () => {
                             <div className="flex flex-col items-center">
                               <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4">
                                 <Users className="h-12 w-12 text-gray-400" />
-                              </div>
+                </div>
                               <h3 className="text-lg font-bold mb-2 text-indigo-600">
                                 No Groups Found
                               </h3>
@@ -1064,9 +1064,9 @@ const SimpleMRTool: React.FC = () => {
                       )}
                     </tbody>
                   </table>
-                </div>
               </div>
             </div>
+          </div>
         )}
 
 

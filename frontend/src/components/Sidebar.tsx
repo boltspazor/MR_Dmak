@@ -24,7 +24,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3, route: '/dashboard' },
-    { id: 'dmak', label: 'DMak', icon: BarChart3, route: '/simple-tool' },
+    { id: 'dmak', label: 'MR', icon: BarChart3, route: '/simple-tool' },
     { id: 'mrs', label: 'MR Management', icon: Users, route: '/mrs' },
     { id: 'templates', label: 'Templates', icon: FileText, route: '/templates' },
     { id: 'campaigns', label: 'Campaigns', icon: MessageSquare, route: '/campaigns' },
