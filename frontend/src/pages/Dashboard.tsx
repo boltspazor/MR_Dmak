@@ -229,72 +229,6 @@ const Dashboard: React.FC = () => {
     setShowRecipientPopup(true);
   };
 
-  const exportRecipientsToCSV = () => {
-    const csvContent = [
-      'Name,Phone,Email,Group,Status',
-      ...selectedRecipients.map(member => 
-        `${member.name},${member.phone},${member.email || ''},${member.group},${member.status}`
-      )
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'recipient_list.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
-
-  const exportRecipientsToPDF = () => {
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      const tableContent = `
-        <html>
-          <head>
-            <title>Recipient List Report</title>
-            <style>
-              body { font-family: Arial, sans-serif; margin: 20px; }
-              h1 { color: #333; text-align: center; }
-              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-              th { background-color: #f2f2f2; }
-              @media print { body { margin: 0; } }
-            </style>
-          </head>
-          <body>
-            <h1>Recipient List Report</h1>
-            <p>Generated on: ${new Date().toLocaleDateString()}</p>
-            <table>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Phone</th>
-                  <th>Email</th>
-                  <th>Group</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${selectedRecipients.map(member => `
-                  <tr>
-                    <td>${member.name}</td>
-                    <td>${member.phone}</td>
-                    <td>${member.email || '-'}</td>
-                    <td>${member.group}</td>
-                    <td>${member.status}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </body>
-        </html>
-      `;
-      printWindow.document.write(tableContent);
-      printWindow.document.close();
-      printWindow.print();
-    }
-  };
 
   const exportToCSV = () => {
     const csvContent = [
@@ -413,7 +347,7 @@ const Dashboard: React.FC = () => {
           subtitle="Campaign delivery status and analytics"
           onExportCSV={exportToCSV}
           onExportPDF={exportToPDF}
-          showExportButtons={true}
+          showExportButtons={false}
         />
         
         {/* Separator Line */}
@@ -684,21 +618,6 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* Export Buttons */}
-              <div className="flex justify-end space-x-4 mb-4">
-                <button
-                  onClick={exportRecipientsToCSV}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700"
-                >
-                  Export CSV
-                </button>
-                <button
-                  onClick={exportRecipientsToPDF}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700"
-                >
-                  Export PDF
-                </button>
-              </div>
 
               {/* Recipients Table */}
               <div className="bg-white rounded-lg border">

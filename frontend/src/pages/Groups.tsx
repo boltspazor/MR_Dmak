@@ -94,22 +94,6 @@ const Groups: React.FC = () => {
     setShowCreateForm(true);
   };
 
-  const exportGroupsToCSV = () => {
-    const csvContent = [
-      'Group Name,Description,MR Count,Created At',
-      ...groups.map(group => 
-        `${group.groupName},${group.description || ''},${group.mrCount || 0},${new Date(group.createdAt).toLocaleDateString()}`
-      )
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'groups.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
 
   const filteredGroups = groups.filter(group =>
     group.groupName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -188,22 +172,6 @@ const Groups: React.FC = () => {
           
           {/* Action Buttons */}
           <div className="flex space-x-3 mt-6" style={{ marginTop: '24px', marginLeft: '100px' }}>
-            <button
-              onClick={() => exportGroupsToCSV()}
-              className="px-4 py-2 rounded-lg text-white text-sm font-semibold"
-              style={{ 
-                background: '#1E1E1E', 
-                fontFamily: 'Jura',
-                fontSize: '13.51px',
-                lineHeight: '16px',
-                fontWeight: 600,
-                letterSpacing: '0.08em',
-                padding: '10px 16px',
-                borderRadius: '10px'
-              }}
-            >
-              Export
-            </button>
             <button
               onClick={() => {
                 setShowCreateForm(true);

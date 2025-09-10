@@ -160,22 +160,6 @@ const Reports: React.FC = () => {
           </div>
           <div className="flex space-x-3">
             <Button
-              onClick={() => exportReport('csv')}
-              variant="outline"
-              className="flex items-center"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Export CSV
-            </Button>
-            <Button
-              onClick={() => exportReport('json')}
-              variant="outline"
-              className="flex items-center"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Export JSON
-            </Button>
-            <Button
               onClick={fetchData}
               variant="outline"
               className="flex items-center"
@@ -384,16 +368,6 @@ const Reports: React.FC = () => {
                     </option>
                   ))}
                 </select>
-                {selectedCampaign && (
-                  <Button
-                    onClick={() => exportReport('csv')}
-                    size="sm"
-                    className="flex items-center"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Export Report
-                  </Button>
-                )}
               </div>
             </div>
           </CardHeader>
