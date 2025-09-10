@@ -2,19 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   MessageSquare, 
-  Edit, 
   Trash2, 
   Search, 
-  Clock,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
   Send,
   Upload,
   X,
-  FileText,
   BarChart3,
-  Users,
   ChevronDown,
   ChevronUp,
   Eye
@@ -399,8 +392,8 @@ const CampaignsNew: React.FC = () => {
                         >
                           <option value="">Select a group to add</option>
                           {groups.map(group => (
-                            <option key={group.id} value={group.name}>
-                              {group.name} ({group.mrCount || 0} contacts)
+                            <option key={group.id} value={group.groupName}>
+                              {group.groupName} ({group.mrCount || 0} contacts)
                             </option>
                           ))}
                         </select>
@@ -408,7 +401,7 @@ const CampaignsNew: React.FC = () => {
                       </div>
                       <button
                         onClick={() => {
-                          const group = groups.find(g => g.name === selectedGroupDropdown);
+                          const group = groups.find(g => g.groupName === selectedGroupDropdown);
                           if (group) handleGroupPreview(group);
                         }}
                         disabled={!selectedGroupDropdown}
@@ -531,8 +524,8 @@ const CampaignsNew: React.FC = () => {
                         >
                           <option value="">Select a group to add</option>
                           {groups.map(group => (
-                            <option key={group.id} value={group.name}>
-                              {group.name} ({group.mrCount || 0} contacts)
+                            <option key={group.id} value={group.groupName}>
+                              {group.groupName} ({group.mrCount || 0} contacts)
                             </option>
                           ))}
                         </select>
@@ -540,7 +533,7 @@ const CampaignsNew: React.FC = () => {
                       </div>
                       <button
                         onClick={() => {
-                          const group = groups.find(g => g.name === selectedGroupDropdown);
+                          const group = groups.find(g => g.groupName === selectedGroupDropdown);
                           if (group) handleGroupPreview(group);
                         }}
                         disabled={!selectedGroupDropdown}
@@ -947,7 +940,7 @@ const CampaignsNew: React.FC = () => {
             <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-semibold text-gray-900">
-                  Group Preview: {previewGroup.name}
+                  Group Preview: {previewGroup.groupName}
                 </h2>
                 <button
                   onClick={() => setShowGroupPreview(false)}
@@ -965,7 +958,7 @@ const CampaignsNew: React.FC = () => {
                       <h4 className="font-medium text-gray-900 mb-2">
                         Group Name:
                       </h4>
-                      <span className="text-sm text-gray-600">{previewGroup.name}</span>
+                      <span className="text-sm text-gray-600">{previewGroup.groupName}</span>
                     </div>
                     
                     <div>
