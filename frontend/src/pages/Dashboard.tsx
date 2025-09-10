@@ -205,6 +205,19 @@ const Dashboard: React.FC = () => {
       { id: '5', name: 'Charlie Brown', phone: '+1234567894', email: 'charlie@example.com', group: 'East Zone', status: 'active' },
       { id: '6', name: 'Diana Prince', phone: '+1234567895', email: 'diana@example.com', group: 'West Zone', status: 'active' },
       { id: '7', name: 'Eva Martinez', phone: '+1234567896', email: 'eva@example.com', group: 'Central Zone', status: 'active' },
+      { id: '8', name: 'Frank Miller', phone: '+1234567897', email: 'frank@example.com', group: 'North Zone', status: 'active' },
+      { id: '9', name: 'Grace Lee', phone: '+1234567898', email: 'grace@example.com', group: 'South Zone', status: 'active' },
+      { id: '10', name: 'Henry Davis', phone: '+1234567899', email: 'henry@example.com', group: 'East Zone', status: 'inactive' },
+      { id: '11', name: 'Ivy Chen', phone: '+1234567800', email: 'ivy@example.com', group: 'West Zone', status: 'active' },
+      { id: '12', name: 'Jack Wilson', phone: '+1234567801', email: 'jack@example.com', group: 'Central Zone', status: 'active' },
+      { id: '13', name: 'Karen Taylor', phone: '+1234567802', email: 'karen@example.com', group: 'North Zone', status: 'active' },
+      { id: '14', name: 'Liam Anderson', phone: '+1234567803', email: 'liam@example.com', group: 'South Zone', status: 'inactive' },
+      { id: '15', name: 'Maya Patel', phone: '+1234567804', email: 'maya@example.com', group: 'East Zone', status: 'active' },
+      { id: '16', name: 'Noah Garcia', phone: '+1234567805', email: 'noah@example.com', group: 'West Zone', status: 'active' },
+      { id: '17', name: 'Olivia Kim', phone: '+1234567806', email: 'olivia@example.com', group: 'Central Zone', status: 'active' },
+      { id: '18', name: 'Paul Rodriguez', phone: '+1234567807', email: 'paul@example.com', group: 'North Zone', status: 'inactive' },
+      { id: '19', name: 'Quinn Thompson', phone: '+1234567808', email: 'quinn@example.com', group: 'South Zone', status: 'active' },
+      { id: '20', name: 'Rachel White', phone: '+1234567809', email: 'rachel@example.com', group: 'East Zone', status: 'active' },
     ];
 
     // Filter members based on selected groups
@@ -703,15 +716,15 @@ const Dashboard: React.FC = () => {
                   </div>
                 </div>
                 
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto max-h-96 overflow-y-auto">
                   <table className="w-full">
-                    <thead>
+                    <thead className="sticky top-0 z-10">
                       <tr className="bg-indigo-50 border-b">
-                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Name</th>
-                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Phone</th>
-                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Email</th>
-                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Group</th>
-                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Status</th>
+                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700 bg-indigo-50">Name</th>
+                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700 bg-indigo-50">Phone</th>
+                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700 bg-indigo-50">Email</th>
+                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700 bg-indigo-50">Group</th>
+                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700 bg-indigo-50">Status</th>
                       </tr>
                     </thead>
                     <tbody>
