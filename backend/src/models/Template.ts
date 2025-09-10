@@ -18,8 +18,7 @@ const templateSchema = new Schema<ITemplate>({
   name: {
     type: String,
     required: true,
-    trim: true,
-    unique: true
+    trim: true
   },
   content: {
     type: String,
@@ -60,5 +59,7 @@ const templateSchema = new Schema<ITemplate>({
 // Index for efficient querying
 templateSchema.index({ createdBy: 1, isActive: 1 });
 templateSchema.index({ name: 1 });
+// Compound unique index to ensure template names are unique per user
+templateSchema.index({ name: 1, createdBy: 1 }, { unique: true });
 
 export default mongoose.model<ITemplate>('Template', templateSchema);
