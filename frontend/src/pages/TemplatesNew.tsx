@@ -5,13 +5,18 @@ import {
   Edit, 
   Trash2, 
   Search, 
+  Download,
+  Plus,
+  Image,
   Code,
   Type,
+  BarChart3,
   Eye,
-  Copy
+  Copy,
+  Upload
 } from 'lucide-react';
 import { api } from '../lib/api';
-import { Template } from '../types';
+import { Template, TemplateStats } from '../types';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import CommonFeatures from '../components/CommonFeatures';
@@ -21,6 +26,7 @@ const Templates: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [stats, setStats] = useState<TemplateStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('');
@@ -38,9 +44,14 @@ const Templates: React.FC = () => {
     parameters: [] as string[]
   });
 
+  // Image upload states
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     fetchTemplates();
+    fetchStats();
   }, []);
 
   const fetchTemplates = async () => {
@@ -57,6 +68,17 @@ const Templates: React.FC = () => {
     }
   };
 
+  const fetchStats = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      const response = await api.get('/templates/stats');
+      setStats(response.data.data);
+    } catch (error: any) {
+      console.error('Error fetching template stats:', error);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,7 +92,7 @@ const Templates: React.FC = () => {
       };
 
       if (editingTemplate) {
-        await api.put(`/templates/${editingTemplate.name}`, templateData);
+        await api.put(`/templates/${editingTemplate.id}`, templateData);
       } else {
         await api.post('/templates', templateData);
       }
@@ -85,6 +107,8 @@ const Templates: React.FC = () => {
         imageUrl: '',
         parameters: []
       });
+      setImageFile(null);
+      setImagePreview('');
     } catch (error: any) {
       console.error('Error saving template:', error);
     }
@@ -99,6 +123,8 @@ const Templates: React.FC = () => {
       imageUrl: template.imageUrl || '',
       parameters: template.parameters
     });
+    setImagePreview(template.imageUrl || '');
+    setImageFile(null);
     setShowCreateForm(true);
   };
 
@@ -287,11 +313,9 @@ const Templates: React.FC = () => {
           onExportPDF={exportTemplatesToPDF}
         >
           <div className="space-y-8">
-            {/* Template Management Header */}
-            <h2 className="text-2xl font-bold text-gray-900">Template Management</h2>
-
             {/* Action Buttons */}
             <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-gray-900">Template Management</h2>
               <div className="flex space-x-4">
                 <button
                   onClick={() => {
@@ -366,8 +390,8 @@ const Templates: React.FC = () => {
                   </thead>
                   <tbody>
                     {filteredTemplates.length > 0 ? (
-                      filteredTemplates.map((template, index) => (
-                        <tr key={index} className="border-b hover:bg-gray-50">
+                      filteredTemplates.map(template => (
+                        <tr key={template.id} className="border-b hover:bg-gray-50">
                           <td className="py-3 px-6 text-sm text-gray-900 text-center">{template.name}</td>
                           <td className="py-3 px-6 text-sm text-gray-900 text-center">
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
@@ -424,7 +448,7 @@ const Templates: React.FC = () => {
                                 <Copy className="h-4 w-4" />
                               </button>
                               <button
-                                onClick={() => handleDelete(template.name)}
+                                onClick={() => handleDelete(template.id)}
                                 className="text-red-600 hover:text-red-800"
                                 title="Delete Template"
                               >

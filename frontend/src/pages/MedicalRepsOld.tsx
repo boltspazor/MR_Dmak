@@ -1,25 +1,25 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   UserCircle, 
-  Plus, 
   Edit, 
   Trash2, 
   Search, 
   Download,
-  Upload,
   Users,
-  Phone,
-  Mail,
-  Calendar,
-  Filter
+  FileText,
+  BarChart3
 } from 'lucide-react';
-import Layout from '../components/layout/Layout';
-import Card, { CardHeader, CardContent } from '../components/ui/Card';
-import Button from '../components/ui/Button';
 import { api } from '../lib/api';
 import { MedicalRepresentative, Group } from '../types';
+import Sidebar from '../components/Sidebar';
+import Header from '../components/Header';
+import CommonFeatures from '../components/CommonFeatures';
+import { useAuth } from '../contexts/AuthContext';
 
 const MedicalReps: React.FC = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [mrs, setMrs] = useState<MedicalRepresentative[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
@@ -231,9 +231,93 @@ const MedicalReps: React.FC = () => {
     return matchesSearch && matchesGroup;
   });
 
+  // Navigation functions
+  const handleSidebarNavigation = (route: string) => {
+    navigate(route);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+    navigate('/login');
+  };
+
+  const exportMRsToPDF = () => {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      const tableContent = `
+        <html>
+          <head>
+            <title>Medical Representatives Report</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 20px; }
+              h1 { color: #333; text-align: center; }
+              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+              th { background-color: #f2f2f2; }
+              @media print { body { margin: 0; } }
+            </style>
+          </head>
+          <body>
+            <h1>Medical Representatives Report</h1>
+            <p>Generated on: ${new Date().toLocaleDateString()}</p>
+            <table>
+              <thead>
+                <tr>
+                  <th>MR ID</th>
+                  <th>Name</th>
+                  <th>Phone</th>
+                  <th>Email</th>
+                  <th>Group</th>
+                  <th>Comments</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${mrs.map(mr => `
+                  <tr>
+                    <td>${mr.mrId}</td>
+                    <td>${mr.firstName} ${mr.lastName}</td>
+                    <td>${mr.phone}</td>
+                    <td>${mr.email || '-'}</td>
+                    <td>${mr.group?.groupName || '-'}</td>
+                    <td>${mr.comments || '-'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </body>
+        </html>
+      `;
+      printWindow.document.write(tableContent);
+      printWindow.document.close();
+      printWindow.print();
+    }
+  };
+
+  const summaryItems = [
+    {
+      title: 'Total MRs',
+      value: mrs.length,
+      icon: <Users className="h-6 w-6 text-blue-600" />,
+      color: 'bg-blue-100'
+    },
+    {
+      title: 'Total Groups',
+      value: groups.length,
+      icon: <FileText className="h-6 w-6 text-green-600" />,
+      color: 'bg-green-100'
+    },
+    {
+      title: 'Active MRs',
+      value: mrs.filter(mr => mr.group).length,
+      icon: <BarChart3 className="h-6 w-6 text-orange-600" />,
+      color: 'bg-orange-100'
+    }
+  ];
+
   if (loading) {
     return (
-      <Layout>
+      <div className="min-h-screen" style={{ background: '#ECEAE2', width: '1440px', height: '1024px' }}>
         <div className="animate-pulse space-y-6">
           <div className="h-8 bg-gray-200 rounded w-1/4"></div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -242,136 +326,416 @@ const MedicalReps: React.FC = () => {
             ))}
           </div>
         </div>
-      </Layout>
+      </div>
     );
   }
 
   return (
-    <Layout>
-      <div className="space-y-6">
+    <div className="min-h-screen bg-gray-100">
+      {/* Sidebar */}
+      <Sidebar 
+        activePage="mrs"
+        onNavigate={handleSidebarNavigation}
+        onLogout={handleLogout}
+        userName={user?.name || "User"}
+      />
+
+      {/* Main Content */}
+      <div className="ml-24 p-8">
         {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Medical Representatives</h1>
-            <p className="text-gray-600">Manage your medical representative contacts</p>
-          </div>
-          <div className="flex space-x-3">
-            <Button
-              onClick={() => setShowUploadForm(true)}
-              variant="outline"
-              className="flex items-center"
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              Bulk Upload
-            </Button>
-            <Button
-              onClick={exportMRsToCSV}
-              variant="outline"
-              className="flex items-center"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
-            <Button
-              onClick={() => {
-                setShowCreateForm(true);
-                setEditingMR(null);
-                setFormData({
-                  mrId: '',
-                  firstName: '',
-                  lastName: '',
-                  phone: '',
-                  email: '',
-                  groupId: '',
-                  comments: ''
-                });
-              }}
-              className="flex items-center"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add MR
-            </Button>
-          </div>
-        </div>
+        <Header 
+          title="MR Management"
+          subtitle="Manage your medical representative contacts"
+          onExportCSV={exportMRsToCSV}
+          onExportPDF={exportMRsToPDF}
+          showExportButtons={false}
+        />
+        
+        {/* Separator Line */}
+        <div className="border-b border-gray-300 my-6"></div>
 
+        {/* Main Content Area */}
+        <CommonFeatures
+          summaryItems={summaryItems}
+          onExportCSV={exportMRsToCSV}
+          onExportPDF={exportMRsToPDF}
+        >
+          <div className="space-y-8">
+            {/* Action Buttons */}
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-gray-900">MR Management</h2>
+              <div className="flex space-x-4">
+                <button
+                  onClick={() => setShowUploadForm(true)}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
+                >
+                  Bulk Upload
+                </button>
+                <button
+                  onClick={() => {
+                    setShowCreateForm(true);
+                    setEditingMR(null);
+                    setFormData({
+                      mrId: '',
+                      firstName: '',
+                      lastName: '',
+                      phone: '',
+                      email: '',
+                      groupId: '',
+                      comments: ''
+                    });
+                  }}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
+                >
+                  Add MR
+                </button>
+              </div>
+            </div>
+          {/* Background with blur effect */}
+          <div 
+            className="absolute inset-0 rounded-2xl"
+            style={{
+              background: 'linear-gradient(120.66deg, rgba(255, 255, 255, 0.4) 7.56%, rgba(255, 255, 255, 0.1) 93.23%)',
+              backdropFilter: 'blur(20px)',
+              borderRadius: '15px',
+              width: '1308px',
+              height: '935px'
+            }}
+          />
+          
+          {/* Content */}
+          <div className="relative" style={{ padding: '24px' }}>
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 rounded-full bg-blue-100 text-blue-600">
-                  <UserCircle className="h-6 w-6" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total MRs</p>
-                  <p className="text-2xl font-semibold text-gray-900">{mrs.length}</p>
+            <div className="grid grid-cols-4 gap-6 mb-8" style={{ gap: '24px', marginBottom: '32px' }}>
+              {/* Total MRs */}
+              <div className="bg-white rounded-lg p-6" style={{ 
+                background: 'rgba(44, 38, 150, 0.1)', 
+                borderRadius: '10px',
+                width: '255px',
+                height: '161px',
+                padding: '24px',
+                border: '1px solid #000000'
+              }}>
+                <div className="flex flex-col items-center justify-center h-full">
+                  <p className="text-6xl font-bold text-black mb-2" style={{ 
+                    fontFamily: 'Jura',
+                    fontSize: '64px',
+                    lineHeight: '76px',
+                    fontWeight: 700,
+                    letterSpacing: '0.08em'
+                  }}>{mrs.length}</p>
+                  <h3 className="text-lg font-bold text-black" style={{ 
+                    fontFamily: 'Jura',
+                    fontSize: '18px',
+                    lineHeight: '21px',
+                    fontWeight: 700,
+                    letterSpacing: '0.08em'
+                  }}>Total MRs</h3>
                 </div>
               </div>
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 rounded-full bg-green-100 text-green-600">
-                  <Users className="h-6 w-6" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Active Groups</p>
-                  <p className="text-2xl font-semibold text-gray-900">
-                    {new Set(mrs.map(mr => mr.groupId)).size}
-                  </p>
+              {/* Active Groups */}
+              <div className="bg-white rounded-lg p-6" style={{ 
+                background: 'rgba(44, 38, 150, 0.15)', 
+                borderRadius: '10px',
+                width: '255px',
+                height: '161px',
+                padding: '24px',
+                border: '1px solid #000000'
+              }}>
+                <div className="flex flex-col items-center justify-center h-full">
+                  <p className="text-6xl font-bold text-black mb-2" style={{ 
+                    fontFamily: 'Jura',
+                    fontSize: '64px',
+                    lineHeight: '76px',
+                    fontWeight: 700,
+                    letterSpacing: '0.08em'
+                  }}>{new Set(mrs.map(mr => mr.groupId)).size}</p>
+                  <h3 className="text-lg font-bold text-black" style={{ 
+                    fontFamily: 'Jura',
+                    fontSize: '18px',
+                    lineHeight: '21px',
+                    fontWeight: 700,
+                    letterSpacing: '0.08em'
+                  }}>Active Groups</h3>
                 </div>
               </div>
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 rounded-full bg-purple-100 text-purple-600">
-                  <Phone className="h-6 w-6" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">With Phone</p>
-                  <p className="text-2xl font-semibold text-gray-900">
-                    {mrs.filter(mr => mr.phone).length}
-                  </p>
+              {/* With Phone */}
+              <div className="bg-white rounded-lg p-6" style={{ 
+                background: 'rgba(44, 38, 150, 0.2)', 
+                borderRadius: '10px',
+                width: '255px',
+                height: '161px',
+                padding: '24px',
+                border: '1px solid #000000'
+              }}>
+                <div className="flex flex-col items-center justify-center h-full">
+                  <p className="text-6xl font-bold text-black mb-2" style={{ 
+                    fontFamily: 'Jura',
+                    fontSize: '64px',
+                    lineHeight: '76px',
+                    fontWeight: 700,
+                    letterSpacing: '0.08em'
+                  }}>{mrs.filter(mr => mr.phone).length}</p>
+                  <h3 className="text-lg font-bold text-black" style={{ 
+                    fontFamily: 'Jura',
+                    fontSize: '18px',
+                    lineHeight: '21px',
+                    fontWeight: 700,
+                    letterSpacing: '0.08em'
+                  }}>With Phone</h3>
                 </div>
               </div>
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 rounded-full bg-orange-100 text-orange-600">
-                  <Mail className="h-6 w-6" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">With Email</p>
-                  <p className="text-2xl font-semibold text-gray-900">
-                    {mrs.filter(mr => mr.email).length}
-                  </p>
+              {/* With Email */}
+              <div className="bg-white rounded-lg p-6" style={{ 
+                background: 'rgba(44, 38, 150, 0.25)', 
+                borderRadius: '10px',
+                width: '255px',
+                height: '161px',
+                padding: '24px',
+                border: '1px solid #000000'
+              }}>
+                <div className="flex flex-col items-center justify-center h-full">
+                  <p className="text-6xl font-bold text-black mb-2" style={{ 
+                    fontFamily: 'Jura',
+                    fontSize: '64px',
+                    lineHeight: '76px',
+                    fontWeight: 700,
+                    letterSpacing: '0.08em'
+                  }}>{mrs.filter(mr => mr.email).length}</p>
+                  <h3 className="text-lg font-bold text-black" style={{ 
+                    fontFamily: 'Jura',
+                    fontSize: '18px',
+                    lineHeight: '21px',
+                    fontWeight: 700,
+                    letterSpacing: '0.08em'
+                  }}>With Email</h3>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+
+            {/* Search and Filter Section */}
+            <div className="flex items-center justify-between mb-6" style={{ marginBottom: '24px' }}>
+              <div className="relative">
+                <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search MRs..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-2 rounded-lg border-0"
+                  style={{ 
+                    background: '#F2F2F2',
+                    borderRadius: '10px',
+                    height: '44px',
+                    padding: '12px 16px',
+                    width: '825px'
+                  }}
+                />
+              </div>
+              <div className="flex items-center space-x-4">
+                <select
+                  value={selectedGroup}
+                  onChange={(e) => setSelectedGroup(e.target.value)}
+                  className="px-4 py-2 rounded-lg text-white text-sm font-semibold"
+                  style={{ 
+                    background: '#1E1E1E', 
+                    fontFamily: 'Jura',
+                    fontSize: '13.51px',
+                    lineHeight: '16px',
+                    fontWeight: 600,
+                    letterSpacing: '0.08em',
+                    padding: '10px 16px',
+                    borderRadius: '10px',
+                    height: '36px'
+                  }}
+                >
+                  <option value="">All Groups</option>
+                  {groups.map(group => (
+                    <option key={group.id} value={group.id}>{group.groupName}</option>
+                  ))}
+                </select>
+                <span className="text-sm text-black font-bold" style={{ 
+                  fontFamily: 'Jura',
+                  fontSize: '13.51px',
+                  lineHeight: '16px',
+                  fontWeight: 600,
+                  letterSpacing: '0.08em'
+                }}>
+                  {filteredMRs.length} MRs
+                </span>
+              </div>
+                </div>
+
+            {/* MRs Table */}
+            <div className="bg-white rounded-lg" style={{ 
+              background: 'rgba(255, 255, 255, 0.1)',
+              borderRadius: '10px',
+              width: '1110px',
+              height: '498px',
+              boxShadow: '0px 4px 4px rgba(0, 0, 0, 0.25)'
+            }}>
+              {/* Table Header */}
+              <div className="p-6 border-b" style={{ 
+                background: 'rgba(215, 181, 109, 0.1)',
+                borderRadius: '10px 10px 0px 0px',
+                padding: '24px',
+                height: '53px'
+              }}>
+                <div className="grid grid-cols-6 gap-4 text-center">
+                  <div className="text-sm font-medium text-black" style={{ 
+                    fontFamily: 'Jura',
+                    fontSize: '14px',
+                    lineHeight: '17px',
+                    fontWeight: 300
+                  }}>MR ID</div>
+                  <div className="text-sm font-medium text-black" style={{ 
+                    fontFamily: 'Jura',
+                    fontSize: '14px',
+                    lineHeight: '17px',
+                    fontWeight: 300
+                  }}>Name</div>
+                  <div className="text-sm font-medium text-black" style={{ 
+                    fontFamily: 'Jura',
+                    fontSize: '14px',
+                    lineHeight: '17px',
+                    fontWeight: 300
+                  }}>Phone No.</div>
+                  <div className="text-sm font-medium text-black" style={{ 
+                    fontFamily: 'Jura',
+                    fontSize: '14px',
+                    lineHeight: '17px',
+                    fontWeight: 300
+                  }}>Group</div>
+                  <div className="text-sm font-medium text-black" style={{ 
+                    fontFamily: 'Jura',
+                    fontSize: '14px',
+                    lineHeight: '17px',
+                    fontWeight: 300
+                  }}>Comments</div>
+                  <div className="text-sm font-medium text-black" style={{ 
+                    fontFamily: 'Jura',
+                    fontSize: '14px',
+                    lineHeight: '17px',
+                    fontWeight: 300
+                  }}>Actions</div>
+                </div>
+              </div>
+
+              {/* Table Body */}
+              <div className="p-6" style={{ padding: '24px' }}>
+                {filteredMRs.length > 0 ? (
+                  <div className="space-y-4">
+                    {filteredMRs.map(mr => (
+                      <div key={mr.id} className="grid grid-cols-6 gap-4 items-center py-3 border-b border-gray-200 last:border-b-0">
+                        <div className="text-sm text-black text-center" style={{ fontFamily: 'Jura' }}>
+                          {mr.mrId}
+                        </div>
+                        <div className="text-sm text-black text-center" style={{ fontFamily: 'Jura' }}>
+                          {mr.firstName} {mr.lastName}
+                        </div>
+                        <div className="text-sm text-black text-center" style={{ fontFamily: 'Jura' }}>
+                          {mr.phone}
+                        </div>
+                        <div className="text-sm text-black text-center" style={{ fontFamily: 'Jura' }}>
+                          {mr.group?.groupName || 'No Group'}
+                        </div>
+                        <div className="text-sm text-black text-center" style={{ fontFamily: 'Jura' }}>
+                          {mr.comments || '-'}
+                        </div>
+                        <div className="text-sm text-center">
+                          <div className="flex justify-center space-x-2">
+                            <button
+                              onClick={() => handleEdit(mr)}
+                              className="text-blue-600 hover:text-blue-900"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(mr.id)}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <UserCircle className="h-12 w-12 text-gray-400" />
+                </div>
+                    <h3 className="text-lg font-bold text-black mb-2" style={{ 
+                      fontFamily: 'Jura',
+                      fontSize: '18.36px',
+                      lineHeight: '22px',
+                      fontWeight: 700,
+                      letterSpacing: '0.08em',
+                      color: 'rgba(0, 0, 0, 0.5)'
+                    }}>
+                      No Medical Representatives Found
+                    </h3>
+                    <p className="text-sm text-black mb-4" style={{ 
+                      fontFamily: 'Jura',
+                      fontSize: '10px',
+                      lineHeight: '12px',
+                      fontWeight: 700,
+                      letterSpacing: '0.08em',
+                      color: 'rgba(0, 0, 0, 0.5)'
+                    }}>
+                      Add your first Medical Representative to get started...
+                    </p>
+                    <button
+                      onClick={() => {
+                        setShowCreateForm(true);
+                        setEditingMR(null);
+                        setFormData({
+                          mrId: '',
+                          firstName: '',
+                          lastName: '',
+                          phone: '',
+                          email: '',
+                          groupId: '',
+                          comments: ''
+                        });
+                      }}
+                      className="px-6 py-3 rounded-lg text-white text-sm font-semibold"
+                      style={{ 
+                        background: '#2C2696', 
+                        fontFamily: 'Jura',
+                        fontSize: '13.51px',
+                        lineHeight: '16px',
+                        fontWeight: 600,
+                        letterSpacing: '0.08em',
+                        padding: '10px 16px',
+                        borderRadius: '10px'
+                      }}
+                    >
+                      Add First MR
+                    </button>
+                </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
         </div>
 
-        {/* Create/Edit Form */}
+      {/* Create/Edit Form Modal */}
         {showCreateForm && (
-          <Card>
-            <CardHeader>
-              <h2 className="text-lg font-semibold text-gray-900">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96">
+            <h2 className="text-lg font-semibold text-black mb-4" style={{ fontFamily: 'Jura' }}>
                 {editingMR ? 'Edit Medical Representative' : 'Add New Medical Representative'}
               </h2>
-            </CardHeader>
-            <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-black mb-1" style={{ fontFamily: 'Jura' }}>
                       MR ID *
                     </label>
                     <input
@@ -384,7 +748,7 @@ const MedicalReps: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-black mb-1" style={{ fontFamily: 'Jura' }}>
                       First Name *
                     </label>
                     <input
@@ -397,7 +761,7 @@ const MedicalReps: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-black mb-1" style={{ fontFamily: 'Jura' }}>
                       Last Name *
                     </label>
                     <input
@@ -410,7 +774,7 @@ const MedicalReps: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-black mb-1" style={{ fontFamily: 'Jura' }}>
                       Phone *
                     </label>
                     <input
@@ -423,7 +787,7 @@ const MedicalReps: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-black mb-1" style={{ fontFamily: 'Jura' }}>
                       Email
                     </label>
                     <input
@@ -435,7 +799,7 @@ const MedicalReps: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-black mb-1" style={{ fontFamily: 'Jura' }}>
                       Group *
                     </label>
                     <select
@@ -452,7 +816,7 @@ const MedicalReps: React.FC = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-black mb-1" style={{ fontFamily: 'Jura' }}>
                     Comments
                   </label>
                   <textarea
@@ -464,12 +828,18 @@ const MedicalReps: React.FC = () => {
                   />
                 </div>
                 <div className="flex space-x-3">
-                  <Button type="submit">
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-lg text-white text-sm font-semibold"
+                  style={{ 
+                    background: '#2C2696', 
+                    fontFamily: 'Jura'
+                  }}
+                >
                     {editingMR ? 'Update MR' : 'Add MR'}
-                  </Button>
-                  <Button
+                </button>
+                <button
                     type="button"
-                    variant="outline"
                     onClick={() => {
                       setShowCreateForm(false);
                       setEditingMR(null);
@@ -483,22 +853,24 @@ const MedicalReps: React.FC = () => {
                         comments: ''
                       });
                     }}
+                  className="px-4 py-2 rounded-lg text-gray-700 text-sm font-semibold border border-gray-300"
+                  style={{ fontFamily: 'Jura' }}
                   >
                     Cancel
-                  </Button>
+                </button>
                 </div>
               </form>
-            </CardContent>
-          </Card>
+          </div>
+        </div>
         )}
 
-        {/* Bulk Upload Form */}
+      {/* Bulk Upload Form Modal */}
         {showUploadForm && (
-          <Card>
-            <CardHeader>
-              <h2 className="text-lg font-semibold text-gray-900">Bulk Upload Medical Representatives</h2>
-            </CardHeader>
-            <CardContent>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96">
+            <h2 className="text-lg font-semibold text-black mb-4" style={{ fontFamily: 'Jura' }}>
+              Bulk Upload Medical Representatives
+            </h2>
               <div className="space-y-4">
                 <div className="flex items-center space-x-4">
                   <input
@@ -507,163 +879,40 @@ const MedicalReps: React.FC = () => {
                     onChange={handleFileUpload}
                     className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                   />
-                  <Button
+                <button
                     onClick={() => downloadTemplate('excel')}
-                    variant="outline"
-                    className="flex items-center"
+                  className="px-4 py-2 rounded-lg text-gray-700 text-sm font-semibold border border-gray-300"
+                  style={{ fontFamily: 'Jura' }}
                   >
                     <Download className="h-4 w-4 mr-2" />
                     Download Excel Template
-                  </Button>
-                  <Button
+                </button>
+                <button
                     onClick={() => downloadTemplate('csv')}
-                    variant="outline"
-                    className="flex items-center"
+                  className="px-4 py-2 rounded-lg text-gray-700 text-sm font-semibold border border-gray-300"
+                  style={{ fontFamily: 'Jura' }}
                   >
                     <Download className="h-4 w-4 mr-2" />
                     Download CSV Template
-                  </Button>
+                </button>
                 </div>
-                <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600" style={{ fontFamily: 'Jura' }}>
                   Upload an Excel file (.xlsx, .xls) or CSV file. Make sure to follow the template format.
                 </p>
                 <div className="flex space-x-3">
-                  <Button
+                <button
                     onClick={() => setShowUploadForm(false)}
-                    variant="outline"
+                  className="px-4 py-2 rounded-lg text-gray-700 text-sm font-semibold border border-gray-300"
+                  style={{ fontFamily: 'Jura' }}
                   >
                     Close
-                  </Button>
-                </div>
+                </button>
               </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Search and Filters */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="relative">
-              <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search MRs..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
             </div>
-            <select
-              value={selectedGroup}
-              onChange={(e) => setSelectedGroup(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Groups</option>
-              {groups.map(group => (
-                <option key={group.id} value={group.id}>{group.groupName}</option>
-              ))}
-            </select>
-            <span className="text-sm text-gray-500">{filteredMRs.length} MRs</span>
           </div>
-        </div>
-
-        {/* MRs Table */}
-        <Card>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MR ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Group</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredMRs.map(mr => (
-                  <tr key={mr.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {mr.mrId}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {mr.firstName} {mr.lastName}
-                        </div>
-                        {mr.comments && (
-                          <div className="text-sm text-gray-500">{mr.comments}</div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="space-y-1">
-                        <div className="text-sm text-gray-900 flex items-center">
-                          <Phone className="h-3 w-3 mr-1" />
-                          {mr.phone}
-                        </div>
-                        {mr.email && (
-                          <div className="text-sm text-gray-500 flex items-center">
-                            <Mail className="h-3 w-3 mr-1" />
-                            {mr.email}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        {mr.group?.groupName || 'No Group'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="flex items-center">
-                        <Calendar className="h-3 w-3 mr-1" />
-                        {new Date(mr.createdAt).toLocaleDateString()}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => handleEdit(mr)}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(mr.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {filteredMRs.length === 0 && (
-              <div className="text-center py-12">
-                <UserCircle className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">No medical representatives found</p>
-                <p className="text-sm text-gray-400">
-                  {searchTerm || selectedGroup ? 'Try adjusting your search terms or filters' : 'Add your first MR to get started'}
-                </p>
-                {!searchTerm && !selectedGroup && (
-                  <Button
-                    onClick={() => setShowCreateForm(true)}
-                    className="mt-4"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add First MR
-                  </Button>
-                )}
               </div>
             )}
           </div>
-        </Card>
-      </div>
-    </Layout>
   );
 };
 
