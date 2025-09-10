@@ -7,9 +7,6 @@ import {
   Search,
   FileText,
   BarChart3,
-  X,
-  Upload,
-  Send,
   Edit,
   ChevronDown
 } from 'lucide-react';
@@ -106,7 +103,7 @@ const mockApi = {
 const SimpleMRTool: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'contacts' | 'groups'>('contacts');
+  const [activeTab, setActiveTab] = useState<'contacts'>('contacts');
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [messageLogs, setMessageLogs] = useState<MessageLog[]>([]);
@@ -114,10 +111,6 @@ const SimpleMRTool: React.FC = () => {
   const [sortField, setSortField] = useState<keyof Contact>('mrId');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [isAddMRDialogOpen, setIsAddMRDialogOpen] = useState(false);
-  const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
-  const [message, setMessage] = useState('');
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>('');
 
   // Filter states
   const [nameFilter, setNameFilter] = useState('');
@@ -127,10 +120,6 @@ const SimpleMRTool: React.FC = () => {
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  // Form states
-  const [newGroup, setNewGroup] = useState({
-    name: ''
-  });
 
   // Load data on component mount
   useEffect(() => {
@@ -294,38 +283,6 @@ const SimpleMRTool: React.FC = () => {
     }
   };
 
-  const addGroup = async () => {
-    if (!newGroup.name.trim()) {
-      alert('Please enter a group name');
-      return;
-    }
-
-    if (groups.some(group => group.name.toLowerCase() === newGroup.name.toLowerCase())) {
-      alert('Group already exists');
-      return;
-    }
-
-    try {
-      await mockApi.post('/groups', {
-        groupName: newGroup.name.trim(),
-        description: 'Group created from MR'
-      });
-
-      // Add to local state
-      const newGroupData: Group = {
-        id: Date.now().toString(),
-        name: newGroup.name.trim(),
-        contactCount: 0
-      };
-      
-      setGroups([...groups, newGroupData]);
-      setNewGroup({ name: '' });
-      alert('Group created successfully!');
-    } catch (error: any) {
-      console.error('Error creating group:', error);
-      alert('Failed to create group');
-    }
-  };
 
   // CSV import/export functions
   const exportContactsToCSV = () => {
@@ -453,67 +410,6 @@ const SimpleMRTool: React.FC = () => {
     }
   };
 
-  // Message functions
-  const handleGroupSelection = (groupName: string) => {
-    if (selectedGroups.includes(groupName)) {
-      setSelectedGroups(selectedGroups.filter(g => g !== groupName));
-    } else {
-      setSelectedGroups([...selectedGroups, groupName]);
-    }
-  };
-
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setSelectedImage(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setImagePreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const removeImage = () => {
-    setSelectedImage(null);
-    setImagePreview('');
-  };
-
-  const sendMessage = () => {
-    if (!message.trim() && !selectedImage) {
-      alert('Please enter a message or select an image');
-      return;
-    }
-
-    if (selectedGroups.length === 0) {
-      alert('Please select at least one group');
-      return;
-    }
-
-    const targetContacts = contacts.filter(contact => 
-      selectedGroups.includes(contact.group)
-    );
-
-    if (targetContacts.length === 0) {
-      alert('No contacts found in selected groups');
-      return;
-    }
-
-    const messageLog: MessageLog = {
-      id: Date.now().toString(),
-      message: message.trim() || (selectedImage ? `Image: ${selectedImage.name}` : ''),
-      groups: selectedGroups,
-      sentAt: new Date().toISOString(),
-      contactCount: targetContacts.length
-    };
-
-    setMessageLogs([messageLog, ...messageLogs]);
-    setMessage('');
-    setSelectedGroups([]);
-    setSelectedImage(null);
-    setImagePreview('');
-    alert(`Message logged for ${targetContacts.length} contacts in ${selectedGroups.length} groups!`);
-  };
 
   const filteredContacts = contacts
     .filter(contact => {
@@ -615,19 +511,16 @@ const SimpleMRTool: React.FC = () => {
           
           {/* Tabs */}
         <div className="flex space-x-8 mt-6">
-          {['contacts', 'groups'].map((tab) => (
               <button
-              key={tab}
-              onClick={() => setActiveTab(tab as any)}
-              className={`pb-2 border-b-2 text-lg font-medium capitalize ${
-                activeTab === tab 
-                  ? 'border-indigo-600 text-gray-900' 
+              onClick={() => setActiveTab('contacts')}
+              className={`pb-2 border-b-2 text-lg font-medium ${
+                activeTab === 'contacts' 
+                ? 'border-indigo-600 text-gray-900' 
                   : 'border-transparent text-gray-600'
               }`}
-            >
-              {tab}
-              </button>
-          ))}
+          >
+            MR
+            </button>
       </div>
 
         {/* Separator Line */}
@@ -849,225 +742,10 @@ const SimpleMRTool: React.FC = () => {
                 </table>
             </div>
           </div>
-            </div>
+              </div>
           </CommonFeatures>
         )}
 
-        {/* Groups Tab */}
-        {activeTab === 'groups' && (
-          <div className="space-y-6">
-              {/* Message Sending Section */}
-              <div className="bg-white bg-opacity-40 rounded-lg p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Send Messages to Groups</h2>
-                
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Left Side - Group Selection */}
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Groups</h3>
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                        {groups.length > 0 ? (
-                          groups.map(group => (
-                          <div
-                            key={group.id}
-                            className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-colors ${
-                              selectedGroups.includes(group.name)
-                                ? 'border-indigo-500 bg-indigo-50'
-                                : 'border-gray-200 hover:border-gray-300'
-                            }`}
-                            onClick={() => handleGroupSelection(group.name)}
-                          >
-                            <div className="flex items-center space-x-3">
-                              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
-                                selectedGroups.includes(group.name)
-                                  ? 'border-indigo-500 bg-indigo-500'
-                                  : 'border-gray-300'
-                              }`}>
-                                {selectedGroups.includes(group.name) && (
-                                  <div className="w-2 h-2 bg-white rounded-full"></div>
-                                )}
-                              </div>
-                              <div>
-                                <p className="font-medium text-gray-900">{group.name}</p>
-                                <p className="text-sm text-gray-500">{group.contactCount} contacts</p>
-                              </div>
-                            </div>
-                            {selectedGroups.includes(group.name) && (
-                              <X 
-                                className="h-4 w-4 text-indigo-500 hover:text-indigo-700"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleGroupSelection(group.name);
-                                }}
-                              />
-                            )}
-                          </div>
-                          ))
-                        ) : (
-                        <p className="text-gray-500 text-center py-4">No groups available</p>
-                        )}
-              </div>
-                    
-                    {selectedGroups.length > 0 && (
-                      <div className="mt-4 p-3 bg-indigo-50 rounded-lg">
-                        <p className="text-sm text-indigo-700">
-                          <strong>Selected Groups:</strong> {selectedGroups.join(', ')}
-                        </p>
-                        <p className="text-sm text-indigo-600 mt-1">
-                          Total contacts: {contacts.filter(c => selectedGroups.includes(c.group)).length}
-                        </p>
-                      </div>
-                    )}
-            </div>
-
-                  {/* Right Side - Message Composition */}
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Compose Message</h3>
-                    
-                    <div className="space-y-4">
-                      {/* Message Input */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Message</label>
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Type your message here..."
-                          rows={4}
-                          className="w-full px-3 py-3 rounded-lg border-0 bg-gray-100 resize-none"
-                        />
-            </div>
-
-                      {/* Image Upload */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Image (Optional)</label>
-                        <div className="space-y-2">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleImageUpload}
-                            className="hidden"
-                            id="image-upload"
-                          />
-                          <label
-                            htmlFor="image-upload"
-                            className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-indigo-400 transition-colors"
-                          >
-                            <Upload className="h-5 w-5 text-gray-400 mr-2" />
-                            <span className="text-sm text-gray-600">Click to upload image</span>
-                          </label>
-                          
-                          {imagePreview && (
-                            <div className="relative">
-                              <img
-                                src={imagePreview}
-                                alt="Preview"
-                                className="w-full h-32 object-cover rounded-lg"
-                              />
-                  <button
-                                onClick={removeImage}
-                                className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                              >
-                                <X className="h-4 w-4" />
-                  </button>
-                </div>
-                          )}
-                        </div>
-                </div>
-
-                      {/* Send Button */}
-                <button
-                  onClick={sendMessage}
-                        disabled={(!message.trim() && !selectedImage) || selectedGroups.length === 0}
-                        className="w-full flex items-center justify-center px-4 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <Send className="h-5 w-5 mr-2" />
-                        Send Message
-                </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Groups Management */}
-              <div className="bg-white bg-opacity-40 rounded-lg p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Groups Management</h2>
-                
-                  <div className="space-y-4">
-                  <div className="flex items-center space-x-4">
-                    <input
-                      type="text"
-                      value={newGroup.name}
-                      onChange={(e) => setNewGroup({name: e.target.value})}
-                      className="flex-1 px-3 py-3 rounded-lg border-0 bg-gray-100"
-                      placeholder="Enter group name"
-                    />
-                  <button
-                      onClick={addGroup}
-                      className="px-4 py-3 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
-                  >
-                      Add Group
-                  </button>
-                  </div>
-                </div>
-                </div>
-                
-              {/* Groups List */}
-              <div className="bg-white bg-opacity-40 rounded-lg">
-                <div className="p-6 border-b bg-indigo-50">
-                  <h2 className="text-2xl font-bold text-gray-900">All Groups</h2>
-                  </div>
-                
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-indigo-50 border-b">
-                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Group Name</th>
-                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Contact Count</th>
-                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {groups.length > 0 ? (
-                        groups.map(group => (
-                          <tr key={group.id} className="border-b hover:bg-gray-50">
-                            <td className="py-3 px-6 text-sm text-gray-900 text-center">{group.name}</td>
-                            <td className="py-3 px-6 text-sm text-gray-900 text-center">{group.contactCount}</td>
-                            <td className="py-3 px-6 text-sm text-center">
-                  <button
-                    onClick={() => {
-                                  if (window.confirm('Are you sure you want to delete this group?')) {
-                                    setGroups(groups.filter(g => g.id !== group.id));
-                                  }
-                                }}
-                                className="text-red-600 hover:text-red-800"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                  </button>
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={3} className="text-center py-12">
-                            <div className="flex flex-col items-center">
-                              <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4">
-                                <Users className="h-12 w-12 text-gray-400" />
-                </div>
-                              <h3 className="text-lg font-bold mb-2 text-indigo-600">
-                                No Groups Found
-                              </h3>
-                              <p className="text-sm text-indigo-600">
-                                Add your first group above
-                              </p>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-              </div>
-            </div>
-          </div>
-        )}
 
 
         {/* Add MR Dialog */}
