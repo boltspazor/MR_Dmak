@@ -10,12 +10,14 @@ import {
   BarChart3,
   X,
   Upload,
-  Send
+  Send,
+  Edit
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import CommonFeatures from '../components/CommonFeatures';
 import AddMRDialog from '../components/AddMRDialog';
+import EditMRDialog from '../components/EditMRDialog';
 
 interface Contact {
   id: string;
@@ -116,6 +118,14 @@ const SimpleMRTool: React.FC = () => {
   const [message, setMessage] = useState('');
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
+
+  // Filter states
+  const [nameFilter, setNameFilter] = useState('');
+  const [groupFilter, setGroupFilter] = useState('');
+
+  // Edit states
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   // Form states
   const [newGroup, setNewGroup] = useState({
@@ -254,6 +264,33 @@ const SimpleMRTool: React.FC = () => {
     } catch (error: any) {
       console.error('Error deleting contact:', error);
       alert('Failed to delete contact');
+    }
+  };
+
+  const handleEditContact = (contact: Contact) => {
+    setEditingContact(contact);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateContact = async (updatedContact: Omit<Contact, 'id'>) => {
+    if (!editingContact) return;
+
+    try {
+      await mockApi.post(`/mrs/${editingContact.id}`, updatedContact);
+      
+      // Update local state
+      setContacts(contacts.map(c => 
+        c.id === editingContact.id 
+          ? { ...updatedContact, id: editingContact.id }
+          : c
+      ));
+      
+      setEditingContact(null);
+      setIsEditDialogOpen(false);
+      alert('Contact updated successfully!');
+    } catch (error: any) {
+      console.error('Error updating contact:', error);
+      alert('Failed to update contact');
     }
   };
 
@@ -479,12 +516,25 @@ const SimpleMRTool: React.FC = () => {
   };
 
   const filteredContacts = contacts
-    .filter(contact =>
-      contact.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contact.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contact.mrId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contact.group.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    .filter(contact => {
+      // Search term filter
+      const matchesSearch = contact.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        contact.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        contact.mrId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        contact.group.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // Name filter
+      const matchesName = !nameFilter || 
+        contact.firstName.toLowerCase().includes(nameFilter.toLowerCase()) ||
+        contact.lastName.toLowerCase().includes(nameFilter.toLowerCase()) ||
+        contact.mrId.toLowerCase().includes(nameFilter.toLowerCase());
+      
+      // Group filter
+      const matchesGroup = !groupFilter || 
+        contact.group.toLowerCase().includes(groupFilter.toLowerCase());
+      
+      return matchesSearch && matchesName && matchesGroup;
+    })
     .sort((a, b) => {
       const aValue = a[sortField] || '';
       const bValue = b[sortField] || '';
@@ -527,7 +577,7 @@ const SimpleMRTool: React.FC = () => {
 
   const summaryItems = [
     {
-      title: 'Total Contacts',
+      title: 'Total MR',
       value: contacts.length,
       icon: <Users className="h-6 w-6 text-blue-600" />,
       color: 'bg-blue-100'
@@ -537,12 +587,6 @@ const SimpleMRTool: React.FC = () => {
       value: groups.length,
       icon: <FileText className="h-6 w-6 text-green-600" />,
       color: 'bg-green-100'
-    },
-    {
-      title: 'Messages Sent',
-      value: messageLogs.length,
-      icon: <MessageSquare className="h-6 w-6 text-purple-600" />,
-      color: 'bg-purple-100'
     },
     {
       title: 'Engagement Rate',
@@ -566,11 +610,11 @@ const SimpleMRTool: React.FC = () => {
       <div className="ml-24 p-8">
         {/* Header */}
         <Header 
-          title="DMak"
+          title="D-MAK"
           subtitle="Simple tool for managing Medical Representatives and sending Whatsapp messages"
           onExportCSV={exportContactsToCSV}
           onExportPDF={exportContactsToPDF}
-          showExportButtons={true}
+          showExportButtons={false}
         />
         
         {/* Tabs */}
@@ -590,6 +634,9 @@ const SimpleMRTool: React.FC = () => {
           ))}
         </div>
 
+        {/* Separator Line */}
+        <div className="border-b border-gray-300 my-6"></div>
+
         {/* Main Content Area */}
         {activeTab === 'contacts' && (
           <CommonFeatures
@@ -598,9 +645,11 @@ const SimpleMRTool: React.FC = () => {
             onExportPDF={exportContactsToPDF}
           >
             <div className="space-y-8">
+              {/* MR Management Header */}
+              <h2 className="text-2xl font-bold text-gray-900">MR Management</h2>
+
               {/* Action Buttons */}
               <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-gray-900">MR Management</h2>
                 <div className="flex space-x-4">
                   <button
                     onClick={() => setIsAddMRDialogOpen(true)}
@@ -633,33 +682,50 @@ const SimpleMRTool: React.FC = () => {
                 </div>
               </div>
 
-              {/* CSV Import Info */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-700">
-                  <strong>CSV Format:</strong> MR ID, First Name, Last Name, Phone Number, Group, Comments
-                </p>
-              </div>
-
               {/* Contacts Table */}
               <div className="bg-white bg-opacity-40 rounded-lg">
                 {/* Table Header */}
                 <div className="p-6 border-b bg-indigo-50">
-                  <div className="flex justify-between items-center">
+                  <div className="flex justify-between items-center mb-4">
                     <h2 className="text-2xl font-bold text-gray-900">All Contacts</h2>
-                    <div className="flex items-center space-x-4">
-                      <div className="relative">
-                        <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                        <input
-                          type="text"
-                          placeholder="Search Contacts..."
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          className="pl-10 pr-4 py-2 rounded-lg border-0 bg-gray-100"
-                        />
-                      </div>
-                      <span className="text-sm text-gray-700 font-bold">
-                        {filteredContacts.length} Contacts
-                      </span>
+                    <span className="text-sm text-gray-700 font-bold">
+                      {filteredContacts.length} Contacts
+                    </span>
+                  </div>
+                  
+                  {/* Search and Filter Controls */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="relative">
+                      <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Search all fields..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 rounded-lg border-0 bg-gray-100"
+                      />
+                    </div>
+                    
+                    <div className="relative">
+                      <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Filter by Name/MR ID..."
+                        value={nameFilter}
+                        onChange={(e) => setNameFilter(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 rounded-lg border-0 bg-gray-100"
+                      />
+                    </div>
+                    
+                    <div className="relative">
+                      <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Filter by Group..."
+                        value={groupFilter}
+                        onChange={(e) => setGroupFilter(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 rounded-lg border-0 bg-gray-100"
+                      />
                     </div>
                   </div>
                 </div>
@@ -737,12 +803,22 @@ const SimpleMRTool: React.FC = () => {
                             <td className="py-3 px-6 text-sm text-gray-900 text-center">{contact.group}</td>
                             <td className="py-3 px-6 text-sm text-gray-900 text-center">{contact.comments || '-'}</td>
                             <td className="py-3 px-6 text-sm text-center">
-                              <button
-                                onClick={() => deleteContact(contact.id)}
-                                className="text-red-600 hover:text-red-800"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
+                              <div className="flex items-center justify-center space-x-2">
+                                <button
+                                  onClick={() => handleEditContact(contact)}
+                                  className="text-blue-600 hover:text-blue-800"
+                                  title="Edit Contact"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => deleteContact(contact.id)}
+                                  className="text-red-600 hover:text-red-800"
+                                  title="Delete Contact"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -1043,6 +1119,18 @@ const SimpleMRTool: React.FC = () => {
           isOpen={isAddMRDialogOpen}
           onClose={() => setIsAddMRDialogOpen(false)}
           onAdd={handleAddMR}
+          groups={groups}
+        />
+
+        {/* Edit MR Dialog */}
+        <EditMRDialog
+          isOpen={isEditDialogOpen}
+          onClose={() => {
+            setIsEditDialogOpen(false);
+            setEditingContact(null);
+          }}
+          onUpdate={handleUpdateContact}
+          contact={editingContact}
           groups={groups}
         />
       </div>
