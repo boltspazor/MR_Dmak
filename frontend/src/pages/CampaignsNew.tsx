@@ -58,7 +58,7 @@ const Campaigns: React.FC = () => {
       const token = localStorage.getItem('authToken');
       if (!token) return;
 
-      const response = await api.get('/campaigns');
+      const response = await api.get('/messages/campaigns');
       setCampaigns(response.data.data || []);
     } catch (error: any) {
       console.error('Error fetching campaigns:', error);
@@ -88,9 +88,9 @@ const Campaigns: React.FC = () => {
       };
 
       if (editingCampaign) {
-        await api.put(`/campaigns/${editingCampaign.id}`, campaignData);
+        await api.put(`/messages/campaigns/${editingCampaign.id}`, campaignData);
       } else {
-        await api.post('/campaigns', campaignData);
+        await api.post('/messages/campaigns', campaignData);
       }
 
       await fetchCampaigns();
@@ -131,7 +131,7 @@ const Campaigns: React.FC = () => {
       const token = localStorage.getItem('authToken');
       if (!token) return;
 
-      await api.delete(`/campaigns/${id}`);
+      await api.delete(`/messages/campaigns/${id}`);
       await fetchCampaigns();
     } catch (error: any) {
       console.error('Error deleting campaign:', error);

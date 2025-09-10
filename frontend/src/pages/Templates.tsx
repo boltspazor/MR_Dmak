@@ -605,6 +605,7 @@ const Templates: React.FC = () => {
             </div>
           </div>
         )}
+
       </div>
     </div>
   );
