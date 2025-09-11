@@ -24,6 +24,8 @@ const Templates: React.FC = () => {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortField, setSortField] = useState<'name' | 'createdAt'>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
   const [showPreview, setShowPreview] = useState(false);
@@ -382,14 +384,41 @@ const Templates: React.FC = () => {
     }
   };
 
-  const filteredTemplates = templates.filter(template => {
-    const matchesSearch = 
-      template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      template.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      template.parameters.some(param => param.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    return matchesSearch;
-  });
+  const filteredTemplates = templates
+    .filter(template => {
+      const matchesSearch = 
+        template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        template.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        template.parameters.some(param => param.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      return matchesSearch;
+    })
+    .sort((a, b) => {
+      let aValue: string | number;
+      let bValue: string | number;
+      
+      if (sortField === 'name') {
+        aValue = a.name.toLowerCase();
+        bValue = b.name.toLowerCase();
+      } else {
+        aValue = new Date(a.createdAt).getTime();
+        bValue = new Date(b.createdAt).getTime();
+      }
+      
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+  // Sorting function
+  const handleSort = (field: 'name' | 'createdAt') => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
 
   // Navigation functions
   const handleSidebarNavigation = (route: string) => {
@@ -577,8 +606,32 @@ const Templates: React.FC = () => {
                 <table className="w-full">
                   <thead>
                     <tr className="bg-indigo-50 border-b">
-                      <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Template Name</th>
-                      <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Date Created</th>
+                      <th 
+                        className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                        onClick={() => handleSort('name')}
+                      >
+                        <div className="flex items-center justify-center">
+                          Template Name
+                          {sortField === 'name' && (
+                            <span className="ml-1">
+                              {sortDirection === 'asc' ? '↑' : '↓'}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                        onClick={() => handleSort('createdAt')}
+                      >
+                        <div className="flex items-center justify-center">
+                          Date Created
+                          {sortField === 'createdAt' && (
+                            <span className="ml-1">
+                              {sortDirection === 'asc' ? '↑' : '↓'}
+                            </span>
+                          )}
+                        </div>
+                      </th>
                       <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Actions</th>
                     </tr>
                   </thead>
