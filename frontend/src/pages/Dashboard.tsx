@@ -252,6 +252,33 @@ const Dashboard: React.FC = () => {
     window.URL.revokeObjectURL(url);
   };
 
+  const exportRecipientsToCSV = () => {
+    const filteredRecipients = selectedRecipients.filter(member => {
+      const matchesSearch = 
+        member.name.toLowerCase().includes(recipientSearchTerm.toLowerCase()) ||
+        member.phone.toLowerCase().includes(recipientSearchTerm.toLowerCase()) ||
+        (member.email && member.email.toLowerCase().includes(recipientSearchTerm.toLowerCase()));
+      const matchesStatus = recipientStatusFilter === 'all' || member.status === recipientStatusFilter;
+      const matchesGroup = recipientGroupFilter === 'all' || member.group === recipientGroupFilter;
+      return matchesSearch && matchesStatus && matchesGroup;
+    });
+
+    const csvContent = [
+      'Name,Phone,Email,Group,Status',
+      ...filteredRecipients.map(member => 
+        `${member.name},${member.phone},${member.email || ''},${member.group},${member.status}`
+      )
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'recipients_list.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   const exportToPDF = () => {
     const printWindow = window.open('', '_blank');
     if (printWindow) {
@@ -584,6 +611,57 @@ const Dashboard: React.FC = () => {
                     </button>
               </div>
               
+              {/* Summary Section */}
+              <div className="bg-indigo-50 p-4 rounded-lg mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Summary</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-white p-4 rounded-lg">
+                    <div className="flex items-center">
+                      <MessageSquare className="h-8 w-8 text-indigo-600 mr-3" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Total Messages</p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {selectedRecipients.reduce((sum, member) => sum + (member.status === 'sent' ? 1 : 0), 0)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-white p-4 rounded-lg">
+                    <div className="flex items-center">
+                      <BarChart3 className="h-8 w-8 text-green-600 mr-3" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Success Rate</p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {selectedRecipients.length > 0 
+                            ? `${Math.round((selectedRecipients.filter(m => m.status === 'sent').length / selectedRecipients.length) * 100)}%`
+                            : '0%'
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-white p-4 rounded-lg">
+                    <div className="flex items-center">
+                      <MessageSquare className="h-8 w-8 text-blue-600 mr-3" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Recipients</p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {selectedRecipients.filter(member => {
+                            const matchesSearch = 
+                              member.name.toLowerCase().includes(recipientSearchTerm.toLowerCase()) ||
+                              member.phone.toLowerCase().includes(recipientSearchTerm.toLowerCase()) ||
+                              (member.email && member.email.toLowerCase().includes(recipientSearchTerm.toLowerCase()));
+                            const matchesStatus = recipientStatusFilter === 'all' || member.status === recipientStatusFilter;
+                            const matchesGroup = recipientGroupFilter === 'all' || member.group === recipientGroupFilter;
+                            return matchesSearch && matchesStatus && matchesGroup;
+                          }).length} of {selectedRecipients.length}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
               {/* Filters for Recipient List */}
               <div className="bg-gray-50 p-4 rounded-lg mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Filters</h3>
@@ -694,9 +772,20 @@ const Dashboard: React.FC = () => {
                   </table>
                 </div>
               </div>
+              
+              {/* Export Button */}
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={exportRecipientsToCSV}
+                  className="bg-indigo-600 text-white px-6 py-3 rounded-lg shadow-lg hover:bg-indigo-700 flex items-center space-x-2"
+                >
+                  <MessageSquare className="h-5 w-5" />
+                  <span>Export CSV</span>
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+                  </div>
+                )}
 
         {/* Template Preview Modal */}
         {showTemplatePreview && (
@@ -791,16 +880,6 @@ The Team`}
           </div>
         )}
 
-        {/* Export Button */}
-        <div className="fixed bottom-6 right-6">
-          <button
-            onClick={exportToCSV}
-            className="bg-indigo-600 text-white px-6 py-3 rounded-lg shadow-lg hover:bg-indigo-700 flex items-center space-x-2"
-          >
-            <MessageSquare className="h-5 w-5" />
-            <span>Export CSV</span>
-          </button>
-        </div>
       </div>
     </div>
   );
