@@ -810,14 +810,89 @@ const Templates: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Text *
                 </label>
-                <textarea
-                    required
-                  value={formData.content}
-                  onChange={(e) => setFormData({...formData, content: e.target.value})}
-                  rows={6}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Enter template content with parameters like #FN, #LN, #Month, #Target..."
-                  />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div>
+                    <textarea
+                        required
+                      value={formData.content}
+                      onChange={(e) => setFormData({...formData, content: e.target.value})}
+                      rows={6}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        placeholder="Enter template content with parameters like #FirstName, #LastName, #Month, #Target..."
+                      />
+                  </div>
+                  
+                  {/* Live Preview */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Live Preview
+                    </label>
+                    <div className="bg-gray-100 p-4 rounded-lg h-40 overflow-y-auto">
+                      <div className="bg-white rounded-2xl rounded-tl-md shadow-sm max-w-xs mx-auto">
+                        {formData.imageUrl && (
+                          <div className="w-full">
+                            <img 
+                              src={formData.imageUrl} 
+                              alt="Header"
+                              className="w-full h-24 object-cover rounded-t-2xl"
+                            />
+                          </div>
+                        )}
+                        <div className="p-3">
+                          <div className="text-gray-800 text-xs leading-relaxed whitespace-pre-wrap">
+                            {(() => {
+                              if (!formData.content) return 'Start typing your template...';
+                              
+                              let processedContent = formData.content;
+                              
+                              // Sample parameter values for live preview
+                              const sampleParams = {
+                                'FirstName': 'John',
+                                'LastName': 'Doe',
+                                'MRId': 'MR001',
+                                'GroupName': 'North Zone',
+                                'PhoneNumber': '+919876543210',
+                                'Name': 'John Doe',
+                                'Company': 'D-MAK',
+                                'Product': 'New Product',
+                                'Date': new Date().toLocaleDateString(),
+                                'Time': new Date().toLocaleTimeString(),
+                                'Month': new Date().toLocaleDateString('en-US', { month: 'long' }),
+                                'Year': new Date().getFullYear().toString(),
+                                'Target': '100',
+                                'Achievement': '85',
+                                'Location': 'Mumbai',
+                                'City': 'Mumbai',
+                                'State': 'Maharashtra',
+                                'Country': 'India'
+                              };
+                              
+                              // Replace parameters with sample values
+                              for (const [param, value] of Object.entries(sampleParams)) {
+                                const regex = new RegExp(`#${param}\\b`, 'g');
+                                processedContent = processedContent.replace(regex, value);
+                              }
+                              
+                              // Replace any remaining parameters with [Sample Value]
+                              processedContent = processedContent.replace(/#[A-Za-z0-9_]+/g, '[Sample Value]');
+                              
+                              return processedContent;
+                            })()}
+                          </div>
+                        </div>
+                        {formData.footerImageUrl && (
+                          <div className="px-3 pb-3">
+                            <img 
+                              src={formData.footerImageUrl} 
+                              alt="Footer"
+                              className="w-full h-16 object-cover rounded-lg"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
                   
                   {/* Available Parameters */}
                   {availableParameters && availableParameters.parameters.length > 0 && (
@@ -956,56 +1031,97 @@ const Templates: React.FC = () => {
                     </pre>
                     </div>
                     
-                    {/* Sample Message Preview */}
-                    {previewTemplate.parameters.length > 0 && (
-                      <div className="mt-6">
-                        <h4 className="font-medium text-gray-900 mb-3">
-                          Sample Message Preview (as it will be sent to users):
-                        </h4>
-                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                          <div className="space-y-4">
-                            {/* Header Image */}
-                            {previewTemplate.imageUrl && (
-                              <div className="text-center">
-                                <img 
-                                  src={previewTemplate.imageUrl} 
-                                  alt="Header"
-                                  className="max-w-full h-32 object-contain mx-auto rounded"
-                                />
-                              </div>
-                            )}
-                            
-                            {/* Processed Content */}
-                            <div className="bg-white p-3 rounded border">
-                              <pre className="whitespace-pre-wrap text-sm text-gray-800">
-                                {previewTemplate.content
-                                  .replace(/#FirstName/g, 'John')
-                                  .replace(/#LastName/g, 'Doe')
-                                  .replace(/#MRId/g, 'MR001')
-                                  .replace(/#GroupName/g, 'North Zone')
-                                  .replace(/#PhoneNumber/g, '+919876543210')
-                                  .replace(/#[A-Za-z0-9_]+/g, '[Parameter]')
+                    {/* WhatsApp Message Preview */}
+                    <div className="mt-6">
+                      <h4 className="font-medium text-gray-900 mb-3">
+                        WhatsApp Message Preview:
+                      </h4>
+                      <div className="bg-gray-100 p-4 rounded-lg">
+                        {/* WhatsApp-like message bubble */}
+                        <div className="bg-white rounded-2xl rounded-tl-md shadow-lg max-w-sm mx-auto">
+                          {/* Header Image */}
+                          {previewTemplate.imageUrl && (
+                            <div className="w-full">
+                              <img 
+                                src={previewTemplate.imageUrl} 
+                                alt="Header"
+                                className="w-full h-48 object-cover rounded-t-2xl"
+                              />
+                            </div>
+                          )}
+                          
+                          {/* Message Content */}
+                          <div className="p-4">
+                            <div className="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap">
+                              {(() => {
+                                let processedContent = previewTemplate.content;
+                                
+                                // Sample parameter values for preview
+                                const sampleParams = {
+                                  'FirstName': 'John',
+                                  'LastName': 'Doe',
+                                  'MRId': 'MR001',
+                                  'GroupName': 'North Zone',
+                                  'PhoneNumber': '+919876543210',
+                                  'Name': 'John Doe',
+                                  'Company': 'D-MAK',
+                                  'Product': 'New Product',
+                                  'Date': new Date().toLocaleDateString(),
+                                  'Time': new Date().toLocaleTimeString(),
+                                  'Month': new Date().toLocaleDateString('en-US', { month: 'long' }),
+                                  'Year': new Date().getFullYear().toString(),
+                                  'Target': '100',
+                                  'Achievement': '85',
+                                  'Location': 'Mumbai',
+                                  'City': 'Mumbai',
+                                  'State': 'Maharashtra',
+                                  'Country': 'India'
+                                };
+                                
+                                // Replace parameters with sample values
+                                for (const [param, value] of Object.entries(sampleParams)) {
+                                  const regex = new RegExp(`#${param}\\b`, 'g');
+                                  processedContent = processedContent.replace(regex, value);
                                 }
-                              </pre>
-                </div>
-                            
-                            {/* Footer Image */}
-                            {previewTemplate.footerImageUrl && (
-                              <div className="text-center">
-                                <img 
-                                  src={previewTemplate.footerImageUrl} 
-                                  alt="Footer"
-                                  className="max-w-full h-24 object-contain mx-auto rounded"
-                                />
-              </div>
-                            )}
+                                
+                                // Replace any remaining parameters with [Sample Value]
+                                processedContent = processedContent.replace(/#[A-Za-z0-9_]+/g, '[Sample Value]');
+                                
+                                return processedContent;
+                              })()}
+                            </div>
+                          </div>
+                          
+                          {/* Footer Image */}
+                          {previewTemplate.footerImageUrl && (
+                            <div className="px-4 pb-4">
+                              <img 
+                                src={previewTemplate.footerImageUrl} 
+                                alt="Footer"
+                                className="w-full h-24 object-cover rounded-lg"
+                              />
+                            </div>
+                          )}
+                          
+                          {/* WhatsApp message time */}
+                          <div className="px-4 pb-2">
+                            <div className="flex justify-end">
+                              <span className="text-xs text-gray-500">
+                                {new Date().toLocaleTimeString('en-US', { 
+                                  hour: '2-digit', 
+                                  minute: '2-digit',
+                                  hour12: true 
+                                })}
+                              </span>
+                              <span className="ml-1 text-xs text-gray-500">✓✓</span>
+                            </div>
                           </div>
                         </div>
-                        <p className="text-xs text-gray-500 mt-2">
-                          * This shows how the message will appear to recipients with sample parameter values
-                        </p>
                       </div>
-                    )}
+                      <p className="text-xs text-gray-500 mt-2">
+                        * This shows how the message will appear in WhatsApp with sample parameter values
+                      </p>
+                    </div>
                     
                     {/* Footer Image */}
                     {previewTemplate.footerImageUrl && (
