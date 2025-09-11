@@ -26,9 +26,11 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Campaigns Dashboard', icon: BarChart3, route: '/dashboard' },
-    { id: 'dmak', label: 'MR', icon: BarChart3, route: '/simple-tool' },
+    { id: 'dmak', label: 'MR', icon: BarChart3, route: '/dmak' },
     { id: 'templates', label: 'Templates', icon: FileText, route: '/templates' },
     { id: 'campaigns', label: 'Konnect', icon: MessageSquare, route: '/campaigns' },
+    { id: 'groups', label: 'Groups', icon: Users, route: '/groups' },
+    { id: 'reports', label: 'Reports', icon: BarChart3, route: '/reports' },
     { id: 'super-admin', label: 'Super Admin', icon: Shield, route: '/super-admin' },
   ];
 

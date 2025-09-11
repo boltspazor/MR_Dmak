@@ -266,8 +266,8 @@ const Campaigns: React.FC = () => {
     }
   ];
 
-  const handleSidebarNavigation = (page: string) => {
-    navigate(`/${page}`);
+  const handleSidebarNavigation = (route: string) => {
+    navigate(route);
   };
 
   const handleLogout = () => {
