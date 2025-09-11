@@ -1020,27 +1020,6 @@ const Templates: React.FC = () => {
                   </div>
                 </div>
                 
-                {/* Template Details */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                    <h4 className="font-medium text-gray-900 mb-2">
-                      Template Type:
-                    </h4>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                      {previewTemplate.type}
-                    </span>
-                  </div>
-                  
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-2">
-                      Created:
-                    </h4>
-                    <span className="text-sm text-gray-600">
-                      {new Date(previewTemplate.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-                
                 {/* Parameters */}
                 {previewTemplate.parameters.length > 0 && (
                   <div>

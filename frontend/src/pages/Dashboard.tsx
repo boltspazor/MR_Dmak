@@ -644,7 +644,20 @@ const Dashboard: React.FC = () => {
               
               {/* Filters for Recipient List */}
               <div className="bg-gray-50 p-4 rounded-lg mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Filters</h3>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
+                  <p className="text-xs text-gray-500">
+                    {selectedRecipients.filter(member => {
+                      const matchesSearch = 
+                        member.name.toLowerCase().includes(recipientSearchTerm.toLowerCase()) ||
+                        member.phone.toLowerCase().includes(recipientSearchTerm.toLowerCase()) ||
+                        (member.email && member.email.toLowerCase().includes(recipientSearchTerm.toLowerCase()));
+                      const matchesStatus = recipientStatusFilter === 'all' || member.status === recipientStatusFilter;
+                      const matchesGroup = recipientGroupFilter === 'all' || member.group === recipientGroupFilter;
+                      return matchesSearch && matchesStatus && matchesGroup;
+                    }).length} of {selectedRecipients.length} recipients
+                  </p>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
@@ -674,17 +687,6 @@ const Dashboard: React.FC = () => {
                     </div>
                   
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">
-                      {selectedRecipients.filter(member => {
-                        const matchesSearch = 
-                          member.name.toLowerCase().includes(recipientSearchTerm.toLowerCase()) ||
-                          member.phone.toLowerCase().includes(recipientSearchTerm.toLowerCase()) ||
-                          (member.email && member.email.toLowerCase().includes(recipientSearchTerm.toLowerCase()));
-                        const matchesStatus = recipientStatusFilter === 'all' || member.status === recipientStatusFilter;
-                        const matchesGroup = recipientGroupFilter === 'all' || member.group === recipientGroupFilter;
-                        return matchesSearch && matchesStatus && matchesGroup;
-                      }).length} of {selectedRecipients.length} recipients
-                    </p>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Group</label>
                     <select
                       value={recipientGroupFilter}

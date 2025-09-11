@@ -86,6 +86,14 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/dmak"
+              element={
+                <ProtectedRoute>
+                  <SimpleMRTool />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Routes>
           <Toaster 

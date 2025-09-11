@@ -23,12 +23,12 @@ const Header: React.FC<HeaderProps> = ({
           <p className="text-lg text-gray-600">{subtitle}</p>
         </div>
         
-        {/* Glenmark Logo */}
+        {/* WhatsApp Logo */}
         <div className="absolute top-4 right-4">
           <img 
-            src="/glenmark.svg" 
-            alt="Glenmark" 
-            className="w-32 h-18"
+            src="/WhatsApp Image 2025-09-11 at 19.22.30.jpeg" 
+            alt="WhatsApp" 
+            className="w-32 h-18 object-contain"
           />
         </div>
       </div>

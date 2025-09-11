@@ -450,7 +450,7 @@ const Campaigns: React.FC = () => {
                     className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                   >
                     <Send className="h-5 w-5 mr-2" />
-                    Konnect
+                    Send
                   </button>
                 </div>
               </div>
@@ -641,7 +641,7 @@ const Campaigns: React.FC = () => {
                     className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                   >
                     <Send className="h-5 w-5 mr-2" />
-                    Konnect
+                    Send
                   </button>
         </div>
       </div>
