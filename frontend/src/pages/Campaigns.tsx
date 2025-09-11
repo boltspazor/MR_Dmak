@@ -64,17 +64,23 @@ const Campaigns: React.FC = () => {
         api.get('/templates')
       ]);
       
-      setCampaigns(campaignsRes.data);
-      setGroups(groupsRes.data);
-      setTemplates(templatesRes.data);
+      // Handle different response structures safely
+      setCampaigns(campaignsRes.data?.data || campaignsRes.data || []);
+      setGroups(groupsRes.data?.data || groupsRes.data || []);
+      setTemplates(templatesRes.data?.data || templatesRes.data || []);
     } catch (error) {
       console.error('Error fetching data:', error);
+      // Set empty arrays on error to prevent undefined access
+      setCampaigns([]);
+      setGroups([]);
+      setTemplates([]);
     } finally {
       setLoading(false);
     }
   };
 
   const handleGroupSelection = (groupName: string) => {
+    if (!groupName) return;
     setSelectedGroups(prev => 
       prev.includes(groupName) 
         ? prev.filter(name => name !== groupName)
@@ -90,7 +96,8 @@ const Campaigns: React.FC = () => {
   };
 
   const handleTemplateDropdownChange = (templateId: string) => {
-    const template = templates.find(t => t._id === templateId);
+    if (!templateId) return;
+    const template = (templates || []).find(t => t?._id === templateId);
     if (template) {
       setSelectedTemplate(template);
     }
@@ -237,14 +244,14 @@ const Campaigns: React.FC = () => {
   const summaryItems = [
     {
       title: 'Total Campaigns',
-      value: campaigns.length.toString(),
+      value: (campaigns?.length || 0).toString(),
       icon: <MessageSquare className="h-6 w-6" />,
       color: 'bg-blue-500'
     },
     {
       title: 'Success Rate',
-      value: campaigns.length > 0 
-        ? `${Math.round((campaigns.filter(c => c.status === 'completed').length / campaigns.length) * 100)}%`
+      value: campaigns && campaigns.length > 0 
+        ? `${Math.round(((campaigns.filter(c => c?.status === 'completed').length || 0) / campaigns.length) * 100)}%`
         : '0%',
       icon: <BarChart3 className="h-6 w-6" />,
       color: 'bg-green-500'
@@ -353,9 +360,9 @@ const Campaigns: React.FC = () => {
                           className="w-full px-3 py-2 pr-10 rounded-lg border-0 bg-gray-100 appearance-none cursor-pointer"
                         >
                           <option value="">Select a template</option>
-                          {templates.map(template => (
-                            <option key={template._id} value={template._id}>
-                              {template.name} ({template.type})
+                          {(templates || []).map(template => (
+                            <option key={template?._id} value={template?._id}>
+                              {template?.name} ({template?.type})
                             </option>
                           ))}
                         </select>
@@ -363,7 +370,7 @@ const Campaigns: React.FC = () => {
                       </div>
                       <button
                         onClick={() => {
-                          const template = templates.find(t => t._id === selectedTemplateDropdown);
+                          const template = (templates || []).find(t => t?._id === selectedTemplateDropdown);
                           if (template) handleTemplatePreview(template);
                         }}
                         disabled={!selectedTemplateDropdown}
@@ -463,9 +470,9 @@ const Campaigns: React.FC = () => {
                           className="w-full px-3 py-2 pr-10 rounded-lg border-0 bg-gray-100 appearance-none cursor-pointer"
                         >
                           <option value="">All Groups</option>
-                          {groups.map(group => (
-                            <option key={group.id} value={group.groupName}>
-                              {group.groupName}
+                          {(groups || []).map(group => (
+                            <option key={group?.id} value={group?.groupName}>
+                              {group?.groupName}
                             </option>
                           ))}
                         </select>
