@@ -128,22 +128,45 @@ const SimpleMRTool: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        await Promise.all([
-          fetchContactsFromBackend(),
-          fetchGroupsFromBackend()
-        ]);
+        // Load contacts from localStorage first
+        const savedContacts = localStorage.getItem('mr_contacts');
+        if (savedContacts) {
+          const parsedContacts = JSON.parse(savedContacts);
+          setContacts(parsedContacts);
+        } else {
+          // If no saved data, load from backend
+          await fetchContactsFromBackend();
+        }
+
+        // Load groups from localStorage first
+        const savedGroups = localStorage.getItem('mr_groups');
+        if (savedGroups) {
+          const parsedGroups = JSON.parse(savedGroups);
+          setGroups(parsedGroups);
+        } else {
+          // If no saved data, load from backend
+          await fetchGroupsFromBackend();
+        }
         
-        // Load message logs from memory (since we can't use localStorage)
-        const savedMessageLogs = [
-          {
-            id: '1',
-            message: 'Welcome to our medical representative program!',
-            groups: ['North Zone'],
-            sentAt: new Date().toISOString(),
-            contactCount: 1
-          }
-        ];
-        setMessageLogs(savedMessageLogs);
+        // Load message logs from localStorage
+        const savedMessageLogs = localStorage.getItem('mr_message_logs');
+        if (savedMessageLogs) {
+          const parsedMessageLogs = JSON.parse(savedMessageLogs);
+          setMessageLogs(parsedMessageLogs);
+        } else {
+          // Default message logs
+          const defaultMessageLogs = [
+            {
+              id: '1',
+              message: 'Welcome to our medical representative program!',
+              groups: ['North Zone'],
+              sentAt: new Date().toISOString(),
+              contactCount: 1
+            }
+          ];
+          setMessageLogs(defaultMessageLogs);
+          localStorage.setItem('mr_message_logs', JSON.stringify(defaultMessageLogs));
+        }
       } catch (error) {
         console.error('Error loading data:', error);
       }
@@ -173,6 +196,8 @@ const SimpleMRTool: React.FC = () => {
       
       console.log('Transformed contacts:', transformedContacts);
       setContacts(transformedContacts);
+      // Save to localStorage
+      localStorage.setItem('mr_contacts', JSON.stringify(transformedContacts));
     } catch (error: any) {
       console.error('Error fetching contacts from backend:', error);
     }
@@ -195,6 +220,8 @@ const SimpleMRTool: React.FC = () => {
       
       console.log('Transformed groups:', transformedGroups);
       setGroups(transformedGroups);
+      // Save to localStorage
+      localStorage.setItem('mr_groups', JSON.stringify(transformedGroups));
     } catch (error: any) {
       console.error('Error fetching groups from backend:', error);
     }
@@ -207,6 +234,8 @@ const SimpleMRTool: React.FC = () => {
       contactCount: contacts.filter(contact => contact.group === group.name).length
     }));
     setGroups(updatedGroups);
+    // Save to localStorage
+    localStorage.setItem('mr_groups', JSON.stringify(updatedGroups));
   }, [contacts]);
 
   // Contact management functions
@@ -247,7 +276,10 @@ const SimpleMRTool: React.FC = () => {
         ...contactData
       };
       
-      setContacts([...contacts, newContactData]);
+      const updatedContacts = [...contacts, newContactData];
+      setContacts(updatedContacts);
+      // Save to localStorage
+      localStorage.setItem('mr_contacts', JSON.stringify(updatedContacts));
       alert('MR added successfully!');
     } catch (error: any) {
       console.error('Error adding MR:', error);
@@ -266,7 +298,10 @@ const SimpleMRTool: React.FC = () => {
     try {
       await mockApi.delete(`/mrs/${id}`);
       // Remove from local state
-      setContacts(contacts.filter(c => c.id !== id));
+      const updatedContacts = contacts.filter(c => c.id !== id);
+      setContacts(updatedContacts);
+      // Save to localStorage
+      localStorage.setItem('mr_contacts', JSON.stringify(updatedContacts));
       alert('MR deleted successfully!');
     } catch (error: any) {
       console.error('Error deleting contact:', error);
@@ -298,11 +333,14 @@ const SimpleMRTool: React.FC = () => {
       await mockApi.post(`/mrs/${editingContact.id}`, updatedContact);
       
       // Update local state
-      setContacts(contacts.map(c => 
+      const updatedContacts = contacts.map(c => 
         c.id === editingContact.id 
           ? { ...updatedContact, id: editingContact.id }
           : c
-      ));
+      );
+      setContacts(updatedContacts);
+      // Save to localStorage
+      localStorage.setItem('mr_contacts', JSON.stringify(updatedContacts));
       
       setEditingContact(null);
       setIsEditDialogOpen(false);
@@ -446,7 +484,10 @@ const SimpleMRTool: React.FC = () => {
       
       // Add all valid contacts at once
       if (newContacts.length > 0) {
-        setContacts(prev => [...prev, ...newContacts]);
+        const updatedContacts = [...contacts, ...newContacts];
+        setContacts(updatedContacts);
+        // Save to localStorage
+        localStorage.setItem('mr_contacts', JSON.stringify(updatedContacts));
       }
       
       alert(`Bulk upload completed!\n\nCreated: ${created} MRs\nTotal Processed: ${lines.length - 1}${errors.length > 0 ? `\n\nErrors (${errors.length}):\n${errors.slice(0, 5).join('\n')}` : ''}`);
