@@ -46,6 +46,7 @@ const Dashboard: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortField, setSortField] = useState<keyof CampaignRecord>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [loading, setLoading] = useState(true);
   
   // Recipient list popup states
   const [showRecipientPopup, setShowRecipientPopup] = useState(false);
@@ -121,6 +122,7 @@ const Dashboard: React.FC = () => {
 
     setCampaigns(mockCampaigns);
     setFilteredCampaigns(mockCampaigns);
+    setLoading(false);
   }, []);
 
   // Filter and sort campaigns
@@ -311,15 +313,16 @@ const Dashboard: React.FC = () => {
   const summaryItems = [
     {
       title: 'Total Campaigns',
-      value: campaigns.length,
+      value: (campaigns?.length || 0).toString(),
       icon: <MessageSquare className="h-6 w-6 text-blue-600" />,
       color: 'bg-blue-100'
     },
     {
       title: 'Success Rate',
       value: (() => {
-        const totalMessages = campaigns.reduce((sum, c) => sum + c.totalRecipients, 0);
-        const sentMessages = campaigns.reduce((sum, c) => sum + c.sentCount, 0);
+        if (!campaigns || campaigns.length === 0) return '0%';
+        const totalMessages = campaigns.reduce((sum, c) => sum + (c?.totalRecipients || 0), 0);
+        const sentMessages = campaigns.reduce((sum, c) => sum + (c?.sentCount || 0), 0);
         return totalMessages > 0 ? `${Math.round((sentMessages / totalMessages) * 100)}%` : '0%';
       })(),
       icon: <BarChart3 className="h-6 w-6 text-green-600" />,
@@ -327,7 +330,18 @@ const Dashboard: React.FC = () => {
     }
   ];
 
-  const uniqueGroups = [...new Set(campaigns.flatMap(c => c.recipientList))];
+  const uniqueGroups = [...new Set((campaigns || []).flatMap(c => c?.recipientList || []))];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-100">
