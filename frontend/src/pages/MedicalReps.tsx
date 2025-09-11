@@ -300,10 +300,11 @@ const MedicalReps: React.FC = () => {
     <div className="min-h-screen bg-gray-100">
       {/* Sidebar */}
       <Sidebar 
-        activePage="mrs"
+        activePage="dmak"
         onNavigate={handleSidebarNavigation}
         onLogout={handleLogout}
         userName={user?.name || "User"}
+        userRole={user?.role || "Super Admin"}
       />
 
       {/* Main Content */}

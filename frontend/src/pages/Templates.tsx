@@ -4,7 +4,7 @@ import {
   FileText, 
   Edit, 
   Trash2, 
-  Search,
+  Search, 
   Eye,
   Copy,
   Upload,
@@ -400,11 +400,11 @@ const Templates: React.FC = () => {
 
   const filteredTemplates = templates
     .filter(template => {
-      const matchesSearch = 
-        template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        template.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        template.parameters.some(param => param.toLowerCase().includes(searchTerm.toLowerCase()));
-      
+    const matchesSearch = 
+      template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      template.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      template.parameters.some(param => param.toLowerCase().includes(searchTerm.toLowerCase()));
+    
       return matchesSearch;
     })
     .sort((a, b) => {
@@ -542,6 +542,7 @@ const Templates: React.FC = () => {
         onNavigate={handleSidebarNavigation}
         onLogout={handleLogout}
         userName={user?.name || "User"}
+        userRole={user?.role || "Super Admin"}
       />
 
       {/* Main Content */}
@@ -568,29 +569,29 @@ const Templates: React.FC = () => {
           onExportPDF={exportTemplatesToPDF}
         >
           <div className="space-y-8">
-
-            {/* Action Buttons */}
+          
+          {/* Action Buttons */}
             <div className="flex justify-between items-center">
               <div className="flex space-x-4">
-                <button
-                  onClick={() => {
-                    setShowCreateForm(true);
-                    setEditingTemplate(null);
-                    setFormData({
-                      name: '',
-                      content: '',
-                      type: 'text',
-                      imageUrl: '',
+            <button
+              onClick={() => {
+                setShowCreateForm(true);
+                setEditingTemplate(null);
+                setFormData({
+                  name: '',
+                  content: '',
+                  type: 'text',
+                  imageUrl: '',
                       footerImageUrl: '',
-                      parameters: []
-                    });
-                  }}
+                  parameters: []
+                });
+              }}
                   className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
-                >
-                  Create Template
-                </button>
-              </div>
-            </div>
+            >
+              Create Template
+            </button>
+          </div>
+        </div>
 
             {/* Templates Table */}
             <div className="bg-white bg-opacity-40 rounded-lg">
@@ -600,19 +601,19 @@ const Templates: React.FC = () => {
                   <span className="text-sm text-gray-700 font-bold">
                     {filteredTemplates.length} of {templates.length}
                   </span>
-                </div>
-                
+              </div>
+
                 {/* Search Control */}
-                <div className="relative">
+              <div className="relative">
                   <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search templates..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                <input
+                  type="text"
+                  placeholder="Search templates..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 rounded-lg border-0 bg-gray-100"
-                  />
-                </div>
+                />
+              </div>
               </div>
               
               {/* Table */}
@@ -629,9 +630,9 @@ const Templates: React.FC = () => {
                           {sortField === 'name' && (
                             <span className="ml-1">
                               {sortDirection === 'asc' ? '↑' : '↓'}
-                            </span>
+                </span>
                           )}
-                        </div>
+              </div>
                       </th>
                       <th 
                         className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
@@ -644,13 +645,13 @@ const Templates: React.FC = () => {
                               {sortDirection === 'asc' ? '↑' : '↓'}
                             </span>
                           )}
-                        </div>
+            </div>
                       </th>
                       <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredTemplates.length > 0 ? (
+              {filteredTemplates.length > 0 ? (
                       filteredTemplates.map((template, index) => (
                         <tr key={index} className="border-b hover:bg-gray-50">
                           <td className="py-3 px-6 text-sm text-gray-900 text-center font-medium">{template.name}</td>
@@ -659,20 +660,20 @@ const Templates: React.FC = () => {
                           </td>
                           <td className="py-3 px-6 text-sm text-center">
                             <div className="flex items-center justify-center space-x-2">
-                              <button
-                                onClick={() => handlePreview(template)}
+                        <button
+                          onClick={() => handlePreview(template)}
                                 className="text-blue-600 hover:text-blue-800 p-1 rounded"
                                 title="Preview Template"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </button>
-                              <button
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        <button
                                 onClick={() => exportTemplateAsPNG(template)}
                                 className="text-green-600 hover:text-green-800 p-1 rounded"
                                 title="Export as PNG"
                               >
                                 <Download className="h-4 w-4" />
-                              </button>
+                        </button>
                               <button
                                 onClick={() => handleDeleteClick(template)}
                                 className="text-red-600 hover:text-red-800 p-1 rounded"
@@ -682,58 +683,58 @@ const Templates: React.FC = () => {
                               </button>
                               {user?.role === 'super-admin' && (
                                 <>
-                                  <button
-                                    onClick={() => handleEdit(template)}
+                        <button
+                          onClick={() => handleEdit(template)}
                                     className="text-orange-600 hover:text-orange-800 p-1 rounded"
                                     title="Edit Template"
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </button>
-                                  <button
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
                                     onClick={() => duplicateTemplate(template)}
                                     className="text-purple-600 hover:text-purple-800 p-1 rounded"
                                     title="Duplicate Template"
                                   >
                                     <Copy className="h-4 w-4" />
-                                  </button>
+                        </button>
                                 </>
-                              )}
-                            </div>
+                      )}
+                    </div>
                           </td>
                         </tr>
-                      ))
-                    ) : (
+                ))
+              ) : (
                       <tr>
                         <td colSpan={3} className="text-center py-12">
                           <div className="flex flex-col items-center">
                             <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4">
-                              <FileText className="h-12 w-12 text-gray-400" />
-                            </div>
+                    <FileText className="h-12 w-12 text-gray-400" />
+                  </div>
                             <h3 className="text-lg font-bold mb-2 text-indigo-600">
-                              No Templates Found
-                            </h3>
+                    No Templates Found
+                  </h3>
                             <p className="text-sm text-indigo-600">
                               Get started by creating your first template
                             </p>
-                          </div>
+                </div>
                         </td>
                       </tr>
-                    )}
+              )}
                   </tbody>
                 </table>
-              </div>
             </div>
           </div>
+        </div>
         </CommonFeatures>
 
-        {/* Create/Edit Form Modal */}
-        {showCreateForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      {/* Create/Edit Form Modal */}
+      {showCreateForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold text-gray-900">
-                  {editingTemplate ? 'Edit Template' : 'Create New Template'}
-                </h2>
+              {editingTemplate ? 'Edit Template' : 'Create New Template'}
+            </h2>
                 <button
                   onClick={() => {
                     setShowCreateForm(false);
@@ -750,29 +751,29 @@ const Templates: React.FC = () => {
               </div>
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Template Name */}
-                <div>
+              <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Template Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  Template Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Enter template name"
-                  />
-                </div>
-
+                  placeholder="Enter template name"
+                />
+              </div>
+              
                 {/* Header Image Upload */}
-                <div>
+              <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Header Image (Optional)
-                  </label>
+                </label>
                   <div className="space-y-2">
-                    <input
-                      type="file"
-                      accept="image/*"
+                  <input
+                    type="file"
+                    accept="image/*"
                       onChange={handleHeaderImageUpload}
                       className="hidden"
                       id="header-image-upload"
@@ -799,21 +800,21 @@ const Templates: React.FC = () => {
                         >
                           <X className="h-4 w-4" />
                         </button>
-                      </div>
-                    )}
+                </div>
+              )}
                   </div>
                 </div>
 
                 {/* Template Content */}
-                <div>
+              <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Text *
-                  </label>
-                  <textarea
+                </label>
+                <textarea
                     required
-                    value={formData.content}
-                    onChange={(e) => setFormData({...formData, content: e.target.value})}
-                    rows={6}
+                  value={formData.content}
+                  onChange={(e) => setFormData({...formData, content: e.target.value})}
+                  rows={6}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     placeholder="Enter template content with parameters like #FN, #LN, #Month, #Target..."
                   />
@@ -838,7 +839,7 @@ const Templates: React.FC = () => {
                             {param}
                           </button>
                         ))}
-                      </div>
+              </div>
                       <p className="text-xs text-gray-500 mt-1">
                         Click on parameters to add them to your template
                       </p>
@@ -878,70 +879,70 @@ const Templates: React.FC = () => {
                           alt="Footer preview"
                           className="w-full h-32 object-cover rounded-lg"
                         />
-                        <button
+                <button
                           type="button"
                           onClick={removeFooterImage}
                           className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
                         >
                           <X className="h-4 w-4" />
-                        </button>
+                </button>
                       </div>
                     )}
                   </div>
                 </div>
 
                 <div className="flex space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowCreateForm(false);
-                      setEditingTemplate(null);
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateForm(false);
+                    setEditingTemplate(null);
                       setHeaderImage(null);
                       setFooterImage(null);
                       setHeaderImagePreview('');
                       setFooterImagePreview('');
                     }}
                     className="px-6 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300"
-                  >
-                    Cancel
-                  </button>
+                >
+                  Cancel
+                </button>
                   <button
                     type="submit"
                     className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
                   >
                     {editingTemplate ? 'Update Template' : 'Create Template'}
                   </button>
-                </div>
-              </form>
-            </div>
+              </div>
+            </form>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Preview Modal */}
-        {showPreview && previewTemplate && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      {/* Preview Modal */}
+      {showPreview && previewTemplate && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-semibold text-gray-900">
                   Template Preview: {previewTemplate.name}
-                </h2>
-                <button
-                  onClick={() => setShowPreview(false)}
+              </h2>
+              <button
+                onClick={() => setShowPreview(false)}
                   className="text-gray-400 hover:text-gray-600"
-                >
+              >
                   <X className="h-6 w-6" />
-                </button>
-              </div>
-              
+              </button>
+            </div>
+            
               <div className="space-y-6">
                 {/* Template Preview */}
                 <div className="border-2 border-gray-200 rounded-lg p-6 bg-white">
-                  <div className="space-y-4">
+            <div className="space-y-4">
                     {/* Header Image */}
                     {previewTemplate.imageUrl && (
                       <div className="text-center">
-                        <img 
-                          src={previewTemplate.imageUrl} 
+                    <img 
+                      src={previewTemplate.imageUrl} 
                           alt="Header"
                           className="max-w-full h-48 object-contain mx-auto rounded"
                         />
@@ -951,8 +952,8 @@ const Templates: React.FC = () => {
                     {/* Content */}
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <pre className="whitespace-pre-wrap text-sm text-gray-800">
-                        {previewTemplate.content}
-                      </pre>
+                      {previewTemplate.content}
+                    </pre>
                     </div>
                     
                     {/* Sample Message Preview */}
@@ -986,7 +987,7 @@ const Templates: React.FC = () => {
                                   .replace(/#[A-Za-z0-9_]+/g, '[Parameter]')
                                 }
                               </pre>
-                            </div>
+                </div>
                             
                             {/* Footer Image */}
                             {previewTemplate.footerImageUrl && (
@@ -996,7 +997,7 @@ const Templates: React.FC = () => {
                                   alt="Footer"
                                   className="max-w-full h-24 object-contain mx-auto rounded"
                                 />
-                              </div>
+              </div>
                             )}
                           </div>
                         </div>
@@ -1021,7 +1022,7 @@ const Templates: React.FC = () => {
                 
                 {/* Template Details */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
+              <div>
                     <h4 className="font-medium text-gray-900 mb-2">
                       Template Type:
                     </h4>
@@ -1044,24 +1045,24 @@ const Templates: React.FC = () => {
                 {previewTemplate.parameters.length > 0 && (
                   <div>
                     <h4 className="font-medium text-gray-900 mb-2">
-                      Parameters:
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {previewTemplate.parameters.map((param, index) => (
-                        <span 
-                          key={index}
-                          className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
-                        >
-                          #{param}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  Parameters:
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {previewTemplate.parameters.map((param, index) => (
+                    <span 
+                      key={index}
+                      className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
+                    >
+                      #{param}
+                    </span>
+                  ))}
+                </div>
               </div>
+                )}
             </div>
           </div>
-        )}
+        </div>
+      )}
 
         {/* Delete Confirmation Dialog */}
         {showDeleteDialog && templateToDelete && (

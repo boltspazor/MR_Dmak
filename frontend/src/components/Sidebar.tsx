@@ -14,18 +14,19 @@ interface SidebarProps {
   onNavigate: (route: string) => void;
   onLogout: () => void;
   userName?: string;
+  userRole?: string;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
   activePage, 
   onNavigate, 
   onLogout, 
-  userName = "User Name" 
+  userName = "User Name",
+  userRole = "Super Admin"
 }) => {
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: BarChart3, route: '/dashboard' },
+    { id: 'dashboard', label: 'Campaigns Dashboard', icon: BarChart3, route: '/dashboard' },
     { id: 'dmak', label: 'MR', icon: BarChart3, route: '/simple-tool' },
-    { id: 'mrs', label: 'MR Management', icon: Users, route: '/mrs' },
     { id: 'templates', label: 'Templates', icon: FileText, route: '/templates' },
     { id: 'campaigns', label: 'Campaigns', icon: MessageSquare, route: '/campaigns' },
     { id: 'super-admin', label: 'Super Admin', icon: Shield, route: '/super-admin' },
@@ -42,9 +43,10 @@ const Sidebar: React.FC<SidebarProps> = ({
       <div className="flex flex-col h-full">
         {/* Top Section */}
         <div className="flex flex-col items-center py-4 space-y-2">
-          {/* User Name */}
+          {/* User Name and Role */}
           <div className="text-white text-xs font-semibold mb-4 text-center px-2">
             <div className="text-xs font-medium">{userName}</div>
+            <div className="text-xs text-blue-200 mt-1">{userRole}</div>
           </div>
 
           {/* Menu Items */}

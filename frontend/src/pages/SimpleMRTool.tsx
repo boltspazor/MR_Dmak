@@ -601,6 +601,7 @@ const SimpleMRTool: React.FC = () => {
         onNavigate={handleSidebarNavigation}
         onLogout={handleLogout}
         userName={user?.name || "User"}
+        userRole={user?.role || "Super Admin"}
       />
 
       {/* Main Content */}

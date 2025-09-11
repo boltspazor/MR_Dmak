@@ -47,7 +47,7 @@ const Dashboard: React.FC = () => {
   const [sortField, setSortField] = useState<keyof CampaignRecord>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [loading, setLoading] = useState(true);
-  
+
   // Recipient list popup states
   const [showRecipientPopup, setShowRecipientPopup] = useState(false);
   const [selectedRecipients, setSelectedRecipients] = useState<GroupMember[]>([]);
@@ -351,6 +351,7 @@ const Dashboard: React.FC = () => {
         onNavigate={handleSidebarNavigation}
         onLogout={handleLogout}
         userName={user?.name || "User"}
+        userRole={user?.role || "Super Admin"}
       />
 
       {/* Main Content */}

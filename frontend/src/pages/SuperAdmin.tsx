@@ -13,11 +13,13 @@ import {
   Building2,
   Globe
 } from 'lucide-react';
-import Layout from '../components/layout/Layout';
-import Card, { CardHeader, CardContent } from '../components/ui/Card';
-import Button from '../components/ui/Button';
+import Sidebar from '../components/Sidebar';
+import Header from '../components/Header';
+import CommonFeatures from '../components/CommonFeatures';
 import { api } from '../lib/api';
 import { User } from '../types';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 interface SystemStats {
   totalUsers: number;
@@ -39,6 +41,8 @@ interface PerformanceMetrics {
 }
 
 const SuperAdmin: React.FC = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [metrics, setMetrics] = useState<PerformanceMetrics | null>(null);
   const [marketingManagers, setMarketingManagers] = useState<User[]>([]);
@@ -126,22 +130,50 @@ const SuperAdmin: React.FC = () => {
     setShowCreateForm(true);
   };
 
+  // Navigation functions
+  const handleSidebarNavigation = (route: string) => {
+    navigate(route);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+    navigate('/login');
+  };
+
   if (loading) {
     return (
-      <Layout>
-        <div className="animate-pulse">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="bg-white rounded-lg h-32 border border-gray-200"></div>
-            ))}
+      <div className="min-h-screen bg-gray-100">
+        <Sidebar 
+          activePage="super-admin"
+          onNavigate={handleSidebarNavigation}
+          onLogout={handleLogout}
+          userName={user?.name || "User"}
+          userRole={user?.role || "Super Admin"}
+        />
+        <div className="ml-24 p-8">
+          <div className="animate-pulse">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="bg-white rounded-lg h-32 border border-gray-200"></div>
+              ))}
+            </div>
           </div>
         </div>
-      </Layout>
+      </div>
     );
   }
 
   return (
-    <Layout>
+    <div className="min-h-screen bg-gray-100">
+      <Sidebar 
+        activePage="super-admin"
+        onNavigate={handleSidebarNavigation}
+        onLogout={handleLogout}
+        userName={user?.name || "User"}
+        userRole={user?.role || "Super Admin"}
+      />
+      <div className="ml-24 p-8">
       <div className="space-y-8">
         {/* Header */}
         <div className="flex justify-between items-center">
@@ -397,7 +429,8 @@ const SuperAdmin: React.FC = () => {
           </CardContent>
         </Card>
       </div>
-    </Layout>
+      </div>
+    </div>
   );
 };
 

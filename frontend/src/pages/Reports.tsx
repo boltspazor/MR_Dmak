@@ -13,13 +13,17 @@ import {
   Filter,
   RefreshCw
 } from 'lucide-react';
-import Layout from '../components/layout/Layout';
-import Card, { CardHeader, CardContent } from '../components/ui/Card';
-import Button from '../components/ui/Button';
+import Sidebar from '../components/Sidebar';
+import Header from '../components/Header';
+import CommonFeatures from '../components/CommonFeatures';
 import { api } from '../lib/api';
 import { Campaign, Group } from '../types';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const Reports: React.FC = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
@@ -134,23 +138,51 @@ const Reports: React.FC = () => {
     return campaigns.reduce((acc, c) => acc + c.failedCount, 0);
   };
 
+  // Navigation functions
+  const handleSidebarNavigation = (route: string) => {
+    navigate(route);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+    navigate('/login');
+  };
+
   if (loading) {
     return (
-      <Layout>
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="bg-white rounded-lg h-32 border border-gray-200"></div>
-            ))}
+      <div className="min-h-screen bg-gray-100">
+        <Sidebar 
+          activePage="reports"
+          onNavigate={handleSidebarNavigation}
+          onLogout={handleLogout}
+          userName={user?.name || "User"}
+          userRole={user?.role || "Super Admin"}
+        />
+        <div className="ml-24 p-8">
+          <div className="animate-pulse space-y-6">
+            <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="bg-white rounded-lg h-32 border border-gray-200"></div>
+              ))}
+            </div>
           </div>
         </div>
-      </Layout>
+      </div>
     );
   }
 
   return (
-    <Layout>
+    <div className="min-h-screen bg-gray-100">
+      <Sidebar 
+        activePage="reports"
+        onNavigate={handleSidebarNavigation}
+        onLogout={handleLogout}
+        userName={user?.name || "User"}
+        userRole={user?.role || "Super Admin"}
+      />
+      <div className="ml-24 p-8">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
@@ -483,7 +515,8 @@ const Reports: React.FC = () => {
           </CardContent>
         </Card>
       </div>
-    </Layout>
+      </div>
+    </div>
   );
 };
 
