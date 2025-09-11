@@ -24,9 +24,9 @@ const Header: React.FC<HeaderProps> = ({
         </div>
         
         {/* Glenmark Logo */}
-        <div className="absolute top-0 right-0">
+        <div className="absolute top-4 right-4">
           <img 
-            src="/glenmark-simple.svg" 
+            src="/glenmark.svg" 
             alt="Glenmark" 
             className="w-32 h-18"
           />

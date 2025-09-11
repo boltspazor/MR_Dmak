@@ -46,7 +46,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           {/* User Name and Role */}
           <div className="text-white text-xs font-semibold mb-4 text-center px-2">
             <div className="text-xs font-medium">{userName}</div>
-            <div className="text-xs text-blue-200 mt-1">{userRole}</div>
+            <div className="text-xs text-blue-200 mt-1">({userRole})</div>
           </div>
 
           {/* Menu Items */}
@@ -85,7 +85,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           {/* DVK Logo */}
           <div className="mt-2">
             <img 
-              src="/dvk-simple.svg" 
+              src="/dvk.svg" 
               alt="DVK" 
               className="w-12 h-10"
             />
