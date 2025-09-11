@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateToken, requireRole } from '../middleware/auth';
+import { authenticateToken, requireRole } from '../middleware/auth.middleware';
 import recipientListController from '../controllers/recipientList.controller';
 
 const router = express.Router();
