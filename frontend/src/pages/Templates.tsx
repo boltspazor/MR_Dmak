@@ -4,9 +4,6 @@ import {
   FileText, 
   Edit, 
   Trash2, 
-  Search, 
-  Code,
-  Type,
   Eye,
   Copy,
   Upload,
@@ -25,12 +22,12 @@ const Templates: React.FC = () => {
   const { user } = useAuth();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedType, setSelectedType] = useState<string>('');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [templateToDelete, setTemplateToDelete] = useState<Template | null>(null);
 
   // Form states
   const [formData, setFormData] = useState({
@@ -217,18 +214,30 @@ const Templates: React.FC = () => {
     setShowCreateForm(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this template?')) return;
+  const handleDeleteClick = (template: Template) => {
+    setTemplateToDelete(template);
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!templateToDelete) return;
 
     try {
       const token = localStorage.getItem('authToken');
       if (!token) return;
 
-      await api.delete(`/templates/${id}`);
+      await api.delete(`/templates/${templateToDelete.name}`);
       await fetchTemplates();
+      setShowDeleteDialog(false);
+      setTemplateToDelete(null);
     } catch (error: any) {
       console.error('Error deleting template:', error);
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteDialog(false);
+    setTemplateToDelete(null);
   };
 
   const handlePreview = (template: Template) => {
@@ -371,16 +380,7 @@ const Templates: React.FC = () => {
     }
   };
 
-  const filteredTemplates = templates.filter(template => {
-    const matchesSearch = 
-      template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      template.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      template.parameters.some(param => param.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesType = !selectedType || template.type === selectedType;
-    
-    return matchesSearch && matchesType;
-  });
+  const filteredTemplates = templates;
 
   // Navigation functions
   const handleSidebarNavigation = (route: string) => {
@@ -464,18 +464,6 @@ const Templates: React.FC = () => {
       value: templates.length,
       icon: <FileText className="h-6 w-6 text-blue-600" />,
       color: 'bg-blue-100'
-    },
-    {
-      title: 'HTML Templates',
-      value: templates.filter(t => t.type === 'html').length,
-      icon: <Code className="h-6 w-6 text-green-600" />,
-      color: 'bg-green-100'
-    },
-    {
-      title: 'Text Templates',
-      value: templates.filter(t => t.type === 'text').length,
-      icon: <Type className="h-6 w-6 text-orange-600" />,
-      color: 'bg-orange-100'
     }
   ];
 
@@ -518,6 +506,9 @@ const Templates: React.FC = () => {
         {/* Separator Line */}
         <div className="border-b-2 border-indigo-500 my-6"></div>
 
+        {/* Template Management Header */}
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Template Management</h2>
+
         {/* Main Content Area */}
         <CommonFeatures
           summaryItems={summaryItems}
@@ -525,8 +516,6 @@ const Templates: React.FC = () => {
           onExportPDF={exportTemplatesToPDF}
         >
           <div className="space-y-8">
-            {/* Template Management Header */}
-            <h2 className="text-2xl font-bold text-gray-900">Template Management</h2>
 
             {/* Action Buttons */}
             <div className="flex justify-between items-center">
@@ -556,37 +545,9 @@ const Templates: React.FC = () => {
               {/* Table Header */}
               <div className="p-6 border-b bg-indigo-50">
                 <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-2xl font-bold text-gray-900">All Templates</h2>
                   <span className="text-sm text-gray-700 font-bold">
-                    {filteredTemplates.length} Templates
+                    {filteredTemplates.length} of {templates.length}
                   </span>
-                </div>
-                
-                {/* Search and Filter Controls */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="relative">
-                    <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Search templates..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 rounded-lg border-0 bg-gray-100"
-                    />
-                  </div>
-                  
-                  <div className="relative">
-                    <select
-                      value={selectedType}
-                      onChange={(e) => setSelectedType(e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg border-0 bg-gray-100"
-                    >
-                      <option value="">All Types</option>
-                      <option value="text">Text</option>
-                      <option value="html">HTML</option>
-                      <option value="image">Image</option>
-                    </select>
-                  </div>
                 </div>
               </div>
               
@@ -624,6 +585,13 @@ const Templates: React.FC = () => {
                               >
                                 <Download className="h-4 w-4" />
                               </button>
+                              <button
+                                onClick={() => handleDeleteClick(template)}
+                                className="text-red-600 hover:text-red-800 p-1 rounded"
+                                title="Delete Template"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
                               {user?.role === 'super-admin' && (
                                 <>
                                   <button
@@ -639,13 +607,6 @@ const Templates: React.FC = () => {
                                     title="Duplicate Template"
                                   >
                                     <Copy className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleDelete(template.name)}
-                                    className="text-red-600 hover:text-red-800 p-1 rounded"
-                                    title="Delete Template"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
                                   </button>
                                 </>
                               )}
@@ -758,7 +719,7 @@ const Templates: React.FC = () => {
                 {/* Template Content */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Template Content *
+                    Text *
                   </label>
                   <textarea
                     required
@@ -878,6 +839,57 @@ const Templates: React.FC = () => {
                       </pre>
                     </div>
                     
+                    {/* Sample Message Preview */}
+                    {previewTemplate.parameters.length > 0 && (
+                      <div className="mt-6">
+                        <h4 className="font-medium text-gray-900 mb-3">
+                          Sample Message Preview (as it will be sent to users):
+                        </h4>
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                          <div className="space-y-4">
+                            {/* Header Image */}
+                            {previewTemplate.imageUrl && (
+                              <div className="text-center">
+                                <img 
+                                  src={previewTemplate.imageUrl} 
+                                  alt="Header"
+                                  className="max-w-full h-32 object-contain mx-auto rounded"
+                                />
+                              </div>
+                            )}
+                            
+                            {/* Processed Content */}
+                            <div className="bg-white p-3 rounded border">
+                              <pre className="whitespace-pre-wrap text-sm text-gray-800">
+                                {previewTemplate.content
+                                  .replace(/#FirstName/g, 'John')
+                                  .replace(/#LastName/g, 'Doe')
+                                  .replace(/#MRId/g, 'MR001')
+                                  .replace(/#GroupName/g, 'North Zone')
+                                  .replace(/#PhoneNumber/g, '+919876543210')
+                                  .replace(/#[A-Za-z0-9_]+/g, '[Parameter]')
+                                }
+                              </pre>
+                            </div>
+                            
+                            {/* Footer Image */}
+                            {previewTemplate.footerImageUrl && (
+                              <div className="text-center">
+                                <img 
+                                  src={previewTemplate.footerImageUrl} 
+                                  alt="Footer"
+                                  className="max-w-full h-24 object-contain mx-auto rounded"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">
+                          * This shows how the message will appear to recipients with sample parameter values
+                        </p>
+                      </div>
+                    )}
+                    
                     {/* Footer Image */}
                     {previewTemplate.footerImageUrl && (
                       <div className="text-center">
@@ -930,6 +942,41 @@ const Templates: React.FC = () => {
                     </div>
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Dialog */}
+        {showDeleteDialog && templateToDelete && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+              <div className="flex items-center mb-4">
+                <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                  <Trash2 className="h-6 w-6 text-red-600" />
+                </div>
+              </div>
+              <div className="text-center">
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Delete Template
+                </h3>
+                <p className="text-sm text-gray-500 mb-6">
+                  Are you sure you want to delete the template "{templateToDelete.name}"? This action cannot be undone.
+                </p>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={handleDeleteCancel}
+                    className="flex-1 px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteConfirm}
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
           </div>
