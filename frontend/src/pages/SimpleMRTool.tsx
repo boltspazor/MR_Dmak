@@ -348,7 +348,7 @@ const SimpleMRTool: React.FC = () => {
           <body>
             <h1>MR Contacts Report</h1>
             <p>Generated on: ${new Date().toLocaleDateString()}</p>
-            <p>Showing ${filteredContacts.length} of ${contacts.length} MRs</p>
+            <p>Showing ${filteredContacts.length} of ${contacts.length}</p>
             <table>
               <thead>
                 <tr>
@@ -608,7 +608,7 @@ const SimpleMRTool: React.FC = () => {
                 <div className="p-6 border-b bg-indigo-50">
                   <div className="flex justify-between items-center mb-4">
                     <span className="text-sm text-gray-700 font-bold">
-                      {filteredContacts.length} of {contacts.length} MRs
+                      {filteredContacts.length} of {contacts.length}
                     </span>
                   </div>
                   
