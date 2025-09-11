@@ -229,6 +229,13 @@ const Templates: React.FC = () => {
       footerImageUrl: template.footerImageUrl || '',
       parameters: template.parameters
     });
+    // Set preview images for editing
+    if (template.imageUrl) {
+      setHeaderImagePreview(template.imageUrl);
+    }
+    if (template.footerImageUrl) {
+      setFooterImagePreview(template.footerImageUrl);
+    }
     setShowCreateForm(true);
   };
 
@@ -259,6 +266,9 @@ const Templates: React.FC = () => {
   };
 
   const handlePreview = (template: Template) => {
+    console.log('Previewing template:', template);
+    console.log('Template imageUrl:', template.imageUrl);
+    console.log('Template footerImageUrl:', template.footerImageUrl);
     setPreviewTemplate(template);
     setShowPreview(true);
   };
@@ -828,67 +838,67 @@ const Templates: React.FC = () => {
                       Live Preview
                     </label>
                     <div className="bg-gray-100 p-4 rounded-lg h-40 overflow-y-auto">
-                      <div className="bg-white rounded-2xl rounded-tl-md shadow-sm max-w-xs mx-auto">
-                        {formData.imageUrl && (
-                          <div className="w-full">
-                            <img 
-                              src={formData.imageUrl} 
-                              alt="Header"
-                              className="w-full h-24 object-cover rounded-t-2xl"
-                            />
+                        <div className="bg-white rounded-2xl rounded-tl-md shadow-sm max-w-xs mx-auto">
+                          {(headerImagePreview || formData.imageUrl) && (
+                            <div className="w-full">
+                              <img 
+                                src={headerImagePreview || formData.imageUrl} 
+                                alt="Header"
+                                className="w-full h-24 object-cover rounded-t-2xl"
+                              />
+                            </div>
+                          )}
+                          <div className="p-3">
+                            <div className="text-gray-800 text-xs leading-relaxed whitespace-pre-wrap">
+                              {(() => {
+                                if (!formData.content) return 'Start typing your template...';
+                                
+                                let processedContent = formData.content;
+                                
+                                // Sample parameter values for live preview
+                                const sampleParams = {
+                                  'FirstName': 'John',
+                                  'LastName': 'Doe',
+                                  'MRId': 'MR001',
+                                  'GroupName': 'North Zone',
+                                  'PhoneNumber': '+919876543210',
+                                  'Name': 'John Doe',
+                                  'Company': 'D-MAK',
+                                  'Product': 'New Product',
+                                  'Date': new Date().toLocaleDateString(),
+                                  'Time': new Date().toLocaleTimeString(),
+                                  'Month': new Date().toLocaleDateString('en-US', { month: 'long' }),
+                                  'Year': new Date().getFullYear().toString(),
+                                  'Target': '100',
+                                  'Achievement': '85',
+                                  'Location': 'Mumbai',
+                                  'City': 'Mumbai',
+                                  'State': 'Maharashtra',
+                                  'Country': 'India'
+                                };
+                                
+                                // Replace parameters with sample values
+                                for (const [param, value] of Object.entries(sampleParams)) {
+                                  const regex = new RegExp(`#${param}\\b`, 'g');
+                                  processedContent = processedContent.replace(regex, value);
+                                }
+                                
+                                // Replace any remaining parameters with [Sample Value]
+                                processedContent = processedContent.replace(/#[A-Za-z0-9_]+/g, '[Sample Value]');
+                                
+                                return processedContent;
+                              })()}
+                            </div>
                           </div>
-                        )}
-                        <div className="p-3">
-                          <div className="text-gray-800 text-xs leading-relaxed whitespace-pre-wrap">
-                            {(() => {
-                              if (!formData.content) return 'Start typing your template...';
-                              
-                              let processedContent = formData.content;
-                              
-                              // Sample parameter values for live preview
-                              const sampleParams = {
-                                'FirstName': 'John',
-                                'LastName': 'Doe',
-                                'MRId': 'MR001',
-                                'GroupName': 'North Zone',
-                                'PhoneNumber': '+919876543210',
-                                'Name': 'John Doe',
-                                'Company': 'D-MAK',
-                                'Product': 'New Product',
-                                'Date': new Date().toLocaleDateString(),
-                                'Time': new Date().toLocaleTimeString(),
-                                'Month': new Date().toLocaleDateString('en-US', { month: 'long' }),
-                                'Year': new Date().getFullYear().toString(),
-                                'Target': '100',
-                                'Achievement': '85',
-                                'Location': 'Mumbai',
-                                'City': 'Mumbai',
-                                'State': 'Maharashtra',
-                                'Country': 'India'
-                              };
-                              
-                              // Replace parameters with sample values
-                              for (const [param, value] of Object.entries(sampleParams)) {
-                                const regex = new RegExp(`#${param}\\b`, 'g');
-                                processedContent = processedContent.replace(regex, value);
-                              }
-                              
-                              // Replace any remaining parameters with [Sample Value]
-                              processedContent = processedContent.replace(/#[A-Za-z0-9_]+/g, '[Sample Value]');
-                              
-                              return processedContent;
-                            })()}
-                          </div>
-                        </div>
-                        {formData.footerImageUrl && (
-                          <div className="px-3 pb-3">
-                            <img 
-                              src={formData.footerImageUrl} 
-                              alt="Footer"
-                              className="w-full h-16 object-cover rounded-lg"
-                            />
-                          </div>
-                        )}
+                          {(footerImagePreview || formData.footerImageUrl) && (
+                            <div className="px-3 pb-3">
+                              <img 
+                                src={footerImagePreview || formData.footerImageUrl} 
+                                alt="Footer"
+                                className="w-full h-16 object-cover rounded-lg"
+                              />
+                            </div>
+                          )}
                       </div>
                     </div>
                   </div>
@@ -1016,10 +1026,15 @@ const Templates: React.FC = () => {
                     {/* Header Image */}
                     {previewTemplate.imageUrl && (
                       <div className="text-center">
-                    <img 
-                      src={previewTemplate.imageUrl} 
+                        <img 
+                          src={previewTemplate.imageUrl} 
                           alt="Header"
                           className="max-w-full h-48 object-contain mx-auto rounded"
+                          onError={(e) => {
+                            console.error('Header image failed to load:', previewTemplate.imageUrl);
+                            e.currentTarget.style.display = 'none';
+                          }}
+                          onLoad={() => console.log('Header image loaded successfully:', previewTemplate.imageUrl)}
                         />
                       </div>
                     )}
@@ -1046,6 +1061,11 @@ const Templates: React.FC = () => {
                                 src={previewTemplate.imageUrl} 
                                 alt="Header"
                                 className="w-full h-48 object-cover rounded-t-2xl"
+                                onError={(e) => {
+                                  console.error('WhatsApp preview header image failed to load:', previewTemplate.imageUrl);
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                                onLoad={() => console.log('WhatsApp preview header image loaded successfully:', previewTemplate.imageUrl)}
                               />
                             </div>
                           )}
@@ -1099,6 +1119,11 @@ const Templates: React.FC = () => {
                                 src={previewTemplate.footerImageUrl} 
                                 alt="Footer"
                                 className="w-full h-24 object-cover rounded-lg"
+                                onError={(e) => {
+                                  console.error('Footer image failed to load:', previewTemplate.footerImageUrl);
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                                onLoad={() => console.log('Footer image loaded successfully:', previewTemplate.footerImageUrl)}
                               />
                             </div>
                           )}
@@ -1130,6 +1155,11 @@ const Templates: React.FC = () => {
                           src={previewTemplate.footerImageUrl} 
                           alt="Footer"
                           className="max-w-full h-32 object-contain mx-auto rounded"
+                          onError={(e) => {
+                            console.error('Main footer image failed to load:', previewTemplate.footerImageUrl);
+                            e.currentTarget.style.display = 'none';
+                          }}
+                          onLoad={() => console.log('Main footer image loaded successfully:', previewTemplate.footerImageUrl)}
                         />
                       </div>
                     )}
