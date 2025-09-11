@@ -4,6 +4,7 @@ import {
   FileText, 
   Edit, 
   Trash2, 
+  Search,
   Eye,
   Copy,
   Upload,
@@ -22,6 +23,7 @@ const Templates: React.FC = () => {
   const { user } = useAuth();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
   const [showPreview, setShowPreview] = useState(false);
@@ -380,7 +382,14 @@ const Templates: React.FC = () => {
     }
   };
 
-  const filteredTemplates = templates;
+  const filteredTemplates = templates.filter(template => {
+    const matchesSearch = 
+      template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      template.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      template.parameters.some(param => param.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    return matchesSearch;
+  });
 
   // Navigation functions
   const handleSidebarNavigation = (route: string) => {
@@ -548,6 +557,18 @@ const Templates: React.FC = () => {
                   <span className="text-sm text-gray-700 font-bold">
                     {filteredTemplates.length} of {templates.length}
                   </span>
+                </div>
+                
+                {/* Search Control */}
+                <div className="relative">
+                  <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search templates..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 rounded-lg border-0 bg-gray-100"
+                  />
                 </div>
               </div>
               
