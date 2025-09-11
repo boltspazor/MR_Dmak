@@ -269,6 +269,8 @@ const Templates: React.FC = () => {
     console.log('Previewing template:', template);
     console.log('Template imageUrl:', template.imageUrl);
     console.log('Template footerImageUrl:', template.footerImageUrl);
+    console.log('Template has header image:', !!(template.imageUrl && template.imageUrl.length > 0));
+    console.log('Template has footer image:', !!(template.footerImageUrl && template.footerImageUrl.length > 0));
     setPreviewTemplate(template);
     setShowPreview(true);
   };
@@ -1039,7 +1041,7 @@ const Templates: React.FC = () => {
                 <div className="flex justify-center">
                   <div className="bg-white rounded-3xl rounded-tl-lg shadow-2xl max-w-sm w-full overflow-hidden">
                     {/* Header Image */}
-                    {previewTemplate.imageUrl && (
+                    {previewTemplate.imageUrl && previewTemplate.imageUrl.length > 0 ? (
                       <div className="w-full">
                         <img 
                           src={previewTemplate.imageUrl} 
@@ -1051,6 +1053,10 @@ const Templates: React.FC = () => {
                           }}
                           onLoad={() => console.log('WhatsApp preview header image loaded successfully:', previewTemplate.imageUrl)}
                         />
+                      </div>
+                    ) : (
+                      <div className="w-full h-32 bg-gray-100 flex items-center justify-center">
+                        <span className="text-gray-500 text-sm">No header image</span>
                       </div>
                     )}
                     
@@ -1097,7 +1103,7 @@ const Templates: React.FC = () => {
                     </div>
                     
                     {/* Footer Image */}
-                    {previewTemplate.footerImageUrl && (
+                    {previewTemplate.footerImageUrl && previewTemplate.footerImageUrl.length > 0 ? (
                       <div className="px-4 pb-4">
                         <img 
                           src={previewTemplate.footerImageUrl} 
@@ -1109,6 +1115,12 @@ const Templates: React.FC = () => {
                           }}
                           onLoad={() => console.log('Footer image loaded successfully:', previewTemplate.footerImageUrl)}
                         />
+                      </div>
+                    ) : (
+                      <div className="px-4 pb-4">
+                        <div className="w-full h-24 bg-gray-100 rounded-lg flex items-center justify-center">
+                          <span className="text-gray-500 text-xs">No footer image</span>
+                        </div>
                       </div>
                     )}
                     
@@ -1128,9 +1140,15 @@ const Templates: React.FC = () => {
                   </div>
                 </div>
                 
-                <p className="text-xs text-gray-600 mt-3 text-center">
-                  * This shows how the message will appear in WhatsApp with sample parameter values
-                </p>
+                <div className="mt-3 text-center">
+                  <p className="text-xs text-gray-600">
+                    * This shows how the message will appear in WhatsApp with sample parameter values
+                  </p>
+                  <div className="mt-2 text-xs text-gray-500">
+                    <p>Header Image: {previewTemplate.imageUrl ? '✅ Present' : '❌ Not found'}</p>
+                    <p>Footer Image: {previewTemplate.footerImageUrl ? '✅ Present' : '❌ Not found'}</p>
+                  </div>
+                </div>
               </div>
 
               {/* Template Details */}
