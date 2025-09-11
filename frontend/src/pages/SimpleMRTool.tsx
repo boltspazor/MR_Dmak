@@ -8,8 +8,7 @@ import {
   FileText,
   BarChart3,
   Edit,
-  ChevronDown,
-  X
+  ChevronDown
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
@@ -124,9 +123,6 @@ const SimpleMRTool: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
-  // Group creation states
-  const [isCreateGroupDialogOpen, setIsCreateGroupDialogOpen] = useState(false);
-  const [newGroupName, setNewGroupName] = useState('');
 
 
   // Load data on component mount
@@ -149,8 +145,15 @@ const SimpleMRTool: React.FC = () => {
           const parsedGroups = JSON.parse(savedGroups);
           setGroups(parsedGroups);
         } else {
-          // If no saved data, load from backend
-          await fetchGroupsFromBackend();
+          // If no saved data, create default groups
+          const defaultGroups: Group[] = [
+            { id: '1', name: 'North', contactCount: 0 },
+            { id: '2', name: 'South', contactCount: 0 },
+            { id: '3', name: 'East', contactCount: 0 },
+            { id: '4', name: 'West', contactCount: 0 }
+          ];
+          setGroups(defaultGroups);
+          localStorage.setItem('mr_groups', JSON.stringify(defaultGroups));
         }
         
         // Load message logs from localStorage
@@ -208,29 +211,6 @@ const SimpleMRTool: React.FC = () => {
     }
   };
 
-  const fetchGroupsFromBackend = async () => {
-    try {
-      console.log('Fetching groups from backend...');
-      const response = await mockApi.get('/groups');
-      const backendGroups = response.data.data || [];
-      
-      console.log('Backend groups response:', backendGroups);
-      
-      // Transform backend group data to Group format
-      const transformedGroups: Group[] = backendGroups.map((group: any) => ({
-        id: group.id,
-        name: group.groupName,
-        contactCount: group.mrCount || 0
-      }));
-      
-      console.log('Transformed groups:', transformedGroups);
-      setGroups(transformedGroups);
-      // Save to localStorage
-      localStorage.setItem('mr_groups', JSON.stringify(transformedGroups));
-    } catch (error: any) {
-      console.error('Error fetching groups from backend:', error);
-    }
-  };
 
   // Update group contact counts
   useEffect(() => {
@@ -243,32 +223,6 @@ const SimpleMRTool: React.FC = () => {
     localStorage.setItem('mr_groups', JSON.stringify(updatedGroups));
   }, [contacts]);
 
-  // Group management functions
-  const handleCreateGroup = () => {
-    if (!newGroupName.trim()) {
-      alert('Please enter a group name');
-      return;
-    }
-
-    if (groups.some(group => group.name.toLowerCase() === newGroupName.toLowerCase())) {
-      alert('Group already exists');
-      return;
-    }
-
-    const newGroup: Group = {
-      id: Date.now().toString(),
-      name: newGroupName.trim(),
-      contactCount: 0
-    };
-
-    const updatedGroups = [...groups, newGroup];
-    setGroups(updatedGroups);
-    localStorage.setItem('mr_groups', JSON.stringify(updatedGroups));
-    
-    setNewGroupName('');
-    setIsCreateGroupDialogOpen(false);
-    alert('Group created successfully!');
-  };
 
   // Contact management functions
 
@@ -665,13 +619,6 @@ const SimpleMRTool: React.FC = () => {
                   >
                     Add Individual MR
               </button>
-              
-              <button
-                    onClick={() => setIsCreateGroupDialogOpen(true)}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700"
-                  >
-                    Create Group
-              </button>
                   
                   <div className="flex items-center space-x-2">
                 <input
@@ -921,62 +868,6 @@ const SimpleMRTool: React.FC = () => {
           groups={groups}
         />
 
-        {/* Create Group Dialog */}
-        {isCreateGroupDialogOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Create New Group</h2>
-                <button
-                  onClick={() => {
-                    setIsCreateGroupDialogOpen(false);
-                    setNewGroupName('');
-                  }}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Group Name*</label>
-                  <input
-                    type="text"
-                    value={newGroupName}
-                    onChange={(e) => setNewGroupName(e.target.value)}
-                    className="w-full px-3 py-3 rounded-lg border-0 bg-gray-100"
-                    placeholder="Enter group name"
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        handleCreateGroup();
-                      }
-                    }}
-                  />
-                </div>
-
-                <div className="flex justify-end space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsCreateGroupDialogOpen(false);
-                      setNewGroupName('');
-                    }}
-                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleCreateGroup}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                  >
-                    Create Group
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
