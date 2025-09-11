@@ -7,11 +7,9 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import SimpleMRTool from './pages/SimpleMRTool';
-import Groups from './pages/Groups';
 import MedicalReps from './pages/MedicalReps';
 import Campaigns from './pages/Campaigns';
 import Templates from './pages/Templates';
-import Reports from './pages/Reports';
 import SuperAdmin from './pages/SuperAdmin';
 
 function App() {
@@ -27,14 +25,6 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/groups"
-              element={
-                <ProtectedRoute>
-                  <Groups />
                 </ProtectedRoute>
               }
             />
@@ -59,14 +49,6 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Templates />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/reports"
-              element={
-                <ProtectedRoute>
-                  <Reports />
                 </ProtectedRoute>
               }
             />
