@@ -6,7 +6,6 @@ import {
   Trash2, 
   Search,
   FileText,
-  BarChart3,
   Edit,
   ChevronDown
 } from 'lucide-react';
@@ -32,13 +31,6 @@ interface Group {
   contactCount: number;
 }
 
-interface MessageLog {
-  id: string;
-  message: string;
-  groups: string[];
-  sentAt: string;
-  contactCount: number;
-}
 
 // Mock API for demonstration
 const mockApi = {
@@ -111,7 +103,6 @@ const SimpleMRTool: React.FC = () => {
     { id: '3', name: 'East', contactCount: 0 },
     { id: '4', name: 'West', contactCount: 0 }
   ]);
-  const [messageLogs, setMessageLogs] = useState<MessageLog[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<keyof Contact>('mrId');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -172,25 +163,6 @@ const SimpleMRTool: React.FC = () => {
           localStorage.setItem('mr_groups', JSON.stringify(defaultGroups));
         }
         
-        // Load message logs from localStorage
-        const savedMessageLogs = localStorage.getItem('mr_message_logs');
-        if (savedMessageLogs) {
-          const parsedMessageLogs = JSON.parse(savedMessageLogs);
-          setMessageLogs(parsedMessageLogs);
-        } else {
-          // Default message logs
-          const defaultMessageLogs = [
-            {
-              id: '1',
-              message: 'Welcome to our medical representative program!',
-              groups: ['North Zone'],
-              sentAt: new Date().toISOString(),
-              contactCount: 1
-            }
-          ];
-          setMessageLogs(defaultMessageLogs);
-          localStorage.setItem('mr_message_logs', JSON.stringify(defaultMessageLogs));
-        }
       } catch (error) {
         console.error('Error loading data:', error);
       }
@@ -550,16 +522,6 @@ const SimpleMRTool: React.FC = () => {
     }
   };
 
-  const getTotalStats = () => {
-    return {
-      totalContacts: contacts.length,
-      totalGroups: groups.length,
-      totalMessages: messageLogs.length,
-      engagementRate: contacts.length > 0 ? Math.round((messageLogs.length / contacts.length) * 100) : 0
-    };
-  };
-
-  const stats = getTotalStats();
 
   // Navigation functions
   const handleSidebarNavigation = (route: string) => {
@@ -584,12 +546,6 @@ const SimpleMRTool: React.FC = () => {
       value: groups.length,
       icon: <FileText className="h-6 w-6 text-green-600" />,
       color: 'bg-green-100'
-    },
-    {
-      title: 'Engagement Rate',
-      value: `${stats.engagementRate}%`,
-      icon: <BarChart3 className="h-6 w-6 text-orange-600" />,
-      color: 'bg-orange-100'
     }
   ];
 
