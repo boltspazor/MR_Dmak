@@ -613,8 +613,7 @@ const Dashboard: React.FC = () => {
               
               {/* Summary Section */}
               <div className="bg-indigo-50 p-4 rounded-lg mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Summary</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="bg-white p-4 rounded-lg">
                     <div className="flex items-center">
                       <MessageSquare className="h-8 w-8 text-indigo-600 mr-3" />
@@ -636,25 +635,6 @@ const Dashboard: React.FC = () => {
                             ? `${Math.round((selectedRecipients.filter(m => m.status === 'sent').length / selectedRecipients.length) * 100)}%`
                             : '0%'
                           }
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-white p-4 rounded-lg">
-                    <div className="flex items-center">
-                      <MessageSquare className="h-8 w-8 text-blue-600 mr-3" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">Recipients</p>
-                        <p className="text-2xl font-bold text-gray-900">
-                          {selectedRecipients.filter(member => {
-                            const matchesSearch = 
-                              member.name.toLowerCase().includes(recipientSearchTerm.toLowerCase()) ||
-                              member.phone.toLowerCase().includes(recipientSearchTerm.toLowerCase()) ||
-                              (member.email && member.email.toLowerCase().includes(recipientSearchTerm.toLowerCase()));
-                            const matchesStatus = recipientStatusFilter === 'all' || member.status === recipientStatusFilter;
-                            const matchesGroup = recipientGroupFilter === 'all' || member.group === recipientGroupFilter;
-                            return matchesSearch && matchesStatus && matchesGroup;
-                          }).length} of {selectedRecipients.length}
                         </p>
                       </div>
                     </div>
@@ -694,6 +674,17 @@ const Dashboard: React.FC = () => {
                     </div>
                   
                   <div>
+                    <p className="text-xs text-gray-500 mb-1">
+                      {selectedRecipients.filter(member => {
+                        const matchesSearch = 
+                          member.name.toLowerCase().includes(recipientSearchTerm.toLowerCase()) ||
+                          member.phone.toLowerCase().includes(recipientSearchTerm.toLowerCase()) ||
+                          (member.email && member.email.toLowerCase().includes(recipientSearchTerm.toLowerCase()));
+                        const matchesStatus = recipientStatusFilter === 'all' || member.status === recipientStatusFilter;
+                        const matchesGroup = recipientGroupFilter === 'all' || member.group === recipientGroupFilter;
+                        return matchesSearch && matchesStatus && matchesGroup;
+                      }).length} of {selectedRecipients.length} recipients
+                    </p>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Group</label>
                     <select
                       value={recipientGroupFilter}
