@@ -34,6 +34,9 @@ const AddMRDialog: React.FC<AddMRDialogProps> = ({ isOpen, onClose, onAdd, group
     comments: ''
   });
 
+  // Debug: Log groups when component renders
+  console.log('AddMRDialog groups:', groups);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     

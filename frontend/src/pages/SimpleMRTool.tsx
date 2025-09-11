@@ -105,7 +105,12 @@ const SimpleMRTool: React.FC = () => {
   const { user } = useAuth();
   const [activeTab] = useState<'contacts'>('contacts');
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [groups, setGroups] = useState<Group[]>([]);
+  const [groups, setGroups] = useState<Group[]>([
+    { id: '1', name: 'North', contactCount: 0 },
+    { id: '2', name: 'South', contactCount: 0 },
+    { id: '3', name: 'East', contactCount: 0 },
+    { id: '4', name: 'West', contactCount: 0 }
+  ]);
   const [messageLogs, setMessageLogs] = useState<MessageLog[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<keyof Contact>('mrId');
@@ -143,16 +148,27 @@ const SimpleMRTool: React.FC = () => {
         const savedGroups = localStorage.getItem('mr_groups');
         if (savedGroups) {
           const parsedGroups = JSON.parse(savedGroups);
-          setGroups(parsedGroups);
+          if (parsedGroups.length > 0) {
+            setGroups(parsedGroups);
+          } else {
+            // If empty array, keep default groups and save them
+            const defaultGroups: Group[] = [
+              { id: '1', name: 'North', contactCount: 0 },
+              { id: '2', name: 'South', contactCount: 0 },
+              { id: '3', name: 'East', contactCount: 0 },
+              { id: '4', name: 'West', contactCount: 0 }
+            ];
+            setGroups(defaultGroups);
+            localStorage.setItem('mr_groups', JSON.stringify(defaultGroups));
+          }
         } else {
-          // If no saved data, create default groups
+          // If no saved data, save the default groups that are already in state
           const defaultGroups: Group[] = [
             { id: '1', name: 'North', contactCount: 0 },
             { id: '2', name: 'South', contactCount: 0 },
             { id: '3', name: 'East', contactCount: 0 },
             { id: '4', name: 'West', contactCount: 0 }
           ];
-          setGroups(defaultGroups);
           localStorage.setItem('mr_groups', JSON.stringify(defaultGroups));
         }
         
@@ -224,6 +240,9 @@ const SimpleMRTool: React.FC = () => {
   }, [contacts]);
 
 
+  // Debug: Log groups state
+  console.log('SimpleMRTool groups state:', groups);
+
   // Contact management functions
 
   const handleAddMR = async (contactData: Omit<Contact, 'id'>) => {
@@ -231,8 +250,8 @@ const SimpleMRTool: React.FC = () => {
       // Validate phone number
       if (!contactData.phone.startsWith('+91')) {
         alert('Phone number must start with +91');
-        return;
-      }
+      return;
+    }
 
       // Check for unique MR ID
       if (contacts.some(contact => contact.mrId === contactData.mrId)) {
@@ -307,14 +326,14 @@ const SimpleMRTool: React.FC = () => {
       // Validate phone number
       if (!updatedContact.phone.startsWith('+91')) {
         alert('Phone number must start with +91');
-        return;
-      }
+      return;
+    }
 
       // Check for unique MR ID (excluding current contact)
       if (contacts.some(contact => contact.mrId === updatedContact.mrId && contact.id !== editingContact.id)) {
         alert('MR ID already exists. Please use a unique MR ID.');
-        return;
-      }
+      return;
+    }
 
       await mockApi.post(`/mrs/${editingContact.id}`, updatedContact);
       
@@ -463,7 +482,7 @@ const SimpleMRTool: React.FC = () => {
           
           newContacts.push(newContact);
           created++;
-        } else {
+      } else {
           errors.push(`Line ${i + 1}: Invalid format`);
         }
       }
@@ -805,20 +824,20 @@ const SimpleMRTool: React.FC = () => {
               <div className="flex items-center text-sm text-gray-700">
                 <span>
                   Showing {startIndex + 1} to {Math.min(endIndex, filteredContacts.length)} of {filteredContacts.length} results
-                </span>
+                              </span>
               </div>
               <div className="flex items-center space-x-2">
-                <button
+                              <button
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
                   className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
+                              >
                   Previous
-                </button>
+                              </button>
                 
                 <div className="flex space-x-1">
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <button
+                  <button
                       key={page}
                       onClick={() => setCurrentPage(page)}
                       className={`px-3 py-2 text-sm font-medium rounded-md ${
@@ -828,7 +847,7 @@ const SimpleMRTool: React.FC = () => {
                       }`}
                     >
                       {page}
-                    </button>
+                  </button>
                   ))}
                 </div>
                 
@@ -839,8 +858,8 @@ const SimpleMRTool: React.FC = () => {
                 >
                   Next
                 </button>
+                    </div>
               </div>
-            </div>
           )}
               </div>
           </CommonFeatures>
