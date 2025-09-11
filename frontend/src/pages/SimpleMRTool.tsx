@@ -119,6 +119,10 @@ const SimpleMRTool: React.FC = () => {
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
 
   // Load data on component mount
   useEffect(() => {
@@ -480,6 +484,17 @@ const SimpleMRTool: React.FC = () => {
       return 0;
     });
 
+  // Pagination logic
+  const totalPages = Math.ceil(filteredContacts.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedContacts = filteredContacts.slice(startIndex, endIndex);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, groupFilter, sortField, sortDirection]);
+
   const handleSort = (field: keyof Contact) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -705,8 +720,8 @@ const SimpleMRTool: React.FC = () => {
                     </tr>
                   </thead>
                     <tbody>
-                      {filteredContacts.length > 0 ? (
-                        filteredContacts.map(contact => (
+                      {paginatedContacts.length > 0 ? (
+                        paginatedContacts.map(contact => (
                           <tr key={contact.id} className="border-b hover:bg-gray-50">
                             <td className="py-3 px-6 text-sm text-gray-900 text-center">{contact.mrId}</td>
                             <td className="py-3 px-6 text-sm text-gray-900 text-center">
@@ -756,6 +771,50 @@ const SimpleMRTool: React.FC = () => {
                 </table>
             </div>
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-6 py-4 bg-white bg-opacity-40 border-t">
+              <div className="flex items-center text-sm text-gray-700">
+                <span>
+                  Showing {startIndex + 1} to {Math.min(endIndex, filteredContacts.length)} of {filteredContacts.length} results
+                </span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                
+                <div className="flex space-x-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`px-3 py-2 text-sm font-medium rounded-md ${
+                        currentPage === page
+                          ? 'bg-indigo-600 text-white'
+                          : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+                
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
               </div>
           </CommonFeatures>
         )}
