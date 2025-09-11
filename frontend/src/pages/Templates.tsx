@@ -1003,187 +1003,234 @@ const Templates: React.FC = () => {
         </div>
       )}
 
-      {/* Preview Modal */}
+      {/* Enhanced Preview Modal */}
       {showPreview && previewTemplate && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Template Preview: {previewTemplate.name}
-              </h2>
-              <button
-                onClick={() => setShowPreview(false)}
-                  className="text-gray-400 hover:text-gray-600"
-              >
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-5xl max-h-[95vh] overflow-y-auto">
+            {/* Header */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-lg">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    Template Preview
+                  </h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {previewTemplate.name} • Created {new Date(previewTemplate.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowPreview(false)}
+                  className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100"
+                >
                   <X className="h-6 w-6" />
-              </button>
+                </button>
+              </div>
             </div>
-            
-              <div className="space-y-6">
-                {/* Template Preview */}
-                <div className="border-2 border-gray-200 rounded-lg p-6 bg-white">
-            <div className="space-y-4">
+
+            {/* Content */}
+            <div className="p-6 space-y-8">
+              {/* WhatsApp Message Preview - Main Focus */}
+              <div className="bg-gradient-to-br from-green-50 to-blue-50 p-6 rounded-xl">
+                <div className="flex items-center mb-4">
+                  <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                  <h3 className="text-lg font-semibold text-gray-800">WhatsApp Message Preview</h3>
+                </div>
+                
+                <div className="flex justify-center">
+                  <div className="bg-white rounded-3xl rounded-tl-lg shadow-2xl max-w-sm w-full overflow-hidden">
                     {/* Header Image */}
                     {previewTemplate.imageUrl && (
-                      <div className="text-center">
+                      <div className="w-full">
                         <img 
                           src={previewTemplate.imageUrl} 
                           alt="Header"
-                          className="max-w-full h-48 object-contain mx-auto rounded"
+                          className="w-full h-64 object-cover"
                           onError={(e) => {
-                            console.error('Header image failed to load:', previewTemplate.imageUrl);
+                            console.error('WhatsApp preview header image failed to load:', previewTemplate.imageUrl);
                             e.currentTarget.style.display = 'none';
                           }}
-                          onLoad={() => console.log('Header image loaded successfully:', previewTemplate.imageUrl)}
+                          onLoad={() => console.log('WhatsApp preview header image loaded successfully:', previewTemplate.imageUrl)}
                         />
                       </div>
                     )}
                     
-                    {/* Content */}
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <pre className="whitespace-pre-wrap text-sm text-gray-800">
-                      {previewTemplate.content}
-                    </pre>
-                    </div>
-                    
-                    {/* WhatsApp Message Preview */}
-                    <div className="mt-6">
-                      <h4 className="font-medium text-gray-900 mb-3">
-                        WhatsApp Message Preview:
-                      </h4>
-                      <div className="bg-gray-100 p-4 rounded-lg">
-                        {/* WhatsApp-like message bubble */}
-                        <div className="bg-white rounded-2xl rounded-tl-md shadow-lg max-w-sm mx-auto">
-                          {/* Header Image */}
-                          {previewTemplate.imageUrl && (
-                            <div className="w-full">
-                              <img 
-                                src={previewTemplate.imageUrl} 
-                                alt="Header"
-                                className="w-full h-48 object-cover rounded-t-2xl"
-                                onError={(e) => {
-                                  console.error('WhatsApp preview header image failed to load:', previewTemplate.imageUrl);
-                                  e.currentTarget.style.display = 'none';
-                                }}
-                                onLoad={() => console.log('WhatsApp preview header image loaded successfully:', previewTemplate.imageUrl)}
-                              />
-                            </div>
-                          )}
+                    {/* Message Content */}
+                    <div className="p-4">
+                      <div className="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap">
+                        {(() => {
+                          let processedContent = previewTemplate.content;
                           
-                          {/* Message Content */}
-                          <div className="p-4">
-                            <div className="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap">
-                              {(() => {
-                                let processedContent = previewTemplate.content;
-                                
-                                // Sample parameter values for preview
-                                const sampleParams = {
-                                  'FirstName': 'John',
-                                  'LastName': 'Doe',
-                                  'MRId': 'MR001',
-                                  'GroupName': 'North Zone',
-                                  'PhoneNumber': '+919876543210',
-                                  'Name': 'John Doe',
-                                  'Company': 'D-MAK',
-                                  'Product': 'New Product',
-                                  'Date': new Date().toLocaleDateString(),
-                                  'Time': new Date().toLocaleTimeString(),
-                                  'Month': new Date().toLocaleDateString('en-US', { month: 'long' }),
-                                  'Year': new Date().getFullYear().toString(),
-                                  'Target': '100',
-                                  'Achievement': '85',
-                                  'Location': 'Mumbai',
-                                  'City': 'Mumbai',
-                                  'State': 'Maharashtra',
-                                  'Country': 'India'
-                                };
-                                
-                                // Replace parameters with sample values
-                                for (const [param, value] of Object.entries(sampleParams)) {
-                                  const regex = new RegExp(`#${param}\\b`, 'g');
-                                  processedContent = processedContent.replace(regex, value);
-                                }
-                                
-                                // Replace any remaining parameters with [Sample Value]
-                                processedContent = processedContent.replace(/#[A-Za-z0-9_]+/g, '[Sample Value]');
-                                
-                                return processedContent;
-                              })()}
-                            </div>
-                          </div>
+                          // Sample parameter values for preview
+                          const sampleParams = {
+                            'FirstName': 'John',
+                            'LastName': 'Doe',
+                            'MRId': 'MR001',
+                            'GroupName': 'North Zone',
+                            'PhoneNumber': '+919876543210',
+                            'Name': 'John Doe',
+                            'Company': 'D-MAK',
+                            'Product': 'New Product',
+                            'Date': new Date().toLocaleDateString(),
+                            'Time': new Date().toLocaleTimeString(),
+                            'Month': new Date().toLocaleDateString('en-US', { month: 'long' }),
+                            'Year': new Date().getFullYear().toString(),
+                            'Target': '100',
+                            'Achievement': '85',
+                            'Location': 'Mumbai',
+                            'City': 'Mumbai',
+                            'State': 'Maharashtra',
+                            'Country': 'India'
+                          };
                           
-                          {/* Footer Image */}
-                          {previewTemplate.footerImageUrl && (
-                            <div className="px-4 pb-4">
-                              <img 
-                                src={previewTemplate.footerImageUrl} 
-                                alt="Footer"
-                                className="w-full h-24 object-cover rounded-lg"
-                                onError={(e) => {
-                                  console.error('Footer image failed to load:', previewTemplate.footerImageUrl);
-                                  e.currentTarget.style.display = 'none';
-                                }}
-                                onLoad={() => console.log('Footer image loaded successfully:', previewTemplate.footerImageUrl)}
-                              />
-                            </div>
-                          )}
+                          // Replace parameters with sample values
+                          for (const [param, value] of Object.entries(sampleParams)) {
+                            const regex = new RegExp(`#${param}\\b`, 'g');
+                            processedContent = processedContent.replace(regex, value);
+                          }
                           
-                          {/* WhatsApp message time */}
-                          <div className="px-4 pb-2">
-                            <div className="flex justify-end">
-                              <span className="text-xs text-gray-500">
-                                {new Date().toLocaleTimeString('en-US', { 
-                                  hour: '2-digit', 
-                                  minute: '2-digit',
-                                  hour12: true 
-                                })}
-                              </span>
-                              <span className="ml-1 text-xs text-gray-500">✓✓</span>
-                            </div>
-                          </div>
-                        </div>
+                          // Replace any remaining parameters with [Sample Value]
+                          processedContent = processedContent.replace(/#[A-Za-z0-9_]+/g, '[Sample Value]');
+                          
+                          return processedContent;
+                        })()}
                       </div>
-                      <p className="text-xs text-gray-500 mt-2">
-                        * This shows how the message will appear in WhatsApp with sample parameter values
-                      </p>
                     </div>
                     
                     {/* Footer Image */}
                     {previewTemplate.footerImageUrl && (
-                      <div className="text-center">
+                      <div className="px-4 pb-4">
                         <img 
                           src={previewTemplate.footerImageUrl} 
                           alt="Footer"
-                          className="max-w-full h-32 object-contain mx-auto rounded"
+                          className="w-full h-32 object-cover rounded-lg"
                           onError={(e) => {
-                            console.error('Main footer image failed to load:', previewTemplate.footerImageUrl);
+                            console.error('Footer image failed to load:', previewTemplate.footerImageUrl);
                             e.currentTarget.style.display = 'none';
                           }}
-                          onLoad={() => console.log('Main footer image loaded successfully:', previewTemplate.footerImageUrl)}
+                          onLoad={() => console.log('Footer image loaded successfully:', previewTemplate.footerImageUrl)}
                         />
+                      </div>
+                    )}
+                    
+                    {/* WhatsApp message time and status */}
+                    <div className="px-4 pb-3">
+                      <div className="flex justify-end items-center">
+                        <span className="text-xs text-gray-500 mr-1">
+                          {new Date().toLocaleTimeString('en-US', { 
+                            hour: '2-digit', 
+                            minute: '2-digit',
+                            hour12: true 
+                          })}
+                        </span>
+                        <span className="text-xs text-gray-500">✓✓</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <p className="text-xs text-gray-600 mt-3 text-center">
+                  * This shows how the message will appear in WhatsApp with sample parameter values
+                </p>
+              </div>
+
+              {/* Template Details */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Template Information */}
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4">Template Information</h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Template Name</label>
+                      <p className="text-gray-900">{previewTemplate.name}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Type</label>
+                      <p className="text-gray-900 capitalize">{previewTemplate.type}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Created</label>
+                      <p className="text-gray-900">{new Date(previewTemplate.createdAt).toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Content Length</label>
+                      <p className="text-gray-900">{previewTemplate.content.length} characters</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Parameters */}
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4">Parameters</h4>
+                  {previewTemplate.parameters.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {previewTemplate.parameters.map((param, index) => (
+                        <span 
+                          key={index}
+                          className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full font-medium"
+                        >
+                          #{param}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-sm">No parameters found in this template</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Raw Content Preview */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6">
+                <h4 className="text-lg font-semibold text-gray-800 mb-4">Raw Content</h4>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <pre className="whitespace-pre-wrap text-sm text-gray-800 font-mono">
+                    {previewTemplate.content}
+                  </pre>
+                </div>
+              </div>
+
+              {/* Images Preview */}
+              {(previewTemplate.imageUrl || previewTemplate.footerImageUrl) && (
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4">Images</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {previewTemplate.imageUrl && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-600 mb-2 block">Header Image</label>
+                        <div className="border border-gray-200 rounded-lg overflow-hidden">
+                          <img 
+                            src={previewTemplate.imageUrl} 
+                            alt="Header"
+                            className="w-full h-48 object-cover"
+                            onError={(e) => {
+                              console.error('Header image failed to load:', previewTemplate.imageUrl);
+                              e.currentTarget.style.display = 'none';
+                            }}
+                            onLoad={() => console.log('Header image loaded successfully:', previewTemplate.imageUrl)}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    
+                    {previewTemplate.footerImageUrl && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-600 mb-2 block">Footer Image</label>
+                        <div className="border border-gray-200 rounded-lg overflow-hidden">
+                          <img 
+                            src={previewTemplate.footerImageUrl} 
+                            alt="Footer"
+                            className="w-full h-48 object-cover"
+                            onError={(e) => {
+                              console.error('Footer image failed to load:', previewTemplate.footerImageUrl);
+                              e.currentTarget.style.display = 'none';
+                            }}
+                            onLoad={() => console.log('Footer image loaded successfully:', previewTemplate.footerImageUrl)}
+                          />
+                        </div>
                       </div>
                     )}
                   </div>
                 </div>
-                
-                {/* Parameters */}
-                {previewTemplate.parameters.length > 0 && (
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-2">
-                  Parameters:
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {previewTemplate.parameters.map((param, index) => (
-                    <span 
-                      key={index}
-                      className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
-                    >
-                      #{param}
-                    </span>
-                  ))}
-                </div>
-              </div>
-                )}
+              )}
             </div>
           </div>
         </div>
