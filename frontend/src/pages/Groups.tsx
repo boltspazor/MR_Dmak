@@ -148,7 +148,7 @@ const Groups: React.FC = () => {
                 lineHeight: '38px',
                 fontWeight: 700,
                 marginBottom: '8px'
-              }}>Groups Management</h1>
+              }}>D-MAK</h1>
               <p className="text-lg text-black" style={{ 
                 fontFamily: 'Jura', 
                 fontSize: '18.36px',
@@ -156,7 +156,7 @@ const Groups: React.FC = () => {
                 fontWeight: 500,
                 letterSpacing: '0.08em'
               }}>
-                Organize your Medical Representatives into groups.
+                Digital - Marketing, Automate & Konnect
               </p>
             </div>
             
@@ -196,7 +196,7 @@ const Groups: React.FC = () => {
         </div>
 
         {/* Separator Line */}
-        <div className="border-b border-gray-300 my-6" style={{ marginLeft: '100px', marginRight: '100px' }}></div>
+        <div className="border-b-2 border-indigo-500 my-6" style={{ marginLeft: '100px', marginRight: '100px' }}></div>
 
         {/* Main Content Area */}
         <div className="relative" style={{ width: '1308px', height: '935px', marginLeft: '100px' }}>

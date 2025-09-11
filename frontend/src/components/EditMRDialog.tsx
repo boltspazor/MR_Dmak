@@ -92,10 +92,11 @@ const EditMRDialog: React.FC<EditMRDialogProps> = ({
               type="text"
               name="mrId"
               value={formData.mrId}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed"
+              disabled
+              readOnly
             />
+            <p className="text-xs text-gray-500 mt-1">MR ID cannot be changed</p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

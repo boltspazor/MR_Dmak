@@ -336,15 +336,15 @@ const CampaignsNew: React.FC = () => {
       <div className="ml-24 p-8">
         {/* Header */}
         <Header 
-          title="Campaign Management"
-          subtitle="Create and manage message campaigns with templates"
+          title="D-MAK"
+          subtitle="Digital - Marketing, Automate & Konnect"
           onExportCSV={() => {}}
           onExportPDF={() => {}}
           showExportButtons={false}
         />
-        
+
         {/* Separator Line */}
-        <div className="border-b border-gray-300 my-6"></div>
+        <div className="border-b-2 border-indigo-500 my-6"></div>
 
         {/* Main Content Area */}
         <CommonFeatures
@@ -362,7 +362,7 @@ const CampaignsNew: React.FC = () => {
                 { key: 'with-template', label: 'With Template' },
                 { key: 'without-template', label: 'Without Template' }
               ].map((tab) => (
-            <button
+          <button 
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key as any)}
                   className={`pb-2 border-b-2 text-lg font-medium capitalize ${
@@ -372,7 +372,7 @@ const CampaignsNew: React.FC = () => {
                   }`}
                 >
                   {tab.label}
-            </button>
+          </button>
               ))}
         </div>
 
@@ -399,7 +399,7 @@ const CampaignsNew: React.FC = () => {
                         </select>
                         <ChevronDown className="h-5 w-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
                       </div>
-                      <button
+          <button 
                         onClick={() => {
                           const group = groups.find(g => g.groupName === selectedGroupDropdown);
                           if (group) handleGroupPreview(group);
@@ -409,7 +409,7 @@ const CampaignsNew: React.FC = () => {
                       >
                         <Eye className="h-4 w-4 mr-1" />
                         Preview
-                      </button>
+          </button>
                     </div>
                     
                     {/* Selected Groups Display */}
@@ -423,12 +423,12 @@ const CampaignsNew: React.FC = () => {
                               className="flex items-center space-x-2 bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm"
                             >
                               <span>{groupName}</span>
-                              <button
+          <button 
                                 onClick={() => handleGroupSelection(groupName)}
                                 className="text-indigo-600 hover:text-indigo-800"
-                              >
+          >
                                 <X className="h-3 w-3" />
-                              </button>
+          </button>
                             </div>
                           ))}
                         </div>
@@ -457,7 +457,7 @@ const CampaignsNew: React.FC = () => {
                         </select>
                         <ChevronDown className="h-5 w-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
                       </div>
-                      <button
+          <button 
                         onClick={() => {
                           const template = templates.find(t => t._id === selectedTemplateDropdown);
                           if (template) handleTemplatePreview(template);
@@ -467,20 +467,20 @@ const CampaignsNew: React.FC = () => {
                       >
                         <Eye className="h-4 w-4 mr-1" />
                         Preview
-                      </button>
-                    </div>
-                    
+          </button>
+          </div>
+          
                     {/* Selected Template Preview */}
                     {selectedTemplate && (
                       <div className="bg-gray-50 p-4 rounded-lg">
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="font-medium text-gray-900">{selectedTemplate.name}</h4>
-                          <button
+          <button 
                             onClick={() => setShowTemplatePreview(true)}
                             className="text-indigo-600 hover:text-indigo-800 text-sm"
-                          >
+          >
                             Full Preview
-                          </button>
+          </button>
                         </div>
                         <p className="text-sm text-gray-600 line-clamp-3">{selectedTemplate.content}</p>
                         <div className="flex items-center justify-between mt-2">
@@ -496,14 +496,14 @@ const CampaignsNew: React.FC = () => {
 
                 {/* Submit Button */}
                 <div className="flex justify-end">
-                  <button
+          <button 
                     onClick={handleWithTemplateSubmit}
                     disabled={!selectedTemplate || selectedGroups.length === 0}
                     className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                  >
+          >
                     <Send className="h-5 w-5 mr-2" />
                     Send Message
-                  </button>
+          </button>
                 </div>
                     </div>
             )}
@@ -531,7 +531,7 @@ const CampaignsNew: React.FC = () => {
                         </select>
                         <ChevronDown className="h-5 w-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
                       </div>
-                      <button
+          <button 
                         onClick={() => {
                           const group = groups.find(g => g.groupName === selectedGroupDropdown);
                           if (group) handleGroupPreview(group);
@@ -541,7 +541,7 @@ const CampaignsNew: React.FC = () => {
                       >
                         <Eye className="h-4 w-4 mr-1" />
                         Preview
-                      </button>
+          </button>
                     </div>
                     
                     {/* Selected Groups Display */}
@@ -555,20 +555,20 @@ const CampaignsNew: React.FC = () => {
                               className="flex items-center space-x-2 bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm"
                             >
                               <span>{groupName}</span>
-                              <button
+          <button 
                                 onClick={() => handleGroupSelection(groupName)}
                                 className="text-indigo-600 hover:text-indigo-800"
-                              >
+          >
                                 <X className="h-3 w-3" />
-                              </button>
-                            </div>
+          </button>
+          </div>
                           ))}
-                        </div>
-                      </div>
+        </div>
+      </div>
                     )}
                   </div>
-                </div>
-
+            </div>
+            
                 {/* Message Composition */}
                 <div className="bg-white bg-opacity-40 rounded-lg p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Compose Message</h3>
@@ -584,8 +584,8 @@ const CampaignsNew: React.FC = () => {
                   rows={4}
                         className="w-full px-3 py-3 rounded-lg border-0 bg-gray-100 resize-none"
                 />
-              </div>
-
+          </div>
+          
                     {/* Image Upload */}
               <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Image (Optional)</label>
@@ -612,18 +612,18 @@ const CampaignsNew: React.FC = () => {
                           alt="Preview"
                               className="w-full h-32 object-cover rounded-lg"
                         />
-                        <button
+            <button
                           onClick={removeImage}
                               className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
                         >
                               <X className="h-4 w-4" />
-                        </button>
-                      </div>
+            </button>
+          </div>
                     )}
-                      </div>
-                    </div>
-                  </div>
+        </div>
                 </div>
+                </div>
+              </div>
 
                 {/* Submit Button */}
                 <div className="flex justify-end">
@@ -636,7 +636,7 @@ const CampaignsNew: React.FC = () => {
                     Send Message
                   </button>
                 </div>
-                      </div>
+              </div>
                     )}
 
             {/* Campaigns List */}
@@ -648,36 +648,36 @@ const CampaignsNew: React.FC = () => {
                   <span className="text-sm text-gray-700 font-bold">
                     {filteredCampaigns.length} Campaigns
                   </span>
-                  </div>
-                
+            </div>
+
                 {/* Search and Filter Controls */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="relative">
+              <div className="relative">
                     <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <input
-                      type="text"
+                <input
+                  type="text"
                       placeholder="Search campaigns..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                       className="w-full pl-10 pr-4 py-2 rounded-lg border-0 bg-gray-100"
-                    />
-                  </div>
+                />
+              </div>
                   
                   <div className="relative">
-                    <select
-                      value={selectedStatus}
-                      onChange={(e) => setSelectedStatus(e.target.value)}
+                <select
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
                       className="w-full px-3 py-2 rounded-lg border-0 bg-gray-100"
                     >
                       <option value="">All Status</option>
-                      <option value="pending">Pending</option>
-                      <option value="sending">Sending</option>
-                      <option value="completed">Completed</option>
-                      <option value="failed">Failed</option>
-                    </select>
-                  </div>
-                </div>
+                  <option value="pending">Pending</option>
+                  <option value="sending">Sending</option>
+                  <option value="completed">Completed</option>
+                  <option value="failed">Failed</option>
+                </select>
               </div>
+            </div>
+                </div>
 
               {/* Table */}
               <div className="overflow-x-auto">
@@ -695,7 +695,7 @@ const CampaignsNew: React.FC = () => {
                               {sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                             </span>
                           )}
-                        </div>
+              </div>
                       </th>
                       <th 
                         className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
@@ -721,7 +721,7 @@ const CampaignsNew: React.FC = () => {
                               {sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                             </span>
                           )}
-                        </div>
+                          </div>
                       </th>
                       <th 
                         className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
@@ -734,7 +734,7 @@ const CampaignsNew: React.FC = () => {
                               {sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                             </span>
                           )}
-                        </div>
+                          </div>
                       </th>
                       <th 
                         className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
@@ -745,9 +745,9 @@ const CampaignsNew: React.FC = () => {
                           {sortField === 'sentCount' && (
                             <span className="ml-1">
                               {sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                            </span>
+                              </span>
                           )}
-                        </div>
+                            </div>
                       </th>
                       <th 
                         className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
@@ -790,7 +790,7 @@ const CampaignsNew: React.FC = () => {
                                     className="bg-indigo-600 h-2 rounded-full" 
                                     style={{ width: `${(campaign.sentCount / campaign.totalRecipients) * 100}%` }}
                                   ></div>
-                                </div>
+                      </div>
                                 <span className="text-xs text-gray-600">
                                   {campaign.sentCount}/{campaign.totalRecipients}
                                 </span>
@@ -804,14 +804,14 @@ const CampaignsNew: React.FC = () => {
                           </td>
                           <td className="py-3 px-6 text-sm text-center">
                             <div className="flex items-center justify-center space-x-2">
-                <button
-                                onClick={() => handleDelete(campaign.id)}
+                        <button
+                          onClick={() => handleDelete(campaign.id)}
                                 className="text-red-600 hover:text-red-800"
                                 title="Delete Campaign"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                           </td>
                         </tr>
                       ))
@@ -821,7 +821,7 @@ const CampaignsNew: React.FC = () => {
                           <div className="flex flex-col items-center">
                             <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4">
                               <MessageSquare className="h-12 w-12 text-gray-400" />
-          </div>
+                    </div>
                             <h3 className="text-lg font-bold mb-2 text-indigo-600">
                               No Campaigns Found
                             </h3>
@@ -853,8 +853,8 @@ const CampaignsNew: React.FC = () => {
                 >
                   <X className="h-6 w-6" />
                 </button>
-              </div>
-              
+                    </div>
+
               <div className="space-y-6">
                 {/* Template Preview */}
                 <div className="border-2 border-gray-200 rounded-lg p-6 bg-white">
@@ -869,14 +869,14 @@ const CampaignsNew: React.FC = () => {
                         />
                       </div>
                     )}
-                    
+
                     {/* Content */}
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <pre className="whitespace-pre-wrap text-sm text-gray-800">
                         {previewTemplate.content}
                       </pre>
-                    </div>
-                    
+                      </div>
+
                     {/* Footer Image */}
                     {previewTemplate.footerImageUrl && (
                       <div className="text-center">
@@ -885,35 +885,35 @@ const CampaignsNew: React.FC = () => {
                           alt="Footer"
                           className="max-w-full h-32 object-contain mx-auto rounded"
                         />
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
+              </div>
+            )}
+        </div>
+      </div>
+
                 {/* Template Details */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
+              <div>
                     <h4 className="font-medium text-gray-900 mb-2">
                       Template Type:
                     </h4>
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
                       {previewTemplate.type}
-                    </span>
-                  </div>
-                  
-                  <div>
+                  </span>
+              </div>
+
+              <div>
                     <h4 className="font-medium text-gray-900 mb-2">
                       Created:
                     </h4>
                     <span className="text-sm text-gray-600">
                       {new Date(previewTemplate.createdAt).toLocaleDateString()}
                     </span>
-                  </div>
                 </div>
-                
+              </div>
+
                 {/* Parameters */}
                 {previewTemplate.parameters.length > 0 && (
-                  <div>
+                <div>
                     <h4 className="font-medium text-gray-900 mb-2">
                       Parameters:
                     </h4>
@@ -926,12 +926,12 @@ const CampaignsNew: React.FC = () => {
                           #{param}
                         </span>
                       ))}
+                        </div>
+                        </div>
+                      )}
+                          </div>
+                        </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
         )}
 
         {/* Group Preview Modal */}
@@ -942,13 +942,13 @@ const CampaignsNew: React.FC = () => {
                 <h2 className="text-xl font-semibold text-gray-900">
                   Group Preview: {previewGroup.groupName}
                 </h2>
-                <button
+                        <button
                   onClick={() => setShowGroupPreview(false)}
                   className="text-gray-400 hover:text-gray-600"
-                >
+                        >
                   <X className="h-6 w-6" />
-                </button>
-              </div>
+                        </button>
+                      </div>
               
               <div className="space-y-6">
                 {/* Group Details */}
@@ -959,15 +959,15 @@ const CampaignsNew: React.FC = () => {
                         Group Name:
                       </h4>
                       <span className="text-sm text-gray-600">{previewGroup.groupName}</span>
-                    </div>
+                      </div>
                     
                     <div>
                       <h4 className="font-medium text-gray-900 mb-2">
                         Contact Count:
                       </h4>
                       <span className="text-sm text-gray-600">{previewGroup.mrCount || 0} contacts</span>
-                    </div>
                   </div>
+                </div>
                 </div>
                 
                 {/* Group Description */}
@@ -978,8 +978,8 @@ const CampaignsNew: React.FC = () => {
                   <p className="text-sm text-gray-600">
                     This group contains {previewGroup.mrCount || 0} medical representatives who will receive the campaign messages.
                   </p>
-                </div>
-                
+              </div>
+
                 {/* Group Statistics */}
                 <div className="bg-indigo-50 p-4 rounded-lg">
                   <h4 className="font-medium text-gray-900 mb-2">
@@ -989,7 +989,7 @@ const CampaignsNew: React.FC = () => {
                     <div>
                       <span className="text-gray-600">Total Contacts:</span>
                       <span className="ml-2 font-medium">{previewGroup.mrCount || 0}</span>
-                    </div>
+              </div>
                     <div>
                       <span className="text-gray-600">Group Status:</span>
                       <span className="ml-2 font-medium text-green-600">Active</span>
@@ -997,9 +997,9 @@ const CampaignsNew: React.FC = () => {
                   </div>
                 </div>
               </div>
-            </div>
           </div>
-        )}
+        </div>
+      )}
       </div>
     </div>
   );

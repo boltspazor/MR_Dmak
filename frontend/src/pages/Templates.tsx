@@ -508,15 +508,15 @@ const Templates: React.FC = () => {
       <div className="ml-24 p-8">
         {/* Header */}
         <Header 
-          title="Template Management"
-          subtitle="Create and manage message templates with dynamic parameters"
+          title="D-MAK"
+          subtitle="Digital - Marketing, Automate & Konnect"
           onExportCSV={exportTemplatesToCSV}
           onExportPDF={exportTemplatesToPDF}
           showExportButtons={false}
         />
-        
+
         {/* Separator Line */}
-        <div className="border-b border-gray-300 my-6"></div>
+        <div className="border-b-2 border-indigo-500 my-6"></div>
 
         {/* Main Content Area */}
         <CommonFeatures

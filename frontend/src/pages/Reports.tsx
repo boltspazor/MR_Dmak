@@ -155,8 +155,8 @@ const Reports: React.FC = () => {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Reports & Analytics</h1>
-            <p className="text-gray-600">Comprehensive insights into your messaging campaigns</p>
+            <h1 className="text-3xl font-bold text-gray-900">D-MAK</h1>
+            <p className="text-gray-600">Digital - Marketing, Automate & Konnect</p>
           </div>
           <div className="flex space-x-3">
             <Button
@@ -171,7 +171,7 @@ const Reports: React.FC = () => {
         </div>
 
         {/* Separator Line */}
-        <div className="border-b border-gray-300 my-6"></div>
+        <div className="border-b-2 border-indigo-500 my-6"></div>
 
         {/* Overall Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

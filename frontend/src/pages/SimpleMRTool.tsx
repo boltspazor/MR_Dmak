@@ -103,7 +103,7 @@ const mockApi = {
 const SimpleMRTool: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'contacts'>('contacts');
+  const [activeTab] = useState<'contacts'>('contacts');
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [messageLogs, setMessageLogs] = useState<MessageLog[]>([]);
@@ -113,7 +113,6 @@ const SimpleMRTool: React.FC = () => {
   const [isAddMRDialogOpen, setIsAddMRDialogOpen] = useState(false);
 
   // Filter states
-  const [nameFilter, setNameFilter] = useState('');
   const [groupFilter, setGroupFilter] = useState('');
 
   // Edit states
@@ -210,6 +209,18 @@ const SimpleMRTool: React.FC = () => {
 
   const handleAddMR = async (contactData: Omit<Contact, 'id'>) => {
     try {
+      // Validate phone number
+      if (!contactData.phone.startsWith('+91')) {
+        alert('Phone number must start with +91');
+        return;
+      }
+
+      // Check for unique MR ID
+      if (contacts.some(contact => contact.mrId === contactData.mrId)) {
+        alert('MR ID already exists. Please use a unique MR ID.');
+        return;
+      }
+
       // Find the group ID by name
       const selectedGroup = groups.find(g => g.name === contactData.group);
       if (!selectedGroup) {
@@ -241,7 +252,10 @@ const SimpleMRTool: React.FC = () => {
   };
 
   const deleteContact = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this contact?')) {
+    const contact = contacts.find(c => c.id === id);
+    if (!contact) return;
+
+    if (!window.confirm(`Are you sure you want to delete MR ${contact.mrId} (${contact.firstName} ${contact.lastName})?`)) {
       return;
     }
 
@@ -249,10 +263,10 @@ const SimpleMRTool: React.FC = () => {
       await mockApi.delete(`/mrs/${id}`);
       // Remove from local state
       setContacts(contacts.filter(c => c.id !== id));
-      alert('Contact deleted successfully!');
+      alert('MR deleted successfully!');
     } catch (error: any) {
       console.error('Error deleting contact:', error);
-      alert('Failed to delete contact');
+      alert('Failed to delete MR');
     }
   };
 
@@ -265,6 +279,18 @@ const SimpleMRTool: React.FC = () => {
     if (!editingContact) return;
 
     try {
+      // Validate phone number
+      if (!updatedContact.phone.startsWith('+91')) {
+        alert('Phone number must start with +91');
+        return;
+      }
+
+      // Check for unique MR ID (excluding current contact)
+      if (contacts.some(contact => contact.mrId === updatedContact.mrId && contact.id !== editingContact.id)) {
+        alert('MR ID already exists. Please use a unique MR ID.');
+        return;
+      }
+
       await mockApi.post(`/mrs/${editingContact.id}`, updatedContact);
       
       // Update local state
@@ -276,10 +302,10 @@ const SimpleMRTool: React.FC = () => {
       
       setEditingContact(null);
       setIsEditDialogOpen(false);
-      alert('Contact updated successfully!');
+      alert('MR updated successfully!');
     } catch (error: any) {
       console.error('Error updating contact:', error);
-      alert('Failed to update contact');
+      alert('Failed to update MR');
     }
   };
 
@@ -288,7 +314,7 @@ const SimpleMRTool: React.FC = () => {
   const exportContactsToCSV = () => {
     const csvContent = [
       'MR ID,First Name,Last Name,Phone,Group,Comments',
-      ...contacts.map(contact => 
+      ...filteredContacts.map(contact => 
         `${contact.mrId},${contact.firstName},${contact.lastName},${contact.phone},${contact.group},${contact.comments || ''}`
       )
     ].join('\n');
@@ -322,6 +348,7 @@ const SimpleMRTool: React.FC = () => {
           <body>
             <h1>MR Contacts Report</h1>
             <p>Generated on: ${new Date().toLocaleDateString()}</p>
+            <p>Showing ${filteredContacts.length} of ${contacts.length} MRs</p>
             <table>
               <thead>
                 <tr>
@@ -333,7 +360,7 @@ const SimpleMRTool: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                ${contacts.map(contact => `
+                ${filteredContacts.map(contact => `
                   <tr>
                     <td>${contact.mrId}</td>
                     <td>${contact.firstName} ${contact.lastName}</td>
@@ -375,6 +402,7 @@ const SimpleMRTool: React.FC = () => {
       
       let created = 0;
       const errors: string[] = [];
+      const newContacts: Contact[] = [];
       
       for (let i = 1; i < lines.length; i++) {
         const line = lines[i].trim();
@@ -382,6 +410,19 @@ const SimpleMRTool: React.FC = () => {
         
         const values = line.split(',');
         if (values.length >= 5) {
+          // Validate phone number
+          if (!values[3].startsWith('+91')) {
+            errors.push(`Line ${i + 1}: Phone number must start with +91`);
+            continue;
+          }
+
+          // Check for unique MR ID
+          if (contacts.some(contact => contact.mrId === values[0]) || 
+              newContacts.some(contact => contact.mrId === values[0])) {
+            errors.push(`Line ${i + 1}: MR ID ${values[0]} already exists`);
+            continue;
+          }
+
           const newContact: Contact = {
             id: Date.now().toString() + i,
             mrId: values[0],
@@ -392,11 +433,16 @@ const SimpleMRTool: React.FC = () => {
             comments: values[5] || ''
           };
           
-          setContacts(prev => [...prev, newContact]);
+          newContacts.push(newContact);
           created++;
-      } else {
+        } else {
           errors.push(`Line ${i + 1}: Invalid format`);
         }
+      }
+      
+      // Add all valid contacts at once
+      if (newContacts.length > 0) {
+        setContacts(prev => [...prev, ...newContacts]);
       }
       
       alert(`Bulk upload completed!\n\nCreated: ${created} MRs\nTotal Processed: ${lines.length - 1}${errors.length > 0 ? `\n\nErrors (${errors.length}):\n${errors.slice(0, 5).join('\n')}` : ''}`);
@@ -417,15 +463,13 @@ const SimpleMRTool: React.FC = () => {
       const matchesSearch = contact.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         contact.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         contact.mrId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        contact.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
         contact.group.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      // Name filter (exact match for dropdown)
-      const matchesName = !nameFilter || contact.firstName === nameFilter;
       
       // Group filter (exact match for dropdown)
       const matchesGroup = !groupFilter || contact.group === groupFilter;
       
-      return matchesSearch && matchesName && matchesGroup;
+      return matchesSearch && matchesGroup;
     })
     .sort((a, b) => {
       const aValue = a[sortField] || '';
@@ -502,29 +546,18 @@ const SimpleMRTool: React.FC = () => {
       <div className="ml-24 p-8">
         {/* Header */}
         <Header 
-          title="MR"
+          title="D-MAK"
           subtitle="Digital - Marketing, Automate & Konnect"
           onExportCSV={exportContactsToCSV}
           onExportPDF={exportContactsToPDF}
           showExportButtons={false}
         />
-          
-          {/* Tabs */}
-        <div className="flex space-x-8 mt-6">
-              <button
-              onClick={() => setActiveTab('contacts')}
-              className={`pb-2 border-b-2 text-lg font-medium ${
-                activeTab === 'contacts' 
-                ? 'border-indigo-600 text-gray-900' 
-                  : 'border-transparent text-gray-600'
-              }`}
-          >
-            MR
-            </button>
-      </div>
 
         {/* Separator Line */}
-        <div className="border-b border-gray-300 my-6"></div>
+        <div className="border-b-2 border-indigo-500 my-6"></div>
+
+        {/* MR Management Header */}
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">MR Management</h2>
 
         {/* Main Content Area */}
         {activeTab === 'contacts' && (
@@ -534,8 +567,6 @@ const SimpleMRTool: React.FC = () => {
             onExportPDF={exportContactsToPDF}
           >
             <div className="space-y-8">
-              {/* MR Management Header */}
-              <h2 className="text-2xl font-bold text-gray-900">MR Management</h2>
 
               {/* Action Buttons */}
               <div className="flex justify-between items-center">
@@ -559,7 +590,7 @@ const SimpleMRTool: React.FC = () => {
                           htmlFor="csv-upload"
                       className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-semibold cursor-pointer hover:bg-indigo-200"
                     >
-                      Import CSV
+                      Import MR
                         </label>
                 <button
                   onClick={downloadCSVTemplate}
@@ -576,39 +607,22 @@ const SimpleMRTool: React.FC = () => {
                 {/* Table Header */}
                 <div className="p-6 border-b bg-indigo-50">
                   <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-2xl font-bold text-gray-900">All Contacts</h2>
                     <span className="text-sm text-gray-700 font-bold">
-                      {filteredContacts.length} Contacts
+                      {filteredContacts.length} of {contacts.length} MRs
                     </span>
                   </div>
                   
                   {/* Search and Filter Controls */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="relative">
                         <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                       <input
                         type="text"
-                        placeholder="Search all fields..."
+                        placeholder="Search MR ID, Name, or Phone..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 rounded-lg border-0 bg-gray-100"
                       />
-                    </div>
-                    
-                    <div className="relative">
-                      <select
-                        value={nameFilter}
-                        onChange={(e) => setNameFilter(e.target.value)}
-                        className="w-full px-3 py-2 pr-10 rounded-lg border-0 bg-gray-100 appearance-none cursor-pointer"
-                      >
-                        <option value="">All Names/MR IDs</option>
-                        {contacts.map(contact => (
-                          <option key={contact.id} value={contact.firstName}>
-                            {contact.firstName} {contact.lastName} ({contact.mrId})
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="h-5 w-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
                     </div>
                     
                     <div className="relative">

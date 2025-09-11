@@ -343,15 +343,15 @@ const Dashboard: React.FC = () => {
       <div className="ml-24 p-8">
         {/* Header */}
         <Header 
-          title="Dashboard"
-          subtitle="Campaign delivery status and analytics"
+          title="D-MAK"
+          subtitle="Digital - Marketing, Automate & Konnect"
           onExportCSV={exportToCSV}
           onExportPDF={exportToPDF}
           showExportButtons={false}
         />
-        
+
         {/* Separator Line */}
-        <div className="border-b border-gray-300 my-6"></div>
+        <div className="border-b-2 border-indigo-500 my-6"></div>
 
         {/* Main Content Area */}
         <CommonFeatures
