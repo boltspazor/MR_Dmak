@@ -12,7 +12,7 @@ import {
   X
 } from 'lucide-react';
 import { api } from '../lib/api';
-import { Template } from '../types';
+import { Template, AvailableParameters } from '../types';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import CommonFeatures from '../components/CommonFeatures';
@@ -27,6 +27,7 @@ const Templates: React.FC = () => {
   const [sortField, setSortField] = useState<'name' | 'createdAt'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [availableParameters, setAvailableParameters] = useState<AvailableParameters | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
@@ -52,6 +53,7 @@ const Templates: React.FC = () => {
 
   useEffect(() => {
     fetchTemplates();
+    fetchAvailableParameters();
   }, []);
 
   const fetchTemplates = async () => {
@@ -65,6 +67,18 @@ const Templates: React.FC = () => {
       console.error('Error fetching templates:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAvailableParameters = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      const response = await api.get('/recipient-lists/parameters');
+      setAvailableParameters(response.data.data);
+    } catch (error: any) {
+      console.error('Error fetching available parameters:', error);
     }
   };
 
@@ -801,10 +815,38 @@ const Templates: React.FC = () => {
                     onChange={(e) => setFormData({...formData, content: e.target.value})}
                     rows={6}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Enter template content with parameters like #FirstName, #LastName, #MRId..."
+                    placeholder="Enter template content with parameters like #FN, #LN, #Month, #Target..."
                   />
+                  
+                  {/* Available Parameters */}
+                  {availableParameters && availableParameters.parameters.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-sm font-medium text-gray-700 mb-2">
+                        Available Parameters from Recipient Lists:
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {availableParameters.parameters.map((param, index) => (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => {
+                              const newContent = formData.content + param;
+                              setFormData({...formData, content: newContent});
+                            }}
+                            className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded hover:bg-blue-200 cursor-pointer"
+                          >
+                            {param}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Click on parameters to add them to your template
+                      </p>
+                    </div>
+                  )}
+                  
                   <p className="text-xs text-gray-500 mt-1">
-                    Use #ParameterName for dynamic parameters (e.g., #FirstName, #LastName, #MRId)
+                    Use #ParameterName for dynamic parameters (e.g., #FN, #LN, #Month, #Target)
                   </p>
                 </div>
 

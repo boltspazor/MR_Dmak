@@ -13,7 +13,7 @@ import {
   Eye
 } from 'lucide-react';
 import { api } from '../lib/api';
-import { Campaign, Group, Template } from '../types';
+import { Campaign, Group, Template, RecipientList } from '../types';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import CommonFeatures from '../components/CommonFeatures';
@@ -25,10 +25,11 @@ const CampaignsNew: React.FC = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [recipientLists, setRecipientLists] = useState<RecipientList[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'with-template' | 'without-template'>('with-template');
+  const [activeTab, setActiveTab] = useState<'with-template' | 'without-template' | 'recipient-lists'>('with-template');
   
   // Sorting states
   const [sortField, setSortField] = useState<keyof Campaign>('createdAt');
@@ -51,10 +52,19 @@ const CampaignsNew: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
 
+  // Recipient List Tab States
+  const [showCreateRecipientList, setShowCreateRecipientList] = useState(false);
+  const [recipientListName, setRecipientListName] = useState('');
+  const [recipientListDescription, setRecipientListDescription] = useState('');
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvData, setCsvData] = useState<any[]>([]);
+  const [showCsvPreview, setShowCsvPreview] = useState(false);
+
   useEffect(() => {
     fetchCampaigns();
     fetchGroups();
     fetchTemplates();
+    fetchRecipientLists();
   }, []);
 
   const fetchCampaigns = async () => {
@@ -92,6 +102,18 @@ const CampaignsNew: React.FC = () => {
       setTemplates(response.data.data || []);
     } catch (error: any) {
       console.error('Error fetching templates:', error);
+    }
+  };
+
+  const fetchRecipientLists = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      const response = await api.get('/recipient-lists');
+      setRecipientLists(response.data.data || []);
+    } catch (error: any) {
+      console.error('Error fetching recipient lists:', error);
     }
   };
 
@@ -135,6 +157,50 @@ const CampaignsNew: React.FC = () => {
         setImagePreview(e.target?.result as string);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  // CSV handling functions
+  const handleCsvUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setCsvFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target?.result as string;
+        const lines = text.split('\n');
+        const parsedData = lines.map(line => line.split(',').map(cell => cell.trim()));
+        setCsvData(parsedData);
+        setShowCsvPreview(true);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCreateRecipientList = async () => {
+    try {
+      if (!recipientListName.trim() || csvData.length === 0) {
+        alert('Please provide a name and upload CSV data');
+        return;
+      }
+
+      await api.post('/recipient-lists/upload', {
+        name: recipientListName,
+        description: recipientListDescription,
+        csvData: csvData
+      });
+
+      alert('Recipient list created successfully!');
+      setShowCreateRecipientList(false);
+      setRecipientListName('');
+      setRecipientListDescription('');
+      setCsvFile(null);
+      setCsvData([]);
+      setShowCsvPreview(false);
+      fetchRecipientLists();
+    } catch (error: any) {
+      console.error('Error creating recipient list:', error);
+      alert('Failed to create recipient list');
     }
   };
 
@@ -360,7 +426,8 @@ const CampaignsNew: React.FC = () => {
             <div className="flex space-x-8 mt-6">
               {[
                 { key: 'with-template', label: 'With Template' },
-                { key: 'without-template', label: 'Without Template' }
+                { key: 'without-template', label: 'Without Template' },
+                { key: 'recipient-lists', label: 'Recipient Lists' }
               ].map((tab) => (
           <button 
                   key={tab.key}
@@ -638,6 +705,96 @@ const CampaignsNew: React.FC = () => {
                 </div>
               </div>
                     )}
+
+            {/* Recipient Lists Tab */}
+            {activeTab === 'recipient-lists' && (
+              <div className="space-y-6">
+                {/* Action Buttons */}
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-semibold text-gray-900">Recipient Lists</h3>
+                  <button
+                    onClick={() => setShowCreateRecipientList(true)}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
+                  >
+                    Create Recipient List
+                  </button>
+                </div>
+
+                {/* Recipient Lists Table */}
+                <div className="bg-white bg-opacity-40 rounded-lg">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-indigo-50 border-b">
+                          <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Name</th>
+                          <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Description</th>
+                          <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Records</th>
+                          <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Created</th>
+                          <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {recipientLists.length > 0 ? (
+                          recipientLists.map((list) => (
+                            <tr key={list._id} className="border-b hover:bg-gray-50">
+                              <td className="py-3 px-6 text-sm text-gray-900 text-center font-medium">{list.name}</td>
+                              <td className="py-3 px-6 text-sm text-gray-900 text-center">{list.description || '-'}</td>
+                              <td className="py-3 px-6 text-sm text-gray-900 text-center">{list.data.length}</td>
+                              <td className="py-3 px-6 text-sm text-gray-900 text-center">
+                                {new Date(list.createdAt).toLocaleDateString()}
+                              </td>
+                              <td className="py-3 px-6 text-sm text-center">
+                                <div className="flex items-center justify-center space-x-2">
+                                  <button
+                                    onClick={() => {
+                                      // Preview recipient list
+                                      console.log('Preview recipient list:', list);
+                                    }}
+                                    className="text-blue-600 hover:text-blue-800 p-1 rounded"
+                                    title="Preview List"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      // Delete recipient list
+                                      if (window.confirm('Are you sure you want to delete this recipient list?')) {
+                                        // Handle delete
+                                        console.log('Delete recipient list:', list._id);
+                                      }
+                                    }}
+                                    className="text-red-600 hover:text-red-800 p-1 rounded"
+                                    title="Delete List"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={5} className="text-center py-12">
+                              <div className="flex flex-col items-center">
+                                <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4">
+                                  <Upload className="h-12 w-12 text-gray-400" />
+                                </div>
+                                <h3 className="text-lg font-bold mb-2 text-indigo-600">
+                                  No Recipient Lists Found
+                                </h3>
+                                <p className="text-sm text-indigo-600">
+                                  Create your first recipient list to get started
+                                </p>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Campaigns List */}
             <div className="bg-white bg-opacity-40 rounded-lg">
@@ -997,6 +1154,147 @@ const CampaignsNew: React.FC = () => {
                   </div>
                 </div>
               </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Recipient List Modal */}
+      {showCreateRecipientList && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">Create Recipient List</h2>
+              <button
+                onClick={() => {
+                  setShowCreateRecipientList(false);
+                  setRecipientListName('');
+                  setRecipientListDescription('');
+                  setCsvFile(null);
+                  setCsvData([]);
+                  setShowCsvPreview(false);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              {/* Recipient List Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  List Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={recipientListName}
+                  onChange={(e) => setRecipientListName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Enter recipient list name"
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description
+                </label>
+                <textarea
+                  value={recipientListDescription}
+                  onChange={(e) => setRecipientListDescription(e.target.value)}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Enter description (optional)"
+                />
+              </div>
+
+              {/* CSV Upload */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Upload CSV File *
+                </label>
+                <div className="space-y-2">
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={handleCsvUpload}
+                    className="hidden"
+                    id="csv-upload"
+                  />
+                  <label
+                    htmlFor="csv-upload"
+                    className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-indigo-400 transition-colors"
+                  >
+                    <Upload className="h-5 w-5 text-gray-400 mr-2" />
+                    <span className="text-sm text-gray-600">Click to upload CSV file</span>
+                  </label>
+                  
+                  {csvFile && (
+                    <p className="text-sm text-green-600">
+                      File selected: {csvFile.name}
+                    </p>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  CSV should have columns like: MR id, First Name, Last Name, #FN, #LN, #Month, #week, #Target, #lastmonth, #doctor
+                </p>
+              </div>
+
+              {/* CSV Preview */}
+              {showCsvPreview && csvData.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">CSV Preview (first 5 rows):</h4>
+                  <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          {csvData[0]?.map((header: string, index: number) => (
+                            <th key={index} className="px-3 py-2 text-left font-medium text-gray-700">
+                              {header}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {csvData.slice(1, 6).map((row: string[], rowIndex: number) => (
+                          <tr key={rowIndex} className="border-t">
+                            {row.map((cell: string, cellIndex: number) => (
+                              <td key={cellIndex} className="px-3 py-2 text-gray-600">
+                                {cell}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateRecipientList(false);
+                    setRecipientListName('');
+                    setRecipientListDescription('');
+                    setCsvFile(null);
+                    setCsvData([]);
+                    setShowCsvPreview(false);
+                  }}
+                  className="px-6 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateRecipientList}
+                  className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                >
+                  Create Recipient List
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

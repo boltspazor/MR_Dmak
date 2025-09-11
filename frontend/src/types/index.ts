@@ -116,3 +116,29 @@ export interface TemplateStats {
   imageTemplates: number;
   avgParameters: number;
 }
+
+export interface RecipientList {
+  _id: string;
+  name: string;
+  description?: string;
+  columns: string[];
+  data: Array<Record<string, any>>;
+  createdBy: {
+    _id: string;
+    name: string;
+    email: string;
+  };
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AvailableParameters {
+  parameters: string[];
+  recipientLists: Array<{
+    _id: string;
+    name: string;
+    columns: string[];
+    recordCount: number;
+  }>;
+}
