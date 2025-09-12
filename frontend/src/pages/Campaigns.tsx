@@ -46,7 +46,6 @@ const Campaigns: React.FC = () => {
   const [mrs, setMrs] = useState<any[]>([]);
   const [mrSearchTerm, setMrSearchTerm] = useState('');
   const [selectedMrs, setSelectedMrs] = useState<string[]>([]);
-  const [showMrSelection, setShowMrSelection] = useState(false);
 
   // Recipient List Modal States
   const [showCreateRecipientList, setShowCreateRecipientList] = useState(false);
@@ -494,24 +493,24 @@ const Campaigns: React.FC = () => {
                                     #{param}
                                   </span>
                                 ))}
-                              </div>
-                            </div>
+          </div>
+        </div>
                           )}
-                        </div>
-                      </div>
-                    )}
       </div>
             </div>
-            
+                    )}
+            </div>
+          </div>
+          
                 {/* Add Recipient List Button */}
                 <div className="bg-white bg-opacity-40 rounded-lg p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Recipient List</h3>
-          <button 
+            <button
                     onClick={() => setShowCreateRecipientList(true)}
                     className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
           >
                     Upload Recipient List
-          </button>
+            </button>
           
                   {/* Selected Recipient List Display */}
                   {selectedRecipientList && (
@@ -519,16 +518,16 @@ const Campaigns: React.FC = () => {
                       <p className="text-sm font-medium text-gray-700">Selected Recipient List:</p>
                       <div className="flex items-center space-x-2 bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm">
                         <span>{selectedRecipientList.name} ({selectedRecipientList.data.length} records)</span>
-          <button 
+            <button
                           onClick={() => setSelectedRecipientList(null)}
                           className="text-indigo-600 hover:text-indigo-800"
           >
                           <X className="h-4 w-4" />
-          </button>
+            </button>
           </div>
         </div>
                   )}
-      </div>
+              </div>
 
                 {/* Konnect Button */}
                 <div className="flex justify-end">
@@ -540,7 +539,7 @@ const Campaigns: React.FC = () => {
                     <Send className="h-5 w-5 mr-2" />
                     Send
                   </button>
-            </div>
+                </div>
               </div>
             )}
 
@@ -557,8 +556,8 @@ const Campaigns: React.FC = () => {
                     placeholder="Enter campaign name"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
-          </div>
-          
+              </div>
+
                 {/* MR Selection */}
                 <div className="bg-white bg-opacity-40 rounded-lg p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Select MRs</h3>
@@ -572,23 +571,17 @@ const Campaigns: React.FC = () => {
                           onChange={(e) => setMrSearchTerm(e.target.value)}
                           className="w-full px-3 py-2 rounded-lg border-0 bg-gray-100"
                         />
-                      </div>
-            <button
-                        onClick={() => setShowMrSelection(!showMrSelection)}
-                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
-                      >
-                        {showMrSelection ? 'Hide' : 'Select MRs'}
-            </button>
-        </div>
+              </div>
+            </div>
 
-                    {/* MR Selection Modal */}
-                    {showMrSelection && (
-                      <div className="border border-gray-200 rounded-lg p-4 max-h-64 overflow-y-auto">
-                        <div className="space-y-2">
+                    {/* MR Selection Dropdown */}
+              <div className="relative">
+                      <div className="border border-gray-200 rounded-lg max-h-64 overflow-y-auto">
+                        <div className="space-y-1 p-2">
                           {filteredMrs.length > 0 ? (
                             filteredMrs.map(mr => (
-                              <div key={mr._id || mr.id} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded">
-                                <input
+                              <div key={mr._id || mr.id} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded cursor-pointer">
+                <input
                                   type="checkbox"
                                   checked={selectedMrs.includes(mr._id || mr.id)}
                                   onChange={() => handleMrSelection(mr._id || mr.id)}
@@ -601,15 +594,15 @@ const Campaigns: React.FC = () => {
                                   <p className="text-xs text-gray-500">
                                     {mr.mrId} • {mr.phone}
                                   </p>
-                </div>
+              </div>
               </div>
                             ))
                           ) : (
-                            <p className="text-sm text-gray-500 text-left py-4">No MRs found</p>
+                            <p className="text-sm text-gray-500 text-left py-4 px-2">No MRs found</p>
                           )}
+            </div>
                 </div>
-              </div>
-                    )}
+                    </div>
 
                     {/* Selected MRs Display */}
                     {selectedMrs.length > 0 && (
@@ -621,20 +614,20 @@ const Campaigns: React.FC = () => {
                             return (
                               <div key={mrId} className="flex items-center space-x-2 bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm">
                                 <span>{mr?.firstName} {mr?.lastName}</span>
-                                <button 
+                <button
                                   onClick={() => handleMrSelection(mrId)}
                                   className="text-indigo-600 hover:text-indigo-800"
                                 >
                                   <X className="h-4 w-4" />
-                                </button>
-                </div>
+                </button>
+              </div>
                             );
                           })}
-              </div>
+                        </div>
+                            </div>
+                          )}
+                        </div>
                 </div>
-                    )}
-              </div>
-            </div>
 
                 {/* Message Composition */}
                 <div className="bg-white bg-opacity-40 rounded-lg p-6">
@@ -679,7 +672,7 @@ const Campaigns: React.FC = () => {
                             </div>
                           )}
                         </div>
-                          </div>
+                      </div>
 
                       {/* Message Input */}
                       <div>
