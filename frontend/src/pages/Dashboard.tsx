@@ -606,7 +606,7 @@ The Team`,
                               className="text-blue-600 hover:text-blue-800 underline"
                               onClick={() => handleRecipientListClick(campaign.recipientList)}
                             >
-                              {campaign.recipientList.length} MRs
+                              {campaign.totalRecipients} MRs
                             </button>
                           </td>
                           <td className="py-3 px-6 text-sm text-left">
