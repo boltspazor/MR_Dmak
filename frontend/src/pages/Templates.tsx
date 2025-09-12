@@ -5,7 +5,6 @@ import {
   Edit, 
   Trash2, 
   Search, 
-  Eye,
   Copy,
   Upload,
   Download,
@@ -30,8 +29,6 @@ const Templates: React.FC = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [availableParameters, setAvailableParameters] = useState<AvailableParameters | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
-  const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState<Template | null>(null);
 
@@ -273,19 +270,6 @@ const Templates: React.FC = () => {
     setTemplateToDelete(null);
   };
 
-  const handlePreview = (template: Template) => {
-    console.log('Previewing template:', template);
-    console.log('Template imageUrl:', template.imageUrl);
-    console.log('Template footerImageUrl:', template.footerImageUrl);
-    console.log('Template imageUrl type:', typeof template.imageUrl);
-    console.log('Template footerImageUrl type:', typeof template.footerImageUrl);
-    console.log('Template imageUrl length:', template.imageUrl?.length);
-    console.log('Template footerImageUrl length:', template.footerImageUrl?.length);
-    console.log('Template has header image:', !!(template.imageUrl && template.imageUrl.trim() !== ''));
-    console.log('Template has footer image:', !!(template.footerImageUrl && template.footerImageUrl.trim() !== ''));
-    setPreviewTemplate(template);
-    setShowPreview(true);
-  };
 
   const duplicateTemplate = async (template: Template) => {
     const newName = `${template.name} (Copy)`;
@@ -730,13 +714,6 @@ const Templates: React.FC = () => {
                           <td className="py-3 px-6 text-sm text-left">
                             <div className="flex items-center justify-start space-x-2">
                         <button
-                          onClick={() => handlePreview(template)}
-                                className="text-blue-600 hover:text-blue-800 p-1 rounded"
-                                title="Preview Template"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        <button
                                 onClick={() => exportTemplateAsPNG(template)}
                                 className="text-green-600 hover:text-green-800 p-1 rounded"
                                 title="Export as PNG"
@@ -1037,277 +1014,6 @@ const Templates: React.FC = () => {
         </div>
       )}
 
-      {/* Enhanced Preview Modal */}
-      {showPreview && previewTemplate && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-5xl max-h-[95vh] overflow-y-auto">
-            {/* Header */}
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-lg">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    Template Preview
-                  </h2>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {previewTemplate.name} • Created {new Date(previewTemplate.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setShowPreview(false)}
-                  className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="p-6 space-y-8">
-              {/* WhatsApp Message Preview - Main Focus */}
-              <div className="bg-gradient-to-br from-green-50 to-blue-50 p-6 rounded-xl">
-                <div className="flex items-center mb-4">
-                  <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-                  <h3 className="text-lg font-semibold text-gray-800">WhatsApp Message Preview</h3>
-                </div>
-                
-                <div className="flex justify-center">
-                  <div className="bg-white rounded-3xl rounded-tl-lg shadow-2xl max-w-sm w-full overflow-hidden">
-                    {/* Header Image */}
-                    {previewTemplate.imageUrl && previewTemplate.imageUrl.trim() !== '' ? (
-                      <div className="w-full">
-                        <img 
-                          src={previewTemplate.imageUrl} 
-                          alt="Header"
-                          className="w-full h-64 object-cover"
-                          onError={(e) => {
-                            console.error('WhatsApp preview header image failed to load:', previewTemplate.imageUrl);
-                            e.currentTarget.style.display = 'none';
-                            // Show fallback
-                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                            if (fallback) {
-                              fallback.style.display = 'flex';
-                            }
-                          }}
-                          onLoad={(e) => {
-                            console.log('WhatsApp preview header image loaded successfully:', previewTemplate.imageUrl);
-                            // Hide fallback if image loads
-                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                            if (fallback) {
-                              fallback.style.display = 'none';
-                            }
-                          }}
-                        />
-                        <div className="w-full h-32 bg-gray-100 flex items-center justify-center" style={{display: 'none'}}>
-                          <span className="text-gray-500 text-sm">Header image failed to load</span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="w-full h-32 bg-gray-100 flex items-center justify-center">
-                        <span className="text-gray-500 text-sm">No header image</span>
-                      </div>
-                    )}
-                    
-                    {/* Message Content */}
-                    <div className="p-4">
-                      <div className="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap">
-                        {(() => {
-                          let processedContent = previewTemplate.content;
-                          
-                          // Sample parameter values for preview
-                          const sampleParams = {
-                            'FirstName': 'John',
-                            'LastName': 'Doe',
-                            'MRId': 'MR001',
-                            'GroupName': 'North Zone',
-                            'PhoneNumber': '+919876543210',
-                            'Name': 'John Doe',
-                            'Company': 'D-MAK',
-                            'Product': 'New Product',
-                            'Date': new Date().toLocaleDateString(),
-                            'Time': new Date().toLocaleTimeString(),
-                            'Month': new Date().toLocaleDateString('en-US', { month: 'long' }),
-                            'Year': new Date().getFullYear().toString(),
-                            'Target': '100',
-                            'Achievement': '85',
-                            'Location': 'Mumbai',
-                            'City': 'Mumbai',
-                            'State': 'Maharashtra',
-                            'Country': 'India'
-                          };
-                          
-                          // Replace parameters with sample values
-                          for (const [param, value] of Object.entries(sampleParams)) {
-                            const regex = new RegExp(`#${param}\\b`, 'g');
-                            processedContent = processedContent.replace(regex, value);
-                          }
-                          
-                          // Replace any remaining parameters with [Sample Value]
-                          processedContent = processedContent.replace(/#[A-Za-z0-9_]+/g, '[Sample Value]');
-                          
-                          return processedContent;
-                        })()}
-                      </div>
-                    </div>
-                    
-                    {/* Footer Image */}
-                    {previewTemplate.footerImageUrl && previewTemplate.footerImageUrl.trim() !== '' ? (
-                      <div className="px-4 pb-4">
-                        <img 
-                          src={previewTemplate.footerImageUrl} 
-                          alt="Footer"
-                          className="w-full h-32 object-cover rounded-lg"
-                          onError={(e) => {
-                            console.error('Footer image failed to load:', previewTemplate.footerImageUrl);
-                            e.currentTarget.style.display = 'none';
-                            // Show fallback
-                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                            if (fallback) {
-                              fallback.style.display = 'flex';
-                            }
-                          }}
-                          onLoad={(e) => {
-                            console.log('Footer image loaded successfully:', previewTemplate.footerImageUrl);
-                            // Hide fallback if image loads
-                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                            if (fallback) {
-                              fallback.style.display = 'none';
-                            }
-                          }}
-                        />
-                        <div className="w-full h-24 bg-gray-100 rounded-lg flex items-center justify-center" style={{display: 'none'}}>
-                          <span className="text-gray-500 text-xs">Footer image failed to load</span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="px-4 pb-4">
-                        <div className="w-full h-24 bg-gray-100 rounded-lg flex items-center justify-center">
-                          <span className="text-gray-500 text-xs">No footer image</span>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* WhatsApp message time and status */}
-                    <div className="px-4 pb-3">
-                      <div className="flex justify-end items-center">
-                        <span className="text-xs text-gray-500 mr-1">
-                          {new Date().toLocaleTimeString('en-US', { 
-                            hour: '2-digit', 
-                            minute: '2-digit',
-                            hour12: true 
-                          })}
-                        </span>
-                        <span className="text-xs text-gray-500">✓✓</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="mt-3 text-left">
-                  <p className="text-xs text-gray-600">
-                    * This shows how the message will appear in WhatsApp with sample parameter values
-                  </p>
-                  <div className="mt-2 text-xs text-gray-500">
-                    <p>Header Image: {previewTemplate.imageUrl && previewTemplate.imageUrl.trim() !== '' ? '✅ Present' : '❌ Not found'}</p>
-                    <p>Footer Image: {previewTemplate.footerImageUrl && previewTemplate.footerImageUrl.trim() !== '' ? '✅ Present' : '❌ Not found'}</p>
-                    {previewTemplate.imageUrl && (
-                      <p className="text-xs text-gray-400 mt-1 break-all">Header URL: {previewTemplate.imageUrl}</p>
-                    )}
-                    {previewTemplate.footerImageUrl && (
-                      <p className="text-xs text-gray-400 mt-1 break-all">Footer URL: {previewTemplate.footerImageUrl}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Template Details */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Template Information */}
-                <div className="bg-white border border-gray-200 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-800 mb-4">Template Information</h4>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-sm font-medium text-gray-600">Template Name</label>
-                      <p className="text-gray-900">{previewTemplate.name}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-600">Created</label>
-                      <p className="text-gray-900">{new Date(previewTemplate.createdAt).toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-600">Content Length</label>
-                      <p className="text-gray-900">{previewTemplate.content.length} characters</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Parameters */}
-                <div className="bg-white border border-gray-200 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-800 mb-4">Parameters Used:</h4>
-                  {previewTemplate.parameters.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {previewTemplate.parameters.map((param, index) => (
-                        <span 
-                          key={index}
-                          className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
-                        >
-                          #{param}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-gray-500 text-sm">No parameters found in this template</p>
-                  )}
-                </div>
-              </div>
-
-
-              {/* Images Preview */}
-              {(previewTemplate.imageUrl || previewTemplate.footerImageUrl) && (
-                <div className="bg-white border border-gray-200 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-800 mb-4">Images</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {previewTemplate.imageUrl && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-600 mb-2 block">Header Image</label>
-                        <div className="border border-gray-200 rounded-lg overflow-hidden">
-                          <img 
-                            src={previewTemplate.imageUrl} 
-                            alt="Header"
-                            className="w-full h-48 object-cover"
-                            onError={(e) => {
-                              console.error('Header image failed to load:', previewTemplate.imageUrl);
-                              e.currentTarget.style.display = 'none';
-                            }}
-                            onLoad={() => console.log('Header image loaded successfully:', previewTemplate.imageUrl)}
-                          />
-                        </div>
-                      </div>
-                    )}
-                    
-                    {previewTemplate.footerImageUrl && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-600 mb-2 block">Footer Image</label>
-                        <div className="border border-gray-200 rounded-lg overflow-hidden">
-                          <img 
-                            src={previewTemplate.footerImageUrl} 
-                            alt="Footer"
-                            className="w-full h-48 object-cover"
-                            onError={(e) => {
-                              console.error('Footer image failed to load:', previewTemplate.footerImageUrl);
-                              e.currentTarget.style.display = 'none';
-                            }}
-                            onLoad={() => console.log('Footer image loaded successfully:', previewTemplate.footerImageUrl)}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
         {/* Delete Confirmation Dialog */}
         {showDeleteDialog && templateToDelete && (
