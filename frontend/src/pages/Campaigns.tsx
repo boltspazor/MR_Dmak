@@ -6,7 +6,8 @@ import {
   Upload,
   X,
   ChevronDown,
-  CheckCircle
+  CheckCircle,
+  FileText
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { Campaign, Template, RecipientList } from '../types';
@@ -31,7 +32,7 @@ const Campaigns: React.FC = () => {
   const [selectedRecipientList, setSelectedRecipientList] = useState<RecipientList | null>(null);
   
   // Preview states
-  const [previewTemplate] = useState<Template | null>(null);
+  const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
   const [previewGroup] = useState<any>(null);
   const [showGroupPreview, setShowGroupPreview] = useState(false);
 
@@ -253,6 +254,21 @@ const Campaigns: React.FC = () => {
     navigate(route);
   };
 
+  // Function to extract parameters from template content
+  const extractParameters = (content: string): string[] => {
+    const paramMatches = content.match(/#[A-Za-z0-9_]+/g);
+    if (paramMatches) {
+      return [...new Set(paramMatches.map((param: string) => param.substring(1)))];
+    }
+    return [];
+  };
+
+  // Function to open template preview
+  const handleTemplatePreview = (template: Template) => {
+    setPreviewTemplate(template);
+    setShowTemplatePreview(true);
+  };
+
   // CSV Validation Functions
   const validateCSVFile = (csvData: string[][], templateName: string, templateParameters: string[] = []): { isValid: boolean; errors: string[] } => {
     const errors: string[] = [];
@@ -467,15 +483,24 @@ const Campaigns: React.FC = () => {
                         <div className="bg-white border border-gray-200 rounded-lg p-4">
                           <div className="flex justify-between items-start mb-2">
                             <h4 className="font-medium text-gray-900">{selectedTemplate.name}</h4>
-          <button 
-                              onClick={() => {
-                                setSelectedTemplate(null);
-                                setSelectedTemplateDropdown('');
-                              }}
-                              className="text-gray-400 hover:text-gray-600"
-                            >
-                              <X className="h-4 w-4" />
-          </button>
+                            <div className="flex space-x-2">
+                              <button 
+                                onClick={() => handleTemplatePreview(selectedTemplate)}
+                                className="text-blue-600 hover:text-blue-800 text-sm"
+                                title="Preview Template"
+                              >
+                                Preview
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  setSelectedTemplate(null);
+                                  setSelectedTemplateDropdown('');
+                                }}
+                                className="text-gray-400 hover:text-gray-600"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
                           </div>
                           <div className="text-sm text-gray-600 mb-3">
                             {selectedTemplate.content.substring(0, 100)}
@@ -1048,23 +1073,43 @@ const Campaigns: React.FC = () => {
               </div>
 
                 {/* Parameters */}
-                {previewTemplate.parameters.length > 0 && (
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-2">
-                      Parameters:
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {previewTemplate.parameters.map((param: string, index: number) => (
-                        <span
-                          key={index}
-                          className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
-                        >
-                          #{param}
-                        </span>
-                      ))}
+                {(() => {
+                  const extractedParams = extractParameters(previewTemplate.content);
+                  return extractedParams.length > 0 ? (
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-2">
+                        Parameters:
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {extractedParams.map((param: string, index: number) => (
+                          <span
+                            key={index}
+                            className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
+                          >
+                            #{param}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-2">
+                        Parameters:
+                      </h4>
+                      <div className="text-center py-4">
+                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <FileText className="h-8 w-8 text-gray-400" />
+                        </div>
+                        <p className="text-gray-500 text-sm">
+                          No parameters found in this template
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Use #ParameterName in your template content to create dynamic parameters
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
                       </div>
