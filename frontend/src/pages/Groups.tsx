@@ -164,7 +164,7 @@ const Groups: React.FC = () => {
             {/* Glenmark Logo */}
             <div className="absolute top-0 right-0" style={{ right: '102px' }}>
               <img 
-                src="/glenmark.png" 
+                src="/logo.png" 
                 alt="Glenmark" 
                 style={{ width: '140px', height: '79px' }}
               />
