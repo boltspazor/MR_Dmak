@@ -693,7 +693,7 @@ const Templates: React.FC = () => {
                         className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
                         onClick={() => handleSort('name')}
                       >
-                        <div className="flex items-center justify-center">
+                        <div className="flex items-center justify-left">
                           Template Name
                           {sortField === 'name' && (
                             <span className="ml-1">
@@ -706,7 +706,7 @@ const Templates: React.FC = () => {
                         className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
                         onClick={() => handleSort('createdAt')}
                       >
-                        <div className="flex items-center justify-center">
+                        <div className="flex items-center justify-left">
                           Date Created
                           {sortField === 'createdAt' && (
                             <span className="ml-1">
@@ -728,7 +728,7 @@ const Templates: React.FC = () => {
                             {new Date(template.createdAt).toLocaleDateString()}
                           </td>
                           <td className="py-3 px-6 text-sm text-left">
-                            <div className="flex items-center justify-center space-x-2">
+                            <div className="flex items-center justify-left space-x-2">
                         <button
                           onClick={() => handlePreview(template)}
                                 className="text-blue-600 hover:text-blue-800 p-1 rounded"
