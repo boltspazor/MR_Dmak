@@ -71,6 +71,57 @@ export class MessageController {
     }
   }
 
+  async createCampaign(req: any, res: Response) {
+    try {
+      const { name, templateId, recipientListId, type, content, targetMrs } = req.body;
+
+      // Validate required fields based on campaign type
+      if (!name) {
+        return res.status(400).json({ 
+          error: 'Campaign name is required' 
+        });
+      }
+
+      let campaignData: any = {
+        name,
+        type: type || 'with-template'
+      };
+
+      if (type === 'with-template') {
+        if (!templateId || !recipientListId) {
+          return res.status(400).json({ 
+            error: 'Template ID and Recipient List ID are required for template-based campaigns' 
+          });
+        }
+        campaignData.templateId = templateId;
+        campaignData.recipientListId = recipientListId;
+      } else if (type === 'custom-messages') {
+        if (!content || !targetMrs) {
+          return res.status(400).json({ 
+            error: 'Content and target MRs are required for custom message campaigns' 
+          });
+        }
+        campaignData.content = content;
+        campaignData.targetMrs = JSON.parse(targetMrs);
+        
+        // Handle image uploads for custom messages
+        if (req.file) {
+          campaignData.imageUrl = `/uploads/${req.file.filename}`;
+        }
+      }
+
+      const result = await messageService.createCampaign(campaignData, req.user.userId);
+
+      return res.json({
+        message: 'Campaign created successfully',
+        ...result
+      });
+    } catch (error: any) {
+      logger.error('Failed to create campaign', { error: error.message, body: req.body });
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
   async uploadImage(req: any, res: Response) {
     try {
       if (!req.file) {

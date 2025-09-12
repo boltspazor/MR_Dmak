@@ -6,7 +6,6 @@ import {
   Upload,
   X,
   ChevronDown,
-  Eye,
   CheckCircle
 } from 'lucide-react';
 import { api } from '../lib/api';
@@ -32,7 +31,7 @@ const Campaigns: React.FC = () => {
   const [selectedRecipientList, setSelectedRecipientList] = useState<RecipientList | null>(null);
   
   // Preview states
-  const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
+  const [previewTemplate] = useState<Template | null>(null);
   const [previewGroup] = useState<any>(null);
   const [showGroupPreview, setShowGroupPreview] = useState(false);
 
@@ -118,10 +117,6 @@ const Campaigns: React.FC = () => {
     setSelectedTemplateDropdown('');
   };
 
-  const handleTemplatePreview = (template: Template) => {
-    setPreviewTemplate(template);
-    setShowTemplatePreview(true);
-  };
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -201,8 +196,8 @@ const Campaigns: React.FC = () => {
   const handleWithoutTemplateSubmit = async () => {
     if (!messageContent.trim() || selectedMrs.length === 0 || !campaignName.trim()) {
       showError('Missing Information', 'Please enter message content, select MRs, and enter a campaign name');
-      return;
-    }
+        return;
+      }
 
     try {
       const campaignData = {
@@ -453,37 +448,20 @@ const Campaigns: React.FC = () => {
                 <div className="bg-white bg-opacity-40 rounded-lg p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Template</h3>
                   <div className="space-y-4">
-                    <div className="flex space-x-2">
-                      <div className="relative flex-1">
-                        <select
-                          value={selectedTemplateDropdown}
-                          onChange={(e) => handleTemplateDropdownChange(e.target.value)}
-                          className="w-full px-3 py-2 pr-10 rounded-lg border-0 bg-gray-100 appearance-none cursor-pointer"
-                        >
-                          <option value="">Select a template</option>
-                          {(templates || []).map(template => (
-                            <option key={template?._id} value={template?._id}>
-                              {template?.name}
-                            </option>
-                          ))}
-                        </select>
-                        <ChevronDown className="h-5 w-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
-                      </div>
-          <button 
-                        onClick={() => {
-                          if (selectedTemplate) {
-                            handleTemplatePreview(selectedTemplate);
-                          } else if (selectedTemplateDropdown) {
-                            const template = (templates || []).find(t => t?._id === selectedTemplateDropdown);
-                            if (template) handleTemplatePreview(template);
-                          }
-                        }}
-                        disabled={!selectedTemplate && !selectedTemplateDropdown}
-                        className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                    <div className="relative">
+                      <select
+                        value={selectedTemplateDropdown}
+                        onChange={(e) => handleTemplateDropdownChange(e.target.value)}
+                        className="w-full px-3 py-2 pr-10 rounded-lg border-0 bg-gray-100 appearance-none cursor-pointer"
                       >
-                        <Eye className="h-4 w-4 mr-1" />
-                        Preview
-          </button>
+                        <option value="">Select a template</option>
+                        {(templates || []).map(template => (
+                          <option key={template?._id} value={template?._id}>
+                            {template?.name}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="h-5 w-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
                     </div>
 
                     {/* Template Preview */}
@@ -847,8 +825,8 @@ const Campaigns: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  </div>
-                </div>
+              </div>
+          </div>
 
                 {/* Konnect Button */}
                 <div className="flex justify-end">
@@ -860,8 +838,8 @@ const Campaigns: React.FC = () => {
                     <Send className="h-5 w-5 mr-2" />
                     Send
                   </button>
+        </div>
       </div>
-              </div>
             )}
           </div>
         </CommonFeatures>

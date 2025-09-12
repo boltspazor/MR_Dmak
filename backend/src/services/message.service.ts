@@ -262,4 +262,138 @@ export class MessageService {
       throw error;
     }
   }
+
+  async createCampaign(campaignData: any, userId: string) {
+    try {
+      const MedicalRepresentative = (await import('../models/MedicalRepresentative')).default;
+      let mrs: any[] = [];
+      let messageContent = '';
+      let imageUrl = '';
+      let campaignName = '';
+
+      // Handle different campaign types
+      if (campaignData.type === 'with-template') {
+        // Template-based campaign
+        const Template = (await import('../models/Template')).default;
+        const RecipientList = (await import('../models/RecipientList')).default;
+
+        const template = await Template.findById(campaignData.templateId);
+        if (!template) {
+          throw new Error('Template not found');
+        }
+
+        const recipientList = await RecipientList.findById(campaignData.recipientListId);
+        if (!recipientList) {
+          throw new Error('Recipient list not found');
+        }
+
+        // Get MRs from recipient list data
+        const mrIds = recipientList.data
+          .map((row: any) => row['MR id'])
+          .filter((id: string) => id && id.trim() !== '');
+        
+        mrs = await MedicalRepresentative.find({
+          mrId: { $in: mrIds }
+        }).populate('groupId', 'groupName');
+
+        messageContent = template.content;
+        imageUrl = template.imageUrl || '';
+        campaignName = campaignData.name;
+
+      } else if (campaignData.type === 'custom-messages') {
+        // Custom message campaign
+        const mrIds = campaignData.targetMrs.map((mr: any) => mr.mrId);
+        
+        mrs = await MedicalRepresentative.find({
+          mrId: { $in: mrIds }
+        }).populate('groupId', 'groupName');
+
+        messageContent = campaignData.content;
+        imageUrl = campaignData.imageUrl || '';
+        campaignName = campaignData.name;
+
+      } else {
+        throw new Error('Invalid campaign type');
+      }
+
+      if (mrs.length === 0) {
+        throw new Error('No MRs found for campaign');
+      }
+
+      // Create message record
+      const message = await Message.create({
+        content: messageContent,
+        imageUrl: imageUrl,
+        type: imageUrl ? 'image' : 'text',
+        createdBy: userId,
+      });
+
+      // Generate unique campaign ID
+      const campaignId = `CAMP-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+
+      // Create campaign record
+      const campaign = await MessageCampaign.create({
+        campaignId,
+        messageId: message._id,
+        targetGroups: campaignData.type === 'with-template' ? 
+          (await (await import('../models/RecipientList')).default.findById(campaignData.recipientListId))?.name : 
+          'Custom Messages',
+        scheduledAt: new Date(),
+        createdBy: userId,
+        status: 'processing',
+        totalRecipients: mrs.length,
+        sentCount: 0,
+        failedCount: 0,
+      });
+
+      // Create message logs for each MR
+      const messageLogs = await Promise.all(
+        mrs.map((mr: any) =>
+          MessageLog.create({
+            campaignId: campaign._id,
+            mrId: mr._id,
+            phoneNumber: mr.phone,
+            status: 'queued',
+          })
+        )
+      );
+
+      // Queue messages for processing
+      const { addMessageToQueue } = await import('./queue.service');
+      
+      for (const mr of mrs) {
+        await addMessageToQueue({
+          campaignId: (campaign as any)._id.toString(),
+          mrId: (mr as any)._id.toString(),
+          phoneNumber: mr.phone,
+          content: messageContent,
+          imageUrl: imageUrl,
+        });
+      }
+
+      // Update campaign status to 'pending' after queuing all messages
+      await MessageCampaign.findByIdAndUpdate(campaign._id, {
+        status: 'pending'
+      });
+
+      logger.info('Campaign created successfully', {
+        campaignId: (campaign as any)._id,
+        totalRecipients: mrs.length,
+        campaignName: campaignName,
+        type: campaignData.type
+      });
+
+      return {
+        campaignId: (campaign as any)._id.toString(),
+        messageId: (message as any)._id.toString(),
+        totalRecipients: mrs.length,
+        status: 'pending',
+        campaignName: campaignName,
+        type: campaignData.type
+      };
+    } catch (error) {
+      logger.error('Failed to create campaign', { error, campaignData });
+      throw error;
+    }
+  }
 }
