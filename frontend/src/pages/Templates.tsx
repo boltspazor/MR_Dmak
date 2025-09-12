@@ -261,8 +261,12 @@ const Templates: React.FC = () => {
     console.log('Previewing template:', template);
     console.log('Template imageUrl:', template.imageUrl);
     console.log('Template footerImageUrl:', template.footerImageUrl);
-    console.log('Template has header image:', !!(template.imageUrl && template.imageUrl.length > 0));
-    console.log('Template has footer image:', !!(template.footerImageUrl && template.footerImageUrl.length > 0));
+    console.log('Template imageUrl type:', typeof template.imageUrl);
+    console.log('Template footerImageUrl type:', typeof template.footerImageUrl);
+    console.log('Template imageUrl length:', template.imageUrl?.length);
+    console.log('Template footerImageUrl length:', template.footerImageUrl?.length);
+    console.log('Template has header image:', !!(template.imageUrl && template.imageUrl.trim() !== ''));
+    console.log('Template has footer image:', !!(template.footerImageUrl && template.footerImageUrl.trim() !== ''));
     setPreviewTemplate(template);
     setShowPreview(true);
   };
@@ -994,7 +998,7 @@ const Templates: React.FC = () => {
                 <div className="flex justify-center">
                   <div className="bg-white rounded-3xl rounded-tl-lg shadow-2xl max-w-sm w-full overflow-hidden">
                     {/* Header Image */}
-                    {previewTemplate.imageUrl && previewTemplate.imageUrl.length > 0 ? (
+                    {previewTemplate.imageUrl && previewTemplate.imageUrl.trim() !== '' ? (
                       <div className="w-full">
                         <img 
                           src={previewTemplate.imageUrl} 
@@ -1003,9 +1007,24 @@ const Templates: React.FC = () => {
                           onError={(e) => {
                             console.error('WhatsApp preview header image failed to load:', previewTemplate.imageUrl);
                             e.currentTarget.style.display = 'none';
+                            // Show fallback
+                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (fallback) {
+                              fallback.style.display = 'flex';
+                            }
                           }}
-                          onLoad={() => console.log('WhatsApp preview header image loaded successfully:', previewTemplate.imageUrl)}
+                          onLoad={(e) => {
+                            console.log('WhatsApp preview header image loaded successfully:', previewTemplate.imageUrl);
+                            // Hide fallback if image loads
+                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (fallback) {
+                              fallback.style.display = 'none';
+                            }
+                          }}
                         />
+                        <div className="w-full h-32 bg-gray-100 flex items-center justify-center" style={{display: 'none'}}>
+                          <span className="text-gray-500 text-sm">Header image failed to load</span>
+                        </div>
                       </div>
                     ) : (
                       <div className="w-full h-32 bg-gray-100 flex items-center justify-center">
@@ -1056,7 +1075,7 @@ const Templates: React.FC = () => {
                     </div>
                     
                     {/* Footer Image */}
-                    {previewTemplate.footerImageUrl && previewTemplate.footerImageUrl.length > 0 ? (
+                    {previewTemplate.footerImageUrl && previewTemplate.footerImageUrl.trim() !== '' ? (
                       <div className="px-4 pb-4">
                         <img 
                           src={previewTemplate.footerImageUrl} 
@@ -1065,9 +1084,24 @@ const Templates: React.FC = () => {
                           onError={(e) => {
                             console.error('Footer image failed to load:', previewTemplate.footerImageUrl);
                             e.currentTarget.style.display = 'none';
+                            // Show fallback
+                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (fallback) {
+                              fallback.style.display = 'flex';
+                            }
                           }}
-                          onLoad={() => console.log('Footer image loaded successfully:', previewTemplate.footerImageUrl)}
+                          onLoad={(e) => {
+                            console.log('Footer image loaded successfully:', previewTemplate.footerImageUrl);
+                            // Hide fallback if image loads
+                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (fallback) {
+                              fallback.style.display = 'none';
+                            }
+                          }}
                         />
+                        <div className="w-full h-24 bg-gray-100 rounded-lg flex items-center justify-center" style={{display: 'none'}}>
+                          <span className="text-gray-500 text-xs">Footer image failed to load</span>
+                        </div>
                       </div>
                     ) : (
                       <div className="px-4 pb-4">
@@ -1098,8 +1132,14 @@ const Templates: React.FC = () => {
                     * This shows how the message will appear in WhatsApp with sample parameter values
                   </p>
                   <div className="mt-2 text-xs text-gray-500">
-                    <p>Header Image: {previewTemplate.imageUrl ? '✅ Present' : '❌ Not found'}</p>
-                    <p>Footer Image: {previewTemplate.footerImageUrl ? '✅ Present' : '❌ Not found'}</p>
+                    <p>Header Image: {previewTemplate.imageUrl && previewTemplate.imageUrl.trim() !== '' ? '✅ Present' : '❌ Not found'}</p>
+                    <p>Footer Image: {previewTemplate.footerImageUrl && previewTemplate.footerImageUrl.trim() !== '' ? '✅ Present' : '❌ Not found'}</p>
+                    {previewTemplate.imageUrl && (
+                      <p className="text-xs text-gray-400 mt-1 break-all">Header URL: {previewTemplate.imageUrl}</p>
+                    )}
+                    {previewTemplate.footerImageUrl && (
+                      <p className="text-xs text-gray-400 mt-1 break-all">Footer URL: {previewTemplate.footerImageUrl}</p>
+                    )}
                   </div>
                 </div>
               </div>
