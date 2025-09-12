@@ -5,6 +5,7 @@ import {
   Edit, 
   Trash2, 
   Search, 
+  Eye,
   Copy,
   Upload,
   Download,
@@ -29,6 +30,8 @@ const Templates: React.FC = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [availableParameters, setAvailableParameters] = useState<AvailableParameters | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState<Template | null>(null);
 
@@ -270,6 +273,11 @@ const Templates: React.FC = () => {
     setTemplateToDelete(null);
   };
 
+  const handlePreview = (template: Template) => {
+    setPreviewTemplate(template);
+    setShowPreview(true);
+  };
+
 
   const duplicateTemplate = async (template: Template) => {
     const newName = `${template.name} (Copy)`;
@@ -502,44 +510,50 @@ const Templates: React.FC = () => {
   };
 
   const downloadRecipientListFormat = (template: Template) => {
-    // Create CSV with template name in A1 and parameters in row 2
-    const csvContent = [
-      template.name, // A1 - Template name
-      '', // B1 - Empty
-      '', // C1 - Empty
-      '', // D1 - Empty
-      '', // E1 - Empty
-      '', // F1 - Empty
-      '', // G1 - Empty
-      '', // H1 - Empty
-      '', // I1 - Empty
-      '', // J1 - Empty
-      '', // K1 - Empty
-      '', // L1 - Empty
-      '', // A2 - Empty
-      'MR id', // B2 - MR id
-      'First Name', // C2 - First Name
-      'last Name', // D2 - last Name
-      '#FN', // E2 - #FN
-      '#LN', // F2 - #LN
-      '#Month', // G2 - #Month
-      '#week', // H2 - #week
-      '#Target', // I2 - #Target
-      '#lastmonth', // J2 - #lastmonth
-      '#doctor', // K2 - #doctor
-      '', // L2 - Empty
-      '', // A3 - Empty
-      'MR001', // B3 - Sample MR id
-      'Prabhjeet', // C3 - Sample First Name
-      'Singh', // D3 - Sample last Name
-      'Prabhjeet', // E3 - Sample #FN
-      'Singh', // F3 - Sample #LN
-      'September', // G3 - Sample #Month
-      'Week 2', // H3 - Sample #week
-      '1 crore', // H3 - Sample #Target
-      '50 lakhs', // I3 - Sample #lastmonth
-      '30' // J3 - Sample #doctor
-    ].join('\n');
+    // Extract parameters from template content
+    const paramMatches = template.content.match(/#[A-Za-z0-9_]+/g);
+    const parameters = paramMatches ? [...new Set(paramMatches.map((param: string) => param.substring(1)))] : [];
+    
+    // Create CSV with template name in A1 and dynamic parameters
+    const csvRows = [];
+    
+    // Row 1: Template name in A1, empty cells for other columns
+    const row1 = [template.name, ...Array(Math.max(parameters.length + 2, 10)).fill('')];
+    csvRows.push(row1.join(','));
+    
+    // Row 2: Headers - MR id, First Name, Last Name, then parameters
+    const row2 = ['', 'MR id', 'First Name', 'Last Name', ...parameters];
+    csvRows.push(row2.join(','));
+    
+    // Row 3: Sample data
+    const sampleData = {
+      'MR id': 'MR001',
+      'First Name': 'John',
+      'Last Name': 'Doe',
+      'FN': 'John',
+      'LN': 'Doe',
+      'Month': 'September',
+      'week': 'Week 2',
+      'Target': '1 crore',
+      'lastmonth': '50 lakhs',
+      'doctor': '30',
+      'Name': 'John Doe',
+      'Company': 'D-MAK',
+      'Product': 'New Product',
+      'Date': new Date().toLocaleDateString(),
+      'Time': new Date().toLocaleTimeString(),
+      'Year': new Date().getFullYear().toString(),
+      'Achievement': '85',
+      'Location': 'Mumbai',
+      'City': 'Mumbai',
+      'State': 'Maharashtra',
+      'Country': 'India'
+    };
+    
+    const row3 = ['', 'MR001', 'John', 'Doe', ...parameters.map(param => (sampleData as any)[param] || `Sample ${param}`)];
+    csvRows.push(row3.join(','));
+    
+    const csvContent = csvRows.join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -713,6 +727,13 @@ const Templates: React.FC = () => {
                           </td>
                           <td className="py-3 px-6 text-sm text-left">
                             <div className="flex items-center justify-start space-x-2">
+                        <button
+                          onClick={() => handlePreview(template)}
+                                className="text-blue-600 hover:text-blue-800 p-1 rounded"
+                                title="Preview Template"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
                         <button
                                 onClick={() => exportTemplateAsPNG(template)}
                                 className="text-green-600 hover:text-green-800 p-1 rounded"
@@ -1014,6 +1035,233 @@ const Templates: React.FC = () => {
         </div>
       )}
 
+      {/* Template Preview Modal */}
+      {showPreview && previewTemplate && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-6xl max-h-[95vh] overflow-y-auto">
+            {/* Header */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-lg">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    Template Preview
+                  </h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {previewTemplate.name} • Created {new Date(previewTemplate.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowPreview(false)}
+                  className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Left Side - Template Content */}
+                <div className="space-y-6">
+                  <div className="bg-gradient-to-br from-green-50 to-blue-50 p-6 rounded-xl">
+                    <div className="flex items-center mb-4">
+                      <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                      <h3 className="text-lg font-semibold text-gray-800">WhatsApp Message Preview</h3>
+                    </div>
+                    
+                    <div className="flex justify-center">
+                      <div className="bg-white rounded-3xl rounded-tl-lg shadow-2xl max-w-sm w-full overflow-hidden">
+                        {/* Header Image */}
+                        {previewTemplate.imageUrl && previewTemplate.imageUrl.trim() !== '' ? (
+                          <div className="w-full">
+                            <img 
+                              src={previewTemplate.imageUrl} 
+                              alt="Header"
+                              className="w-full h-64 object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                                if (fallback) {
+                                  fallback.style.display = 'flex';
+                                }
+                              }}
+                            />
+                            <div className="w-full h-32 bg-gray-100 flex items-center justify-center" style={{display: 'none'}}>
+                              <span className="text-gray-500 text-sm">Header image failed to load</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="w-full h-32 bg-gray-100 flex items-center justify-center">
+                            <span className="text-gray-500 text-sm">No header image</span>
+                          </div>
+                        )}
+                        
+                        {/* Message Content */}
+                        <div className="p-4">
+                          <div className="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap">
+                            {(() => {
+                              let processedContent = previewTemplate.content;
+                              
+                              // Sample parameter values for preview
+                              const sampleParams = {
+                                'FirstName': 'John',
+                                'LastName': 'Doe',
+                                'MRId': 'MR001',
+                                'GroupName': 'North Zone',
+                                'PhoneNumber': '+919876543210',
+                                'Name': 'John Doe',
+                                'Company': 'D-MAK',
+                                'Product': 'New Product',
+                                'Date': new Date().toLocaleDateString(),
+                                'Time': new Date().toLocaleTimeString(),
+                                'Month': new Date().toLocaleDateString('en-US', { month: 'long' }),
+                                'Year': new Date().getFullYear().toString(),
+                                'Target': '100',
+                                'Achievement': '85',
+                                'Location': 'Mumbai',
+                                'City': 'Mumbai',
+                                'State': 'Maharashtra',
+                                'Country': 'India',
+                                'FN': 'John',
+                                'LN': 'Doe',
+                                'week': 'Week 2',
+                                'lastmonth': '50 lakhs',
+                                'doctor': '30'
+                              };
+                              
+                              // Replace parameters with sample values
+                              for (const [param, value] of Object.entries(sampleParams)) {
+                                const regex = new RegExp(`#${param}\\b`, 'g');
+                                processedContent = processedContent.replace(regex, value);
+                              }
+                              
+                              // Replace any remaining parameters with [Sample Value]
+                              processedContent = processedContent.replace(/#[A-Za-z0-9_]+/g, '[Sample Value]');
+                              
+                              return processedContent;
+                            })()}
+                          </div>
+                        </div>
+                        
+                        {/* Footer Image */}
+                        {previewTemplate.footerImageUrl && previewTemplate.footerImageUrl.trim() !== '' ? (
+                          <div className="px-4 pb-4">
+                            <img 
+                              src={previewTemplate.footerImageUrl} 
+                              alt="Footer"
+                              className="w-full h-32 object-cover rounded-lg"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                                if (fallback) {
+                                  fallback.style.display = 'flex';
+                                }
+                              }}
+                            />
+                            <div className="w-full h-24 bg-gray-100 rounded-lg flex items-center justify-center" style={{display: 'none'}}>
+                              <span className="text-gray-500 text-xs">Footer image failed to load</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="px-4 pb-4">
+                            <div className="w-full h-24 bg-gray-100 rounded-lg flex items-center justify-center">
+                              <span className="text-gray-500 text-xs">No footer image</span>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* WhatsApp message time and status */}
+                        <div className="px-4 pb-3">
+                          <div className="flex justify-end items-center">
+                            <span className="text-xs text-gray-500 mr-1">
+                              {new Date().toLocaleTimeString('en-US', { 
+                                hour: '2-digit', 
+                                minute: '2-digit',
+                                hour12: true 
+                              })}
+                            </span>
+                            <span className="text-xs text-gray-500">✓✓</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Side - Parameters */}
+                <div className="space-y-6">
+                  <div className="bg-white border border-gray-200 rounded-lg p-6">
+                    <h4 className="text-lg font-semibold text-gray-800 mb-4">Extracted Parameters</h4>
+                    {previewTemplate.parameters && previewTemplate.parameters.length > 0 ? (
+                      <div className="space-y-3">
+                        <p className="text-sm text-gray-600 mb-3">
+                          The following parameters were found in the template content:
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {previewTemplate.parameters.map((param, index) => (
+                            <span 
+                              key={index}
+                              className="px-3 py-2 bg-blue-100 text-blue-800 text-sm rounded-lg font-medium"
+                            >
+                              #{param}
+                            </span>
+                          ))}
+                        </div>
+                        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                          <p className="text-xs text-gray-600 mb-2">
+                            <strong>Recipient List Format:</strong>
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            • Template name will be in cell A1<br/>
+                            • Headers: MR id, First Name, Last Name, {previewTemplate.parameters.join(', ')}<br/>
+                            • Each parameter will have its own column in the recipient list
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <FileText className="h-8 w-8 text-gray-400" />
+                        </div>
+                        <p className="text-gray-500 text-sm">
+                          No parameters found in this template
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Use #ParameterName in your template content to create dynamic parameters
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Template Information */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-6">
+                    <h4 className="text-lg font-semibold text-gray-800 mb-4">Template Information</h4>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Template Name</label>
+                        <p className="text-gray-900">{previewTemplate.name}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Created</label>
+                        <p className="text-gray-900">{new Date(previewTemplate.createdAt).toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Content Length</label>
+                        <p className="text-gray-900">{previewTemplate.content.length} characters</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Parameter Count</label>
+                        <p className="text-gray-900">{previewTemplate.parameters?.length || 0} parameters</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
         {/* Delete Confirmation Dialog */}
         {showDeleteDialog && templateToDelete && (

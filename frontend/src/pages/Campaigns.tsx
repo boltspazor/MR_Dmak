@@ -260,7 +260,7 @@ const Campaigns: React.FC = () => {
   };
 
   // CSV Validation Functions
-  const validateCSVFile = (csvData: string[][], templateName: string): { isValid: boolean; errors: string[] } => {
+  const validateCSVFile = (csvData: string[][], templateName: string, templateParameters: string[] = []): { isValid: boolean; errors: string[] } => {
     const errors: string[] = [];
 
     // Check if CSV has at least 3 rows (A1, A2, A3)
@@ -272,7 +272,7 @@ const Campaigns: React.FC = () => {
     // Check A1 cell for template name match
     const a1Value = csvData[0]?.[0]?.trim();
     if (!a1Value || a1Value !== templateName) {
-      errors.push(`Template name in A1 cell must match the selected template name "${templateName}". Found: "${a1Value || 'empty'}"`);
+      errors.push(`Template name mismatch: Ensure that the template name is same in the cell A1. Expected: "${templateName}", Found: "${a1Value || 'empty'}"`);
     }
 
     // Check row 2 (parameters row) for empty cells
@@ -294,6 +294,30 @@ const Campaigns: React.FC = () => {
             errors.push(`Data row ${rowIndex + 1} has empty cell in column ${String.fromCharCode(65 + colIndex)}${rowIndex + 1}`);
           }
         }
+      }
+    }
+
+    // Validate template parameters match CSV parameters
+    if (templateParameters.length > 0 && parameterRow) {
+      // Extract parameters from CSV (skip first 3 columns: empty, MR id, First Name, Last Name)
+      const csvParameters = parameterRow.slice(3).filter(param => param.trim() !== '');
+      
+      // Check if all template parameters are present in CSV
+      const missingParameters = templateParameters.filter(templateParam => 
+        !csvParameters.some(csvParam => csvParam === templateParam)
+      );
+      
+      if (missingParameters.length > 0) {
+        errors.push(`Missing parameters in recipient list: ${missingParameters.join(', ')}. These parameters are required based on the template content.`);
+      }
+
+      // Check if CSV has extra parameters not in template
+      const extraParameters = csvParameters.filter(csvParam => 
+        !templateParameters.includes(csvParam)
+      );
+      
+      if (extraParameters.length > 0) {
+        errors.push(`Extra parameters in recipient list: ${extraParameters.join(', ')}. These parameters are not used in the template content.`);
       }
     }
 
@@ -324,7 +348,7 @@ const Campaigns: React.FC = () => {
       const csvData = lines.map(line => line.split(',').map(cell => cell.trim()));
 
       // Validate CSV
-      const validation = validateCSVFile(csvData, selectedTemplate.name);
+      const validation = validateCSVFile(csvData, selectedTemplate.name, selectedTemplate.parameters || []);
       if (!validation.isValid) {
         showError('CSV Validation Failed', validation.errors.join('\n'));
         return;
