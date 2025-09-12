@@ -9,7 +9,8 @@ import {
   Copy,
   Upload,
   Download,
-  X
+  X,
+  ChevronDown
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { Template, AvailableParameters } from '../types';
@@ -24,6 +25,7 @@ const Templates: React.FC = () => {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchType, setSearchType] = useState<'name' | 'content'>('name');
   const [sortField, setSortField] = useState<'name' | 'createdAt'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -107,15 +109,6 @@ const Templates: React.FC = () => {
     }
   };
 
-  const removeHeaderImage = () => {
-    setHeaderImage(null);
-    setHeaderImagePreview('');
-  };
-
-  const removeFooterImage = () => {
-    setFooterImage(null);
-    setFooterImagePreview('');
-  };
 
   // Upload image to server
   const uploadImage = async (file: File, type: 'header' | 'footer') => {
@@ -318,57 +311,9 @@ const Templates: React.FC = () => {
       ctx.fillText(template.name, canvas.width / 2, yPosition);
       yPosition += 40;
 
-      // Add header image if exists
-      if (template.imageUrl) {
-        const headerImg = new Image();
-        headerImg.crossOrigin = 'anonymous';
-        headerImg.onload = () => {
-          const imgHeight = 200;
-          const imgWidth = Math.min(400, (headerImg.width * imgHeight) / headerImg.height);
-          const x = (canvas.width - imgWidth) / 2;
-          ctx.drawImage(headerImg, x, yPosition, imgWidth, imgHeight);
-          yPosition += imgHeight + 20;
-          
-          // Add content
-          ctx.fillStyle = '#374151';
-          ctx.font = '16px Arial';
-          ctx.textAlign = 'left';
-          const lines = template.content.split('\n');
-          lines.forEach((line, index) => {
-            if (yPosition + (index + 1) * 20 < canvas.height - 100) {
-              ctx.fillText(line, 50, yPosition + (index + 1) * 20);
-            }
-          });
-          yPosition += lines.length * 20 + 20;
-
-          // Add footer image if exists
-          if (template.footerImageUrl) {
-            const footerImg = new Image();
-            footerImg.crossOrigin = 'anonymous';
-            footerImg.onload = () => {
-              const footerHeight = 100;
-              const footerWidth = Math.min(300, (footerImg.width * footerHeight) / footerImg.height);
-              const footerX = (canvas.width - footerWidth) / 2;
-              ctx.drawImage(footerImg, footerX, yPosition, footerWidth, footerHeight);
-              
-              // Download the image
-              const link = document.createElement('a');
-              link.download = `${template.name.replace(/\s+/g, '_')}.png`;
-              link.href = canvas.toDataURL();
-              link.click();
-            };
-            footerImg.src = template.footerImageUrl;
-          } else {
-            // Download without footer image
-            const link = document.createElement('a');
-            link.download = `${template.name.replace(/\s+/g, '_')}.png`;
-            link.href = canvas.toDataURL();
-            link.click();
-          }
-        };
-        headerImg.src = template.imageUrl;
-      } else {
-        // No header image, just add content
+      // Function to draw content and download
+      const drawContentAndDownload = () => {
+        // Add content
         ctx.fillStyle = '#374151';
         ctx.font = '16px Arial';
         ctx.textAlign = 'left';
@@ -396,6 +341,13 @@ const Templates: React.FC = () => {
             link.href = canvas.toDataURL();
             link.click();
           };
+          footerImg.onerror = () => {
+            // If footer image fails to load, download without it
+            const link = document.createElement('a');
+            link.download = `${template.name.replace(/\s+/g, '_')}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+          };
           footerImg.src = template.footerImageUrl;
         } else {
           // Download without footer image
@@ -404,6 +356,28 @@ const Templates: React.FC = () => {
           link.href = canvas.toDataURL();
           link.click();
         }
+      };
+
+      // Add header image if exists
+      if (template.imageUrl) {
+        const headerImg = new Image();
+        headerImg.crossOrigin = 'anonymous';
+        headerImg.onload = () => {
+          const imgHeight = 200;
+          const imgWidth = Math.min(400, (headerImg.width * imgHeight) / headerImg.height);
+          const x = (canvas.width - imgWidth) / 2;
+          ctx.drawImage(headerImg, x, yPosition, imgWidth, imgHeight);
+          yPosition += imgHeight + 20;
+          drawContentAndDownload();
+        };
+        headerImg.onerror = () => {
+          // If header image fails to load, continue without it
+          drawContentAndDownload();
+        };
+        headerImg.src = template.imageUrl;
+      } else {
+        // No header image, just add content
+        drawContentAndDownload();
       }
     } catch (error) {
       console.error('Error exporting template as PNG:', error);
@@ -412,12 +386,14 @@ const Templates: React.FC = () => {
 
   const filteredTemplates = templates
     .filter(template => {
-    const matchesSearch = 
-      template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      template.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      template.parameters.some(param => param.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-      return matchesSearch;
+      if (!searchTerm) return true;
+      
+      if (searchType === 'name') {
+        return template.name.toLowerCase().includes(searchTerm.toLowerCase());
+      } else {
+        return template.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+               template.parameters.some(param => param.toLowerCase().includes(searchTerm.toLowerCase()));
+      }
     })
     .sort((a, b) => {
       let aValue: string | number;
@@ -615,16 +591,29 @@ const Templates: React.FC = () => {
                   </span>
               </div>
 
-                {/* Search Control */}
-              <div className="relative">
+                {/* Search Controls */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="relative">
                   <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search templates..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  <input
+                    type="text"
+                    placeholder={searchType === 'name' ? 'Search by template name...' : 'Search by template content...'}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 rounded-lg border-0 bg-gray-100"
-                />
+                  />
+                </div>
+                <div className="relative">
+                  <select
+                    value={searchType}
+                    onChange={(e) => setSearchType(e.target.value as 'name' | 'content')}
+                    className="w-full px-3 py-2 pr-10 rounded-lg border-0 bg-gray-100 appearance-none cursor-pointer"
+                  >
+                    <option value="name">Search by Name</option>
+                    <option value="content">Search by Content</option>
+                  </select>
+                  <ChevronDown className="h-5 w-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+                </div>
               </div>
               </div>
               
@@ -797,23 +786,6 @@ const Templates: React.FC = () => {
                       <Upload className="h-5 w-5 text-gray-400 mr-2" />
                       <span className="text-sm text-gray-600">Click to upload header image</span>
                     </label>
-                    
-                    {headerImagePreview && (
-                      <div className="relative">
-                        <img
-                          src={headerImagePreview}
-                          alt="Header preview"
-                          className="w-full h-32 object-cover rounded-lg"
-                        />
-                        <button
-                          type="button"
-                          onClick={removeHeaderImage}
-                          className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                </div>
-              )}
                   </div>
                 </div>
 
@@ -958,23 +930,6 @@ const Templates: React.FC = () => {
                       <Upload className="h-5 w-5 text-gray-400 mr-2" />
                       <span className="text-sm text-gray-600">Click to upload footer image</span>
                     </label>
-                    
-                    {footerImagePreview && (
-                      <div className="relative">
-                        <img
-                          src={footerImagePreview}
-                          alt="Footer preview"
-                          className="w-full h-32 object-cover rounded-lg"
-                        />
-                <button
-                          type="button"
-                          onClick={removeFooterImage}
-                          className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                        >
-                          <X className="h-4 w-4" />
-                </button>
-                      </div>
-                    )}
                   </div>
                 </div>
 
@@ -1196,14 +1151,23 @@ const Templates: React.FC = () => {
                 </div>
               </div>
 
-              {/* Raw Content Preview */}
+              {/* Parameters Information */}
               <div className="bg-white border border-gray-200 rounded-lg p-6">
-                <h4 className="text-lg font-semibold text-gray-800 mb-4">Raw Content</h4>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <pre className="whitespace-pre-wrap text-sm text-gray-800 font-mono">
-                    {previewTemplate.content}
-                  </pre>
-                </div>
+                <h4 className="text-lg font-semibold text-gray-800 mb-4">Parameters Used:</h4>
+                {previewTemplate.parameters.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {previewTemplate.parameters.map((param, index) => (
+                      <span 
+                        key={index}
+                        className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full font-medium"
+                      >
+                        #{param}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm">No parameters found in this template</p>
+                )}
               </div>
 
               {/* Images Preview */}
