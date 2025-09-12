@@ -173,8 +173,8 @@ const Campaigns: React.FC = () => {
   const handleWithTemplateSubmit = async () => {
     if (!selectedTemplate || !selectedRecipientList || !campaignName.trim()) {
       showError('Missing Information', 'Please select a template, recipient list, and enter a campaign name');
-      return;
-    }
+        return;
+      }
 
     try {
       const campaignData = {
@@ -396,7 +396,7 @@ const Campaigns: React.FC = () => {
                 { key: 'with-template', label: 'With Template' },
                 { key: 'custom-messages', label: 'Custom Messages' }
               ].map((tab) => (
-                <button 
+          <button 
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key as any)}
                   className={`pb-2 border-b-2 text-lg font-medium capitalize ${
@@ -406,7 +406,7 @@ const Campaigns: React.FC = () => {
                   }`}
                 >
                   {tab.label}
-                </button>
+          </button>
               ))}
             </div>
 
@@ -469,7 +469,7 @@ const Campaigns: React.FC = () => {
                         <div className="bg-white border border-gray-200 rounded-lg p-4">
                           <div className="flex justify-between items-start mb-2">
                             <h4 className="font-medium text-gray-900">{selectedTemplate.name}</h4>
-                            <button 
+          <button 
                               onClick={() => {
                                 setSelectedTemplate(null);
                                 setSelectedTemplateDropdown('');
@@ -477,7 +477,7 @@ const Campaigns: React.FC = () => {
                               className="text-gray-400 hover:text-gray-600"
                             >
                               <X className="h-4 w-4" />
-                            </button>
+          </button>
                           </div>
                           <div className="text-sm text-gray-600 mb-3">
                             {selectedTemplate.content.substring(0, 100)}
@@ -507,29 +507,29 @@ const Campaigns: React.FC = () => {
                 {/* Add Recipient List Button */}
                 <div className="bg-white bg-opacity-40 rounded-lg p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Recipient List</h3>
-            <button
+          <button 
                     onClick={() => setShowCreateRecipientList(true)}
                     className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
-                  >
+          >
                     Upload Recipient List
-            </button>
-
+          </button>
+          
                   {/* Selected Recipient List Display */}
                   {selectedRecipientList && (
                     <div className="mt-4 space-y-2">
                       <p className="text-sm font-medium text-gray-700">Selected Recipient List:</p>
                       <div className="flex items-center space-x-2 bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm">
                         <span>{selectedRecipientList.name} ({selectedRecipientList.data.length} records)</span>
-            <button
+          <button 
                           onClick={() => setSelectedRecipientList(null)}
                           className="text-indigo-600 hover:text-indigo-800"
-                        >
+          >
                           <X className="h-4 w-4" />
-            </button>
+          </button>
           </div>
         </div>
                   )}
-              </div>
+      </div>
 
                 {/* Konnect Button */}
                 <div className="flex justify-end">
@@ -541,7 +541,7 @@ const Campaigns: React.FC = () => {
                     <Send className="h-5 w-5 mr-2" />
                     Send
                   </button>
-                </div>
+            </div>
               </div>
             )}
 
@@ -558,8 +558,8 @@ const Campaigns: React.FC = () => {
                     placeholder="Enter campaign name"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
-              </div>
-
+          </div>
+          
                 {/* MR Selection */}
                 <div className="bg-white bg-opacity-40 rounded-lg p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Select MRs</h3>
@@ -574,13 +574,13 @@ const Campaigns: React.FC = () => {
                           className="w-full px-3 py-2 rounded-lg border-0 bg-gray-100"
                         />
                       </div>
-                      <button
+            <button
                         onClick={() => setShowMrSelection(!showMrSelection)}
                         className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
                       >
                         {showMrSelection ? 'Hide' : 'Select MRs'}
-                      </button>
-                    </div>
+            </button>
+        </div>
 
                     {/* MR Selection Modal */}
                     {showMrSelection && (
@@ -602,14 +602,14 @@ const Campaigns: React.FC = () => {
                                   <p className="text-xs text-gray-500">
                                     {mr.mrId} • {mr.phone}
                                   </p>
-                                </div>
-                              </div>
+                </div>
+              </div>
                             ))
                           ) : (
                             <p className="text-sm text-gray-500 text-center py-4">No MRs found</p>
                           )}
-                        </div>
-                      </div>
+                </div>
+              </div>
                     )}
 
                     {/* Selected MRs Display */}
@@ -628,14 +628,14 @@ const Campaigns: React.FC = () => {
                                 >
                                   <X className="h-4 w-4" />
                                 </button>
-                              </div>
+                </div>
                             );
                           })}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+              </div>
                 </div>
+                    )}
+              </div>
+            </div>
 
                 {/* Message Composition */}
                 <div className="bg-white bg-opacity-40 rounded-lg p-6">
@@ -648,7 +648,7 @@ const Campaigns: React.FC = () => {
                           Header Image (Optional)
                         </label>
                         <div className="space-y-2">
-                          <input
+                <input
                             type="file"
                             accept="image/*"
                             onChange={handleImageUpload}
@@ -670,17 +670,17 @@ const Campaigns: React.FC = () => {
                                 alt="Header preview"
                                 className="w-full h-32 object-cover rounded-lg"
                               />
-                          <button
+                <button
                                 type="button"
                                 onClick={removeImage}
                                 className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
                           >
                                 <X className="h-4 w-4" />
-                          </button>
-                        </div>
+                </button>
+                            </div>
                           )}
                         </div>
-                      </div>
+                          </div>
 
                       {/* Message Input */}
                       <div>
@@ -695,6 +695,59 @@ const Campaigns: React.FC = () => {
                         <p className="text-xs text-gray-500 mt-1">
                           Use #ParameterName for dynamic parameters (e.g., #FN, #LN, #Month, #Target)
                         </p>
+                          </div>
+
+                      {/* Footer Image Upload */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Footer Image (Optional)
+                        </label>
+                        <div className="space-y-2">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                setFooterImage(file);
+                                const reader = new FileReader();
+                                reader.onload = (e) => {
+                                  setFooterImagePreview(e.target?.result as string);
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                            className="hidden"
+                            id="footer-image-upload"
+                          />
+                          <label
+                            htmlFor="footer-image-upload"
+                            className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-indigo-400 transition-colors"
+                          >
+                            <Upload className="h-5 w-5 text-gray-400 mr-2" />
+                            <span className="text-sm text-gray-600">Click to upload footer image</span>
+                          </label>
+
+                          {footerImagePreview && (
+                            <div className="relative">
+                              <img
+                                src={footerImagePreview}
+                                alt="Footer preview"
+                                className="w-full h-32 object-cover rounded-lg"
+                              />
+                        <button
+                                type="button"
+                                onClick={() => {
+                                  setFooterImage(null);
+                                  setFooterImagePreview('');
+                                }}
+                                className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                              >
+                                <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                          )}
+                    </div>
                       </div>
                     </div>
 
@@ -711,9 +764,9 @@ const Campaigns: React.FC = () => {
                                 src={imagePreview} 
                                 alt="Header"
                                 className="w-full h-24 object-cover rounded-t-2xl"
-                              />
-                            </div>
-                          )}
+                        />
+                      </div>
+                    )}
                           <div className="p-3">
                             <div className="text-gray-800 text-xs leading-relaxed whitespace-pre-wrap">
                               {(() => {
@@ -764,66 +817,13 @@ const Campaigns: React.FC = () => {
                                 src={footerImagePreview} 
                                 alt="Footer"
                                 className="w-full h-16 object-cover rounded-lg"
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Footer Image Upload */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Footer Image (Optional)
-                        </label>
-                      <div className="space-y-2">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              setFooterImage(file);
-                              const reader = new FileReader();
-                              reader.onload = (e) => {
-                                setFooterImagePreview(e.target?.result as string);
-                              };
-                              reader.readAsDataURL(file);
-                            }
-                          }}
-                          className="hidden"
-                          id="footer-image-upload"
                         />
-                        <label
-                          htmlFor="footer-image-upload"
-                          className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-indigo-400 transition-colors"
-                        >
-                          <Upload className="h-5 w-5 text-gray-400 mr-2" />
-                          <span className="text-sm text-gray-600">Click to upload footer image</span>
-                        </label>
-
-                        {footerImagePreview && (
-                          <div className="relative">
-                            <img
-                              src={footerImagePreview}
-                              alt="Footer preview"
-                              className="w-full h-32 object-cover rounded-lg"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setFooterImage(null);
-                                setFooterImagePreview('');
-                              }}
-                              className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
-                        )}
+                      </div>
+                          )}
                       </div>
                     </div>
                   </div>
-                </div>
+                  </div>
                 </div>
 
                 {/* Konnect Button */}
@@ -836,7 +836,7 @@ const Campaigns: React.FC = () => {
                     <Send className="h-5 w-5 mr-2" />
                     Send
                   </button>
-                </div>
+      </div>
               </div>
             )}
           </div>
@@ -980,9 +980,9 @@ const Campaigns: React.FC = () => {
                         </div>
                           </div>
                         </div>
-                    </div>
-        )}
-
+                        </div>
+                      )}
+                      
         {/* Template Preview Modal */}
         {showTemplatePreview && previewTemplate && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -997,7 +997,7 @@ const Campaigns: React.FC = () => {
                         >
                   <X className="h-6 w-6" />
                         </button>
-              </div>
+                          </div>
 
               <div className="space-y-6">
                 {/* Template Preview */}
@@ -1011,8 +1011,8 @@ const Campaigns: React.FC = () => {
                           alt="Header"
                           className="max-w-full h-48 object-contain mx-auto rounded"
                         />
-                      </div>
-                    )}
+                        </div>
+                      )}
 
                     {/* Content */}
                     <div className="bg-gray-50 p-4 rounded-lg">
@@ -1075,8 +1075,8 @@ const Campaigns: React.FC = () => {
                 )}
               </div>
             </div>
-          </div>
-        )}
+                      </div>
+                    )}
 
         {/* Group Preview Modal */}
         {showGroupPreview && previewGroup && (
@@ -1086,13 +1086,13 @@ const Campaigns: React.FC = () => {
                 <h2 className="text-xl font-semibold text-gray-900">
                   Group Preview: {previewGroup.groupName}
                 </h2>
-                <button
+                        <button
                   onClick={() => setShowGroupPreview(false)}
                   className="text-gray-400 hover:text-gray-600"
-                >
+                        >
                   <X className="h-6 w-6" />
-                </button>
-              </div>
+                        </button>
+                      </div>
 
               <div className="space-y-6">
                 {/* Group Details */}
@@ -1104,11 +1104,11 @@ const Campaigns: React.FC = () => {
                     <div>
                       <span className="text-gray-600">Group Name:</span>
                       <span className="ml-2 font-medium">{previewGroup.groupName}</span>
-                    </div>
+                  </div>
                     <div>
                       <span className="text-gray-600">Total Contacts:</span>
                       <span className="ml-2 font-medium">{previewGroup.mrCount || 0}</span>
-                    </div>
+                </div>
                   </div>
                 </div>
 
@@ -1142,7 +1142,7 @@ const Campaigns: React.FC = () => {
           </div>
         </div>
       )}
-      </div>
+              </div>
 
       {/* Send Confirmation Popup */}
       {showSendConfirmation && (
@@ -1160,12 +1160,12 @@ const Campaigns: React.FC = () => {
               <div className="text-sm text-gray-500 mb-6">
                 Your messages have been queued for sending. Please check the Dashboard in 5 minutes to see the status.
               </div>
-              <button
+                <button
                 onClick={() => setShowSendConfirmation(false)}
                 className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 OK
-              </button>
+                </button>
             </div>
           </div>
         </div>
@@ -1193,7 +1193,7 @@ const Campaigns: React.FC = () => {
               <div className="text-sm text-gray-500 mb-6 whitespace-pre-line text-left">
                 {errorMessage}
               </div>
-              <button
+                <button
                 onClick={() => setShowErrorPopup(false)}
                 className={`w-full px-4 py-2 text-white rounded-lg ${
                   (window as any).lastPopupIsSuccess 
@@ -1202,8 +1202,8 @@ const Campaigns: React.FC = () => {
                 }`}
               >
                 Close
-              </button>
-            </div>
+                </button>
+              </div>
           </div>
         </div>
       )}
