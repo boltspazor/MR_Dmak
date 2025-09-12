@@ -517,6 +517,55 @@ const Templates: React.FC = () => {
     }
   };
 
+  const downloadRecipientListFormat = (template: Template) => {
+    // Create CSV with template name in A1 and parameters in row 2
+    const csvContent = [
+      template.name, // A1 - Template name
+      '', // B1 - Empty
+      '', // C1 - Empty
+      '', // D1 - Empty
+      '', // E1 - Empty
+      '', // F1 - Empty
+      '', // G1 - Empty
+      '', // H1 - Empty
+      '', // I1 - Empty
+      '', // J1 - Empty
+      '', // K1 - Empty
+      '', // L1 - Empty
+      '', // A2 - Empty
+      'MR id', // B2 - MR id
+      'First Name', // C2 - First Name
+      'last Name', // D2 - last Name
+      '#FN', // E2 - #FN
+      '#LN', // F2 - #LN
+      '#Month', // G2 - #Month
+      '#week', // H2 - #week
+      '#Target', // I2 - #Target
+      '#lastmonth', // J2 - #lastmonth
+      '#doctor', // K2 - #doctor
+      '', // L2 - Empty
+      '', // A3 - Empty
+      'MR001', // B3 - Sample MR id
+      'Prabhjeet', // C3 - Sample First Name
+      'Singh', // D3 - Sample last Name
+      'Prabhjeet', // E3 - Sample #FN
+      'Singh', // F3 - Sample #LN
+      'September', // G3 - Sample #Month
+      'Week 2', // H3 - Sample #week
+      '1 crore', // H3 - Sample #Target
+      '50 lakhs', // I3 - Sample #lastmonth
+      '30' // J3 - Sample #doctor
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${template.name.replace(/\s+/g, '_')}_recipient_list_format.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   const summaryItems = [
     {
       title: 'Total Templates',
@@ -667,6 +716,7 @@ const Templates: React.FC = () => {
             </div>
                       </th>
                       <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Actions</th>
+                      <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Download</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -720,11 +770,20 @@ const Templates: React.FC = () => {
                       )}
                     </div>
                           </td>
+                          <td className="py-3 px-6 text-sm text-center">
+                            <button
+                              onClick={() => downloadRecipientListFormat(template)}
+                              className="text-green-600 hover:text-green-800 p-1 rounded"
+                              title="Download Recipient List Format"
+                            >
+                              <Download className="h-4 w-4" />
+                            </button>
+                          </td>
                         </tr>
                 ))
               ) : (
                       <tr>
-                        <td colSpan={3} className="text-center py-12">
+                        <td colSpan={4} className="text-center py-12">
                           <div className="flex flex-col items-center">
                             <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4">
                     <FileText className="h-12 w-12 text-gray-400" />
@@ -1183,13 +1242,13 @@ const Templates: React.FC = () => {
 
                 {/* Parameters */}
                 <div className="bg-white border border-gray-200 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-800 mb-4">Parameters</h4>
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4">Parameters Used:</h4>
                   {previewTemplate.parameters.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
                       {previewTemplate.parameters.map((param, index) => (
                         <span 
                           key={index}
-                          className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full font-medium"
+                          className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
                         >
                           #{param}
                         </span>

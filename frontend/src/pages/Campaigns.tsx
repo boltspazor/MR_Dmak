@@ -5,9 +5,9 @@ import {
   Send,
   Upload,
   X,
-  BarChart3,
   ChevronDown,
-  Eye
+  Eye,
+  CheckCircle
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { Campaign, Group, Template, RecipientList } from '../types';
@@ -53,6 +53,11 @@ const Campaigns: React.FC = () => {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvData, setCsvData] = useState<string[][]>([]);
   const [showCsvPreview, setShowCsvPreview] = useState(false);
+
+  // Error Popup States
+  const [showErrorPopup, setShowErrorPopup] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [errorTitle, setErrorTitle] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -123,25 +128,10 @@ const Campaigns: React.FC = () => {
     }
   };
 
-  const handleCsvUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setCsvFile(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const csv = e.target?.result as string;
-        const lines = csv.split('\n');
-        const data = lines.map(line => line.split(','));
-        setCsvData(data);
-        setShowCsvPreview(true);
-      };
-      reader.readAsText(file);
-    }
-  };
 
   const handleCreateRecipientList = async () => {
     if (!recipientListName.trim() || !csvFile) {
-      alert('Please provide a name and upload a CSV file');
+      showError('Missing Information', 'Please provide a name and upload a CSV file');
       return;
     }
 
@@ -155,7 +145,7 @@ const Campaigns: React.FC = () => {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
-      alert('Recipient list created successfully!');
+      showError('Success', 'Recipient list created successfully!', true);
       setShowCreateRecipientList(false);
       setRecipientListName('');
       setRecipientListDescription('');
@@ -164,7 +154,7 @@ const Campaigns: React.FC = () => {
       setShowCsvPreview(false);
     } catch (error) {
       console.error('Error creating recipient list:', error);
-      alert('Failed to create recipient list');
+      showError('Error', 'Failed to create recipient list');
     }
   };
 
@@ -175,7 +165,7 @@ const Campaigns: React.FC = () => {
 
   const handleWithTemplateSubmit = async () => {
     if (!selectedTemplate || !selectedRecipientList || !campaignName.trim()) {
-      alert('Please select a template, recipient list, and enter a campaign name');
+      showError('Missing Information', 'Please select a template, recipient list, and enter a campaign name');
       return;
     }
 
@@ -188,7 +178,7 @@ const Campaigns: React.FC = () => {
       };
 
       await api.post('/messages/campaigns', campaignData);
-      alert('Campaign created and messages sent successfully!');
+      showError('Success', 'Campaign created and messages sent successfully!', true);
       
       // Reset form
       setSelectedTemplate(null);
@@ -197,13 +187,13 @@ const Campaigns: React.FC = () => {
       setSelectedTemplateDropdown('');
     } catch (error) {
       console.error('Error creating campaign:', error);
-      alert('Failed to create campaign');
+      showError('Error', 'Failed to create campaign');
     }
   };
 
   const handleWithoutTemplateSubmit = async () => {
     if (!messageContent.trim() || selectedGroups.length === 0 || !campaignName.trim()) {
-      alert('Please enter message content, select groups, and enter a campaign name');
+      showError('Missing Information', 'Please enter message content, select groups, and enter a campaign name');
       return;
     }
 
@@ -233,7 +223,7 @@ const Campaigns: React.FC = () => {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       
-      alert('Campaign created and messages sent successfully!');
+      showError('Success', 'Campaign created and messages sent successfully!', true);
       
       // Reset form
       setMessageContent('');
@@ -245,7 +235,7 @@ const Campaigns: React.FC = () => {
       setFooterImagePreview(null);
     } catch (error) {
       console.error('Error creating campaign:', error);
-      alert('Failed to create campaign');
+      showError('Error', 'Failed to create campaign');
     }
   };
 
@@ -255,19 +245,90 @@ const Campaigns: React.FC = () => {
       value: (campaigns?.length || 0).toString(),
       icon: <MessageSquare className="h-6 w-6" />,
       color: 'bg-blue-500'
-    },
-    {
-      title: 'Success Rate',
-      value: campaigns && campaigns.length > 0 
-        ? `${Math.round(((campaigns.filter(c => c?.status === 'completed').length || 0) / campaigns.length) * 100)}%`
-        : '0%',
-      icon: <BarChart3 className="h-6 w-6" />,
-      color: 'bg-green-500'
     }
   ];
 
   const handleSidebarNavigation = (route: string) => {
     navigate(route);
+  };
+
+  // CSV Validation Functions
+  const validateCSVFile = (csvData: string[][], templateName: string): { isValid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+
+    // Check if CSV has at least 3 rows (A1, A2, A3)
+    if (csvData.length < 3) {
+      errors.push('CSV file must have at least 3 rows (template name, parameters, and sample data)');
+      return { isValid: false, errors };
+    }
+
+    // Check A1 cell for template name match
+    const a1Value = csvData[0]?.[0]?.trim();
+    if (!a1Value || a1Value !== templateName) {
+      errors.push(`Template name in A1 cell must match the selected template name "${templateName}". Found: "${a1Value || 'empty'}"`);
+    }
+
+    // Check row 2 (parameters row) for empty cells
+    const parameterRow = csvData[1];
+    if (parameterRow) {
+      for (let i = 0; i < parameterRow.length; i++) {
+        if (parameterRow[i]?.trim() === '') {
+          errors.push(`Parameter row (row 2) has empty cell in column ${String.fromCharCode(65 + i)}2`);
+        }
+      }
+    }
+
+    // Check data rows (starting from row 3) for empty cells
+    for (let rowIndex = 2; rowIndex < csvData.length; rowIndex++) {
+      const row = csvData[rowIndex];
+      if (row) {
+        for (let colIndex = 0; colIndex < row.length; colIndex++) {
+          if (row[colIndex]?.trim() === '') {
+            errors.push(`Data row ${rowIndex + 1} has empty cell in column ${String.fromCharCode(65 + colIndex)}${rowIndex + 1}`);
+          }
+        }
+      }
+    }
+
+    return { isValid: errors.length === 0, errors };
+  };
+
+  const showError = (title: string, message: string, isSuccess: boolean = false) => {
+    setErrorTitle(title);
+    setErrorMessage(message);
+    setShowErrorPopup(true);
+    // Store success state for styling
+    (window as any).lastPopupIsSuccess = isSuccess;
+  };
+
+  const handleCSVUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!selectedTemplate) {
+      showError('No Template Selected', 'Please select a template before uploading a recipient list.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      const lines = text.split('\n');
+      const csvData = lines.map(line => line.split(',').map(cell => cell.trim()));
+
+      // Validate CSV
+      const validation = validateCSVFile(csvData, selectedTemplate.name);
+      if (!validation.isValid) {
+        showError('CSV Validation Failed', validation.errors.join('\n'));
+        return;
+      }
+
+      // If validation passes, process the CSV
+      setCsvData(csvData);
+      setCsvFile(file);
+      setShowCsvPreview(true);
+    };
+    reader.readAsText(file);
   };
 
   const handleLogout = () => {
@@ -311,8 +372,8 @@ const Campaigns: React.FC = () => {
         {/* Separator Line */}
         <div className="border-b-2 border-indigo-500 my-6"></div>
 
-        {/* Campaign Management Header */}
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Campaign Management</h2>
+        {/* Konnect Header */}
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Konnect</h2>
 
         {/* Main Content Area */}
         <CommonFeatures
@@ -371,7 +432,7 @@ const Campaigns: React.FC = () => {
                           <option value="">Select a template</option>
                           {(templates || []).map(template => (
                             <option key={template?._id} value={template?._id}>
-                              {template?.name} ({template?.type})
+                              {template?.name}
                             </option>
                           ))}
                         </select>
@@ -394,23 +455,44 @@ const Campaigns: React.FC = () => {
           </button>
                     </div>
 
-                    {/* Selected Template Display */}
+                    {/* Template Preview */}
                     {selectedTemplate && (
                       <div className="space-y-2">
-                        <p className="text-sm font-medium text-gray-700">Selected Template:</p>
-                        <div className="flex items-center space-x-2 bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm">
-                          <span>{selectedTemplate.name}</span>
-          <button 
-                            onClick={() => {
-                              setSelectedTemplate(null);
-                              setSelectedTemplateDropdown('');
-                            }}
-                            className="text-indigo-600 hover:text-indigo-800"
-                          >
-                            <X className="h-4 w-4" />
-          </button>
-          </div>
-        </div>
+                        <p className="text-sm font-medium text-gray-700">Template Preview:</p>
+                        <div className="bg-white border border-gray-200 rounded-lg p-4">
+                          <div className="flex justify-between items-start mb-2">
+                            <h4 className="font-medium text-gray-900">{selectedTemplate.name}</h4>
+                            <button 
+                              onClick={() => {
+                                setSelectedTemplate(null);
+                                setSelectedTemplateDropdown('');
+                              }}
+                              className="text-gray-400 hover:text-gray-600"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                          <div className="text-sm text-gray-600 mb-3">
+                            {selectedTemplate.content.substring(0, 100)}
+                            {selectedTemplate.content.length > 100 && '...'}
+                          </div>
+                          {selectedTemplate.parameters.length > 0 && (
+                            <div>
+                              <p className="text-xs font-medium text-gray-500 mb-1">Parameters Used:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {selectedTemplate.parameters.map((param, index) => (
+                                  <span 
+                                    key={index}
+                                    className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
+                                  >
+                                    #{param}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     )}
       </div>
             </div>
@@ -422,7 +504,7 @@ const Campaigns: React.FC = () => {
                     onClick={() => setShowCreateRecipientList(true)}
                     className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
                   >
-                    Add Recipient List
+                    Upload Recipient List
             </button>
 
                   {/* Selected Recipient List Display */}
@@ -709,7 +791,7 @@ const Campaigns: React.FC = () => {
                           <input
                             type="file"
                       accept=".csv"
-                      onChange={handleCsvUpload}
+                      onChange={handleCSVUpload}
                             className="hidden"
                       id="csv-upload"
                           />
@@ -950,6 +1032,43 @@ const Campaigns: React.FC = () => {
         </div>
       )}
       </div>
+
+      {/* Error/Success Popup */}
+      {showErrorPopup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex items-center mb-4">
+              <div className={`mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full ${
+                (window as any).lastPopupIsSuccess ? 'bg-green-100' : 'bg-red-100'
+              }`}>
+                {(window as any).lastPopupIsSuccess ? (
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+                ) : (
+                  <X className="h-6 w-6 text-red-600" />
+                )}
+              </div>
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                {errorTitle}
+              </h3>
+              <div className="text-sm text-gray-500 mb-6 whitespace-pre-line text-left">
+                {errorMessage}
+              </div>
+              <button
+                onClick={() => setShowErrorPopup(false)}
+                className={`w-full px-4 py-2 text-white rounded-lg ${
+                  (window as any).lastPopupIsSuccess 
+                    ? 'bg-green-600 hover:bg-green-700' 
+                    : 'bg-red-600 hover:bg-red-700'
+                }`}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
