@@ -10,7 +10,7 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { api } from '../lib/api';
-import { Campaign, Group, Template, RecipientList } from '../types';
+import { Campaign, Template, RecipientList } from '../types';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import CommonFeatures from '../components/CommonFeatures';
@@ -20,23 +20,20 @@ const Campaigns: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [groups, setGroups] = useState<Group[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'with-template' | 'custom-messages'>('with-template');
   
   // With Template Tab States
-  const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [showTemplatePreview, setShowTemplatePreview] = useState(false);
-  const [selectedGroupDropdown, setSelectedGroupDropdown] = useState<string>('');
   const [selectedTemplateDropdown, setSelectedTemplateDropdown] = useState<string>('');
   const [campaignName, setCampaignName] = useState('');
   const [selectedRecipientList, setSelectedRecipientList] = useState<RecipientList | null>(null);
   
   // Preview states
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
-  const [previewGroup] = useState<Group | null>(null);
+  const [previewGroup] = useState<any>(null);
   const [showGroupPreview, setShowGroupPreview] = useState(false);
 
   // Without Template Tab States
@@ -45,6 +42,12 @@ const Campaigns: React.FC = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [footerImage, setFooterImage] = useState<File | null>(null);
   const [footerImagePreview, setFooterImagePreview] = useState<string | null>(null);
+
+  // MR Search and Selection States
+  const [mrs, setMrs] = useState<any[]>([]);
+  const [mrSearchTerm, setMrSearchTerm] = useState('');
+  const [selectedMrs, setSelectedMrs] = useState<string[]>([]);
+  const [showMrSelection, setShowMrSelection] = useState(false);
 
   // Recipient List Modal States
   const [showCreateRecipientList, setShowCreateRecipientList] = useState(false);
@@ -59,48 +62,52 @@ const Campaigns: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [errorTitle, setErrorTitle] = useState('');
 
+  // Send Confirmation Popup States
+  const [showSendConfirmation, setShowSendConfirmation] = useState(false);
+
   useEffect(() => {
     fetchData();
   }, []);
 
   const fetchData = async () => {
     try {
-      const [campaignsRes, groupsRes, templatesRes] = await Promise.all([
+      const [campaignsRes, templatesRes, mrsRes] = await Promise.all([
         api.get('/messages/campaigns'),
-        api.get('/groups'),
-        api.get('/templates')
+        api.get('/templates'),
+        api.get('/mrs')
       ]);
       
       // Handle different response structures safely
       setCampaigns(campaignsRes.data?.data || campaignsRes.data || []);
-      setGroups(groupsRes.data?.data || groupsRes.data || []);
       setTemplates(templatesRes.data?.data || templatesRes.data || []);
+      setMrs(mrsRes.data?.data || mrsRes.data || []);
     } catch (error) {
       console.error('Error fetching data:', error);
       // Set empty arrays on error to prevent undefined access
       setCampaigns([]);
-      setGroups([]);
       setTemplates([]);
+      setMrs([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGroupSelection = (groupName: string) => {
-    if (!groupName) return;
-    setSelectedGroups(prev => 
-      prev.includes(groupName) 
-        ? prev.filter(name => name !== groupName)
-        : [...prev, groupName]
+
+  const handleMrSelection = (mrId: string) => {
+    setSelectedMrs(prev => 
+      prev.includes(mrId) 
+        ? prev.filter(id => id !== mrId)
+        : [...prev, mrId]
     );
   };
 
-  const handleGroupDropdownChange = (groupName: string) => {
-    if (groupName && !selectedGroups.includes(groupName)) {
-      setSelectedGroups(prev => [...prev, groupName]);
-    }
-    setSelectedGroupDropdown('');
-  };
+  const filteredMrs = mrs.filter(mr => 
+    mr.firstName?.toLowerCase().includes(mrSearchTerm.toLowerCase()) ||
+    mr.lastName?.toLowerCase().includes(mrSearchTerm.toLowerCase()) ||
+    mr.mrId?.toLowerCase().includes(mrSearchTerm.toLowerCase()) ||
+    mr.phone?.includes(mrSearchTerm)
+  );
+
 
   const handleTemplateDropdownChange = (templateId: string) => {
     if (!templateId) return;
@@ -178,7 +185,7 @@ const Campaigns: React.FC = () => {
       };
 
       await api.post('/messages/campaigns', campaignData);
-      showError('Success', 'Campaign created and messages sent successfully!', true);
+      setShowSendConfirmation(true);
       
       // Reset form
       setSelectedTemplate(null);
@@ -192,8 +199,8 @@ const Campaigns: React.FC = () => {
   };
 
   const handleWithoutTemplateSubmit = async () => {
-    if (!messageContent.trim() || selectedGroups.length === 0 || !campaignName.trim()) {
-      showError('Missing Information', 'Please enter message content, select groups, and enter a campaign name');
+    if (!messageContent.trim() || selectedMrs.length === 0 || !campaignName.trim()) {
+      showError('Missing Information', 'Please enter message content, select MRs, and enter a campaign name');
       return;
     }
 
@@ -201,7 +208,7 @@ const Campaigns: React.FC = () => {
       const campaignData = {
         name: campaignName,
         content: messageContent,
-        targetGroups: selectedGroups,
+        targetMrs: selectedMrs,
         image: selectedImage,
         footerImage: footerImage,
         type: 'custom-messages'
@@ -210,7 +217,7 @@ const Campaigns: React.FC = () => {
       const formData = new FormData();
       formData.append('name', campaignData.name);
       formData.append('content', campaignData.content);
-      formData.append('targetGroups', JSON.stringify(campaignData.targetGroups));
+      formData.append('targetMrs', JSON.stringify(campaignData.targetMrs));
       formData.append('type', campaignData.type);
       if (campaignData.image) {
         formData.append('image', campaignData.image);
@@ -223,11 +230,11 @@ const Campaigns: React.FC = () => {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       
-      showError('Success', 'Campaign created and messages sent successfully!', true);
+      setShowSendConfirmation(true);
       
       // Reset form
       setMessageContent('');
-      setSelectedGroups([]);
+      setSelectedMrs([]);
       setCampaignName('');
       setSelectedImage(null);
       setImagePreview(null);
@@ -389,7 +396,7 @@ const Campaigns: React.FC = () => {
                 { key: 'with-template', label: 'With Template' },
                 { key: 'custom-messages', label: 'Custom Messages' }
               ].map((tab) => (
-          <button 
+                <button 
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key as any)}
                   className={`pb-2 border-b-2 text-lg font-medium capitalize ${
@@ -399,7 +406,7 @@ const Campaigns: React.FC = () => {
                   }`}
                 >
                   {tab.label}
-          </button>
+                </button>
               ))}
             </div>
 
@@ -553,118 +560,221 @@ const Campaigns: React.FC = () => {
                 />
               </div>
 
-                {/* Group Selection Dropdown */}
+                {/* MR Selection */}
                 <div className="bg-white bg-opacity-40 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Groups</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Select MRs</h3>
                   <div className="space-y-4">
                     <div className="flex space-x-2">
                       <div className="relative flex-1">
-                <select
-                          value={selectedGroupDropdown}
-                          onChange={(e) => handleGroupDropdownChange(e.target.value)}
-                          className="w-full px-3 py-2 pr-10 rounded-lg border-0 bg-gray-100 appearance-none cursor-pointer"
-                        >
-                          <option value="">All Groups</option>
-                          {(groups || []).map(group => (
-                            <option key={group?.id} value={group?.groupName}>
-                              {group?.groupName}
-                            </option>
-                          ))}
-                </select>
-                        <ChevronDown className="h-5 w-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
-              </div>
-            </div>
+                        <input
+                          type="text"
+                          placeholder="Search MRs by name, ID, or phone..."
+                          value={mrSearchTerm}
+                          onChange={(e) => setMrSearchTerm(e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg border-0 bg-gray-100"
+                        />
+                      </div>
+                      <button
+                        onClick={() => setShowMrSelection(!showMrSelection)}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
+                      >
+                        {showMrSelection ? 'Hide' : 'Select MRs'}
+                      </button>
+                    </div>
 
-                    {/* Selected Groups Display */}
-                    {selectedGroups.length > 0 && (
+                    {/* MR Selection Modal */}
+                    {showMrSelection && (
+                      <div className="border border-gray-200 rounded-lg p-4 max-h-64 overflow-y-auto">
+                        <div className="space-y-2">
+                          {filteredMrs.length > 0 ? (
+                            filteredMrs.map(mr => (
+                              <div key={mr._id || mr.id} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedMrs.includes(mr._id || mr.id)}
+                                  onChange={() => handleMrSelection(mr._id || mr.id)}
+                                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                />
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-gray-900">
+                                    {mr.firstName} {mr.lastName}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {mr.mrId} • {mr.phone}
+                                  </p>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-sm text-gray-500 text-center py-4">No MRs found</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Selected MRs Display */}
+                    {selectedMrs.length > 0 && (
                       <div className="space-y-2">
-                        <p className="text-sm font-medium text-gray-700">Selected Groups:</p>
+                        <p className="text-sm font-medium text-gray-700">Selected MRs ({selectedMrs.length}):</p>
                         <div className="flex flex-wrap gap-2">
-                          {selectedGroups.map(groupName => (
-                            <div
-                              key={groupName}
-                              className="flex items-center space-x-2 bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm"
-                            >
-                              <span>{groupName}</span>
-                <button
-                                onClick={() => handleGroupSelection(groupName)}
-                                className="text-indigo-600 hover:text-indigo-800"
-                              >
-                                <X className="h-3 w-3" />
-                </button>
-              </div>
-                          ))}
+                          {selectedMrs.map(mrId => {
+                            const mr = mrs.find(m => (m._id || m.id) === mrId);
+                            return (
+                              <div key={mrId} className="flex items-center space-x-2 bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm">
+                                <span>{mr?.firstName} {mr?.lastName}</span>
+                                <button 
+                                  onClick={() => handleMrSelection(mrId)}
+                                  className="text-indigo-600 hover:text-indigo-800"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Message Composition */}
+                <div className="bg-white bg-opacity-40 rounded-lg p-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Left Column - Input Fields */}
+                    <div className="space-y-6">
+                      {/* Header Image Upload */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Header Image (Optional)
+                        </label>
+                        <div className="space-y-2">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            className="hidden"
+                            id="header-image-upload"
+                          />
+                          <label
+                            htmlFor="header-image-upload"
+                            className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-indigo-400 transition-colors"
+                          >
+                            <Upload className="h-5 w-5 text-gray-400 mr-2" />
+                            <span className="text-sm text-gray-600">Click to upload header image</span>
+                          </label>
+
+                          {imagePreview && (
+                            <div className="relative">
+                              <img
+                                src={imagePreview}
+                                alt="Header preview"
+                                className="w-full h-32 object-cover rounded-lg"
+                              />
+                          <button
+                                type="button"
+                                onClick={removeImage}
+                                className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                          >
+                                <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Message Input */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Text *</label>
+                        <textarea
+                          value={messageContent}
+                          onChange={(e) => setMessageContent(e.target.value)}
+                          placeholder="Enter message content with parameters like #FN, #LN, #Month, #Target..."
+                          rows={6}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Use #ParameterName for dynamic parameters (e.g., #FN, #LN, #Month, #Target)
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Right Column - Live Preview */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Live Preview
+                      </label>
+                      <div className="bg-gray-100 p-4 rounded-lg h-96 overflow-y-auto">
+                        <div className="bg-white rounded-2xl rounded-tl-md shadow-sm max-w-xs mx-auto">
+                          {imagePreview && (
+                            <div className="w-full">
+                              <img 
+                                src={imagePreview} 
+                                alt="Header"
+                                className="w-full h-24 object-cover rounded-t-2xl"
+                              />
                             </div>
+                          )}
+                          <div className="p-3">
+                            <div className="text-gray-800 text-xs leading-relaxed whitespace-pre-wrap">
+                              {(() => {
+                                if (!messageContent) return 'Start typing your message...';
+                                
+                                let processedContent = messageContent;
+                                
+                                // Sample parameter values for live preview
+                                const sampleParams = {
+                                  'FN': 'John',
+                                  'LN': 'Doe',
+                                  'FirstName': 'John',
+                                  'LastName': 'Doe',
+                                  'MRId': 'MR001',
+                                  'GroupName': 'North Zone',
+                                  'PhoneNumber': '+919876543210',
+                                  'Name': 'John Doe',
+                                  'Company': 'D-MAK',
+                                  'Product': 'New Product',
+                                  'Date': new Date().toLocaleDateString(),
+                                  'Time': new Date().toLocaleTimeString(),
+                                  'Month': new Date().toLocaleDateString('en-US', { month: 'long' }),
+                                  'Year': new Date().getFullYear().toString(),
+                                  'Target': '100',
+                                  'Achievement': '85',
+                                  'Location': 'Mumbai',
+                                  'City': 'Mumbai',
+                                  'State': 'Maharashtra',
+                                  'Country': 'India'
+                                };
+                                
+                                // Replace parameters with sample values
+                                for (const [param, value] of Object.entries(sampleParams)) {
+                                  const regex = new RegExp(`#${param}\\b`, 'g');
+                                  processedContent = processedContent.replace(regex, value);
+                                }
+                                
+                                // Replace any remaining parameters with [Sample Value]
+                                processedContent = processedContent.replace(/#[A-Za-z0-9_]+/g, '[Sample Value]');
+                                
+                                return processedContent;
+                              })()}
+                            </div>
+                          </div>
+                          {footerImagePreview && (
+                            <div className="px-3 pb-3">
+                              <img 
+                                src={footerImagePreview} 
+                                alt="Footer"
+                                className="w-full h-16 object-cover rounded-lg"
+                              />
                             </div>
                           )}
                         </div>
                       </div>
 
-                {/* Message Composition */}
-                <div className="bg-white bg-opacity-40 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Compose Message</h3>
-
-                  <div className="space-y-6">
-                    {/* Header Image Upload */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Header Image (Optional)
-                      </label>
-                      <div className="space-y-2">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageUpload}
-                          className="hidden"
-                          id="header-image-upload"
-                        />
-                        <label
-                          htmlFor="header-image-upload"
-                          className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-indigo-400 transition-colors"
-                        >
-                          <Upload className="h-5 w-5 text-gray-400 mr-2" />
-                          <span className="text-sm text-gray-600">Click to upload header image</span>
+                      {/* Footer Image Upload */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Footer Image (Optional)
                         </label>
-
-                        {imagePreview && (
-                          <div className="relative">
-                            <img
-                              src={imagePreview}
-                              alt="Header preview"
-                              className="w-full h-32 object-cover rounded-lg"
-                            />
-                        <button
-                              type="button"
-                              onClick={removeImage}
-                              className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                        >
-                              <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Message Input */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Text *</label>
-                      <textarea
-                        value={messageContent}
-                        onChange={(e) => setMessageContent(e.target.value)}
-                        placeholder="Enter message content with parameters like #FN, #LN, #Month, #Target..."
-                        rows={6}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        Use #ParameterName for dynamic parameters (e.g., #FN, #LN, #Month, #Target)
-                      </p>
-                      </div>
-
-                    {/* Footer Image Upload */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Footer Image (Optional)
-                      </label>
                       <div className="space-y-2">
                         <input
                           type="file"
@@ -708,25 +818,26 @@ const Campaigns: React.FC = () => {
                             >
                               <X className="h-4 w-4" />
                             </button>
-                      </div>
+                          </div>
                         )}
+                      </div>
                     </div>
                   </div>
-              </div>
-          </div>
+                </div>
+                </div>
 
                 {/* Konnect Button */}
                 <div className="flex justify-end">
                   <button
                     onClick={handleWithoutTemplateSubmit}
-                    disabled={!messageContent.trim() || selectedGroups.length === 0 || !campaignName.trim()}
+                    disabled={!messageContent.trim() || selectedMrs.length === 0 || !campaignName.trim()}
                     className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                   >
                     <Send className="h-5 w-5 mr-2" />
                     Send
                   </button>
-        </div>
-      </div>
+                </div>
+              </div>
             )}
           </div>
         </CommonFeatures>
@@ -1032,6 +1143,33 @@ const Campaigns: React.FC = () => {
         </div>
       )}
       </div>
+
+      {/* Send Confirmation Popup */}
+      {showSendConfirmation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex items-center mb-4">
+              <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100">
+                <MessageSquare className="h-6 w-6 text-blue-600" />
+              </div>
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Messages Queued Successfully!
+              </h3>
+              <div className="text-sm text-gray-500 mb-6">
+                Your messages have been queued for sending. Please check the Dashboard in 5 minutes to see the status.
+              </div>
+              <button
+                onClick={() => setShowSendConfirmation(false)}
+                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Error/Success Popup */}
       {showErrorPopup && (
