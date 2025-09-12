@@ -10,16 +10,18 @@ interface SummaryItem {
 
 interface CommonFeaturesProps {
   summaryItems: SummaryItem[];
-  onExportCSV: () => void;
-  onExportPDF: () => void;
+  onExportCSV?: () => void;
+  onExportPDF?: () => void;
   children: React.ReactNode;
+  showExportBlock?: boolean;
 }
 
 const CommonFeatures: React.FC<CommonFeaturesProps> = ({
   summaryItems,
   onExportCSV,
   onExportPDF,
-  children
+  children,
+  showExportBlock = true
 }) => {
   return (
     <div className="space-y-8">
@@ -46,25 +48,27 @@ const CommonFeatures: React.FC<CommonFeaturesProps> = ({
       </div>
 
       {/* Export Block */}
-      <div className="bg-white bg-opacity-60 rounded-lg p-6 border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Export Data</h3>
-        <div className="flex space-x-4">
-          <button
-            onClick={onExportCSV}
-            className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Export CSV
-          </button>
-          <button
-            onClick={onExportPDF}
-            className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Export PDF
-          </button>
+      {showExportBlock && (
+        <div className="bg-white bg-opacity-60 rounded-lg p-6 border border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Export Data</h3>
+          <div className="flex space-x-4">
+            <button
+              onClick={onExportCSV}
+              className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </button>
+            <button
+              onClick={onExportPDF}
+              className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export PDF
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

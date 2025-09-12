@@ -390,8 +390,6 @@ const Campaigns: React.FC = () => {
         <Header 
           title="D-MAK"
           subtitle="Digital - Marketing, Automate & Konnect"
-          onExportCSV={() => {}}
-          onExportPDF={() => {}}
           showExportButtons={false}
         />
 
@@ -404,8 +402,7 @@ const Campaigns: React.FC = () => {
         {/* Main Content Area */}
         <CommonFeatures
           summaryItems={summaryItems}
-          onExportCSV={() => {}}
-          onExportPDF={() => {}}
+          showExportBlock={false}
         >
           <div className="space-y-8">
 
