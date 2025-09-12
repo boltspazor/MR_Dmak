@@ -680,7 +680,7 @@ const SimpleMRTool: React.FC = () => {
                     <thead>
                       <tr className="bg-indigo-50 border-b">
                         <th 
-                          className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                          className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
                           onClick={() => handleSort('mrId')}
                         >
                           <div className="flex items-center justify-center">
@@ -693,7 +693,7 @@ const SimpleMRTool: React.FC = () => {
                           </div>
                         </th>
                         <th 
-                          className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                          className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
                           onClick={() => handleSort('firstName')}
                         >
                           <div className="flex items-center justify-center">
@@ -706,7 +706,7 @@ const SimpleMRTool: React.FC = () => {
                           </div>
                         </th>
                         <th 
-                          className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                          className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
                           onClick={() => handleSort('phone')}
                         >
                           <div className="flex items-center justify-center">
@@ -719,7 +719,7 @@ const SimpleMRTool: React.FC = () => {
                           </div>
                         </th>
                         <th 
-                          className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                          className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
                           onClick={() => handleSort('group')}
                         >
                           <div className="flex items-center justify-center">
@@ -731,22 +731,22 @@ const SimpleMRTool: React.FC = () => {
                             )}
                           </div>
                         </th>
-                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Comments</th>
-                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Actions</th>
+                        <th className="text-left py-3 px-6 text-sm font-medium text-gray-700">Comments</th>
+                        <th className="text-left py-3 px-6 text-sm font-medium text-gray-700">Actions</th>
                     </tr>
                   </thead>
                     <tbody>
                       {paginatedContacts.length > 0 ? (
                         paginatedContacts.map(contact => (
                           <tr key={contact.id} className="border-b hover:bg-gray-50">
-                            <td className="py-3 px-6 text-sm text-gray-900 text-center">{contact.mrId}</td>
-                            <td className="py-3 px-6 text-sm text-gray-900 text-center">
+                            <td className="py-3 px-6 text-sm text-gray-900 text-left">{contact.mrId}</td>
+                            <td className="py-3 px-6 text-sm text-gray-900 text-left">
                               {contact.firstName} {contact.lastName}
                             </td>
-                            <td className="py-3 px-6 text-sm text-gray-900 text-center">{contact.phone}</td>
-                            <td className="py-3 px-6 text-sm text-gray-900 text-center">{contact.group}</td>
-                            <td className="py-3 px-6 text-sm text-gray-900 text-center">{contact.comments || '-'}</td>
-                            <td className="py-3 px-6 text-sm text-center">
+                            <td className="py-3 px-6 text-sm text-gray-900 text-left">{contact.phone}</td>
+                            <td className="py-3 px-6 text-sm text-gray-900 text-left">{contact.group}</td>
+                            <td className="py-3 px-6 text-sm text-gray-900 text-left">{contact.comments || '-'}</td>
+                            <td className="py-3 px-6 text-sm text-left">
                               <div className="flex items-center justify-center space-x-2">
                           <button
                                   onClick={() => handleEditContact(contact)}
@@ -768,7 +768,7 @@ const SimpleMRTool: React.FC = () => {
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={6} className="text-center py-12">
+                          <td colSpan={6} className="text-left py-12">
                             <div className="flex flex-col items-center">
                               <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4">
                                 <Users className="h-12 w-12 text-gray-400" />
@@ -866,7 +866,7 @@ const SimpleMRTool: React.FC = () => {
                   <Trash2 className="h-6 w-6 text-red-600" />
               </div>
                           </div>
-              <div className="text-center">
+              <div className="text-left">
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
                   Delete MR
                 </h3>

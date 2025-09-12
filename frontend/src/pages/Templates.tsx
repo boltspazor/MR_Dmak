@@ -690,7 +690,7 @@ const Templates: React.FC = () => {
                   <thead>
                     <tr className="bg-indigo-50 border-b">
                       <th 
-                        className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                        className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
                         onClick={() => handleSort('name')}
                       >
                         <div className="flex items-center justify-center">
@@ -703,7 +703,7 @@ const Templates: React.FC = () => {
               </div>
                       </th>
                       <th 
-                        className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                        className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
                         onClick={() => handleSort('createdAt')}
                       >
                         <div className="flex items-center justify-center">
@@ -715,19 +715,19 @@ const Templates: React.FC = () => {
                           )}
             </div>
                       </th>
-                      <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Actions</th>
-                      <th className="text-center py-3 px-6 text-sm font-medium text-gray-700">Download</th>
+                      <th className="text-left py-3 px-6 text-sm font-medium text-gray-700">Actions</th>
+                      <th className="text-left py-3 px-6 text-sm font-medium text-gray-700">Download</th>
                     </tr>
                   </thead>
                   <tbody>
               {filteredTemplates.length > 0 ? (
                       filteredTemplates.map((template, index) => (
                         <tr key={index} className="border-b hover:bg-gray-50">
-                          <td className="py-3 px-6 text-sm text-gray-900 text-center font-medium">{template.name}</td>
-                          <td className="py-3 px-6 text-sm text-gray-900 text-center">
+                          <td className="py-3 px-6 text-sm text-gray-900 text-left font-medium">{template.name}</td>
+                          <td className="py-3 px-6 text-sm text-gray-900 text-left">
                             {new Date(template.createdAt).toLocaleDateString()}
                           </td>
-                          <td className="py-3 px-6 text-sm text-center">
+                          <td className="py-3 px-6 text-sm text-left">
                             <div className="flex items-center justify-center space-x-2">
                         <button
                           onClick={() => handlePreview(template)}
@@ -770,7 +770,7 @@ const Templates: React.FC = () => {
                       )}
                     </div>
                           </td>
-                          <td className="py-3 px-6 text-sm text-center">
+                          <td className="py-3 px-6 text-sm text-left">
                             <button
                               onClick={() => downloadRecipientListFormat(template)}
                               className="text-green-600 hover:text-green-800 p-1 rounded"
@@ -783,7 +783,7 @@ const Templates: React.FC = () => {
                 ))
               ) : (
                       <tr>
-                        <td colSpan={4} className="text-center py-12">
+                        <td colSpan={4} className="text-left py-12">
                           <div className="flex flex-col items-center">
                             <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4">
                     <FileText className="h-12 w-12 text-gray-400" />
@@ -1202,7 +1202,7 @@ const Templates: React.FC = () => {
                   </div>
                 </div>
                 
-                <div className="mt-3 text-center">
+                <div className="mt-3 text-left">
                   <p className="text-xs text-gray-600">
                     * This shows how the message will appear in WhatsApp with sample parameter values
                   </p>
@@ -1318,7 +1318,7 @@ const Templates: React.FC = () => {
                   <Trash2 className="h-6 w-6 text-red-600" />
                 </div>
               </div>
-              <div className="text-center">
+              <div className="text-left">
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
                   Delete Template
                 </h3>

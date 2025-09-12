@@ -346,7 +346,7 @@ const Campaigns: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
+        <div className="text-left">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading campaigns...</p>
         </div>
@@ -606,7 +606,7 @@ const Campaigns: React.FC = () => {
               </div>
                             ))
                           ) : (
-                            <p className="text-sm text-gray-500 text-center py-4">No MRs found</p>
+                            <p className="text-sm text-gray-500 text-left py-4">No MRs found</p>
                           )}
                 </div>
               </div>
@@ -1005,7 +1005,7 @@ const Campaigns: React.FC = () => {
                   <div className="space-y-4">
                     {/* Header Image */}
                     {previewTemplate.imageUrl && (
-                      <div className="text-center">
+                      <div className="text-left">
                         <img
                           src={previewTemplate.imageUrl}
                           alt="Header"
@@ -1023,7 +1023,7 @@ const Campaigns: React.FC = () => {
 
                     {/* Footer Image */}
                     {previewTemplate.footerImageUrl && (
-                      <div className="text-center">
+                      <div className="text-left">
                         <img
                           src={previewTemplate.footerImageUrl}
                           alt="Footer"
@@ -1153,7 +1153,7 @@ const Campaigns: React.FC = () => {
                 <MessageSquare className="h-6 w-6 text-blue-600" />
               </div>
             </div>
-            <div className="text-center">
+            <div className="text-left">
               <h3 className="text-lg font-medium text-gray-900 mb-2">
                 Messages Queued Successfully!
               </h3>
@@ -1186,7 +1186,7 @@ const Campaigns: React.FC = () => {
                 )}
               </div>
             </div>
-            <div className="text-center">
+            <div className="text-left">
               <h3 className="text-lg font-medium text-gray-900 mb-2">
                 {errorTitle}
               </h3>

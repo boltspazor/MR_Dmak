@@ -12,6 +12,7 @@ import {
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import CommonFeatures from '../components/CommonFeatures';
+import { api } from '../lib/api';
 
 interface CampaignRecord {
   id: string;
@@ -55,7 +56,7 @@ const Dashboard: React.FC = () => {
   
   // Template preview popup states
   const [showTemplatePreview, setShowTemplatePreview] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
+  const [previewTemplate, setPreviewTemplate] = useState<any>(null);
 
   // Mock data for demonstration
   useEffect(() => {
@@ -195,8 +196,55 @@ const Dashboard: React.FC = () => {
     navigate('/login');
   };
 
-  const handleTemplatePreview = (templateName: string) => {
-    setSelectedTemplate(templateName);
+  const handleTemplatePreview = async (templateName: string) => {
+    try {
+      // Fetch template data from API
+      const response = await api.get('/templates');
+      const templates = response.data.data || [];
+      const template = templates.find((t: any) => t.name === templateName);
+      if (template) {
+        setPreviewTemplate(template);
+      } else {
+        // Fallback to mock data if template not found
+        setPreviewTemplate({
+          name: templateName,
+          content: `Dear #FirstName #LastName,
+
+We are excited to announce our new product launch for #ProductName.
+
+Key Features:
+- Advanced technology
+- User-friendly interface
+- 24/7 support
+
+Best regards,
+The Team`,
+          imageUrl: '',
+          footerImageUrl: '',
+          parameters: ['FirstName', 'LastName', 'ProductName']
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching template:', error);
+      // Fallback to mock data
+      setPreviewTemplate({
+        name: templateName,
+        content: `Dear #FirstName #LastName,
+
+We are excited to announce our new product launch for #ProductName.
+
+Key Features:
+- Advanced technology
+- User-friendly interface
+- 24/7 support
+
+Best regards,
+The Team`,
+        imageUrl: '',
+        footerImageUrl: '',
+        parameters: ['FirstName', 'LastName', 'ProductName']
+      });
+    }
     setShowTemplatePreview(true);
   };
 
@@ -371,7 +419,7 @@ const Dashboard: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
+        <div className="text-left">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading dashboard...</p>
         </div>
@@ -459,7 +507,7 @@ const Dashboard: React.FC = () => {
                   <thead>
                     <tr className="bg-indigo-50 border-b">
                       <th 
-                        className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                        className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
                         onClick={() => handleSort('campaignId')}
                       >
                         <div className="flex items-center justify-center">
@@ -472,7 +520,7 @@ const Dashboard: React.FC = () => {
                         </div>
                       </th>
                       <th 
-                        className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                        className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
                         onClick={() => handleSort('date')}
                       >
                         <div className="flex items-center justify-center">
@@ -485,7 +533,7 @@ const Dashboard: React.FC = () => {
                         </div>
                       </th>
                       <th 
-                        className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                        className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
                         onClick={() => handleSort('campaignName')}
                       >
                         <div className="flex items-center justify-center">
@@ -498,7 +546,7 @@ const Dashboard: React.FC = () => {
                         </div>
                       </th>
                       <th 
-                        className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                        className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
                         onClick={() => handleSort('template')}
                       >
                         <div className="flex items-center justify-center">
@@ -511,7 +559,7 @@ const Dashboard: React.FC = () => {
                         </div>
                       </th>
                       <th 
-                        className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                        className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
                         onClick={() => handleSort('recipientList')}
                       >
                         <div className="flex items-center justify-center">
@@ -524,7 +572,7 @@ const Dashboard: React.FC = () => {
                         </div>
                       </th>
                       <th 
-                        className="text-center py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                        className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
                         onClick={() => handleSort('sendStatus')}
                       >
                         <div className="flex items-center justify-center">
@@ -542,10 +590,10 @@ const Dashboard: React.FC = () => {
                     {filteredCampaigns.length > 0 ? (
                       filteredCampaigns.map(campaign => (
                         <tr key={campaign.id} className="border-b hover:bg-gray-50">
-                          <td className="py-3 px-6 text-sm text-gray-900 text-center">{campaign.campaignId}</td>
-                          <td className="py-3 px-6 text-sm text-gray-900 text-center">{campaign.date}</td>
-                          <td className="py-3 px-6 text-sm text-gray-900 text-center font-medium">{campaign.campaignName}</td>
-                          <td className="py-3 px-6 text-sm text-gray-900 text-center">
+                          <td className="py-3 px-6 text-sm text-gray-900 text-left">{campaign.campaignId}</td>
+                          <td className="py-3 px-6 text-sm text-gray-900 text-left">{campaign.date}</td>
+                          <td className="py-3 px-6 text-sm text-gray-900 text-left font-medium">{campaign.campaignName}</td>
+                          <td className="py-3 px-6 text-sm text-gray-900 text-left">
                             <button 
                               className="text-blue-600 hover:text-blue-800 underline"
                               onClick={() => handleTemplatePreview(campaign.template)}
@@ -553,15 +601,15 @@ const Dashboard: React.FC = () => {
                               {campaign.template}
                             </button>
                           </td>
-                          <td className="py-3 px-6 text-sm text-gray-900 text-center">
+                          <td className="py-3 px-6 text-sm text-gray-900 text-left">
                             <button 
                               className="text-blue-600 hover:text-blue-800 underline"
                               onClick={() => handleRecipientListClick(campaign.recipientList)}
                             >
-                              {campaign.recipientList.length} Groups
+                              {campaign.recipientList.length} MRs
                             </button>
                           </td>
-                          <td className="py-3 px-6 text-sm text-center">
+                          <td className="py-3 px-6 text-sm text-left">
                             <div className="flex items-center justify-center">
                               {getStatusIcon(campaign.sendStatus)}
                               <span className={`ml-2 ${getStatusColor(campaign.sendStatus)}`}>
@@ -573,7 +621,7 @@ const Dashboard: React.FC = () => {
                   ))
                 ) : (
                       <tr>
-                        <td colSpan={6} className="text-center py-12">
+                        <td colSpan={6} className="text-left py-12">
                           <div className="flex flex-col items-center">
                             <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4">
                               <MessageSquare className="h-12 w-12 text-gray-400" />
@@ -726,11 +774,11 @@ const Dashboard: React.FC = () => {
                   <table className="w-full">
                     <thead className="sticky top-0 z-10">
                       <tr className="bg-indigo-50 border-b">
-                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700 bg-indigo-50">Name</th>
-                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700 bg-indigo-50">Phone</th>
-                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700 bg-indigo-50">Email</th>
-                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700 bg-indigo-50">Group</th>
-                        <th className="text-center py-3 px-6 text-sm font-medium text-gray-700 bg-indigo-50">Status</th>
+                        <th className="text-left py-3 px-6 text-sm font-medium text-gray-700 bg-indigo-50">Name</th>
+                        <th className="text-left py-3 px-6 text-sm font-medium text-gray-700 bg-indigo-50">Phone</th>
+                        <th className="text-left py-3 px-6 text-sm font-medium text-gray-700 bg-indigo-50">Email</th>
+                        <th className="text-left py-3 px-6 text-sm font-medium text-gray-700 bg-indigo-50">Group</th>
+                        <th className="text-left py-3 px-6 text-sm font-medium text-gray-700 bg-indigo-50">Status</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -746,11 +794,11 @@ const Dashboard: React.FC = () => {
                         })
                         .map(member => (
                           <tr key={member.id} className="border-b hover:bg-gray-50">
-                            <td className="py-3 px-6 text-sm text-gray-900 text-center">{member.name}</td>
-                            <td className="py-3 px-6 text-sm text-gray-900 text-center">{member.phone}</td>
-                            <td className="py-3 px-6 text-sm text-gray-900 text-center">{member.email || '-'}</td>
-                            <td className="py-3 px-6 text-sm text-gray-900 text-center">{member.group}</td>
-                            <td className="py-3 px-6 text-sm text-center">
+                            <td className="py-3 px-6 text-sm text-gray-900 text-left">{member.name}</td>
+                            <td className="py-3 px-6 text-sm text-gray-900 text-left">{member.phone}</td>
+                            <td className="py-3 px-6 text-sm text-gray-900 text-left">{member.email || '-'}</td>
+                            <td className="py-3 px-6 text-sm text-gray-900 text-left">{member.group}</td>
+                            <td className="py-3 px-6 text-sm text-left">
                               <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                                 member.status === 'sent' 
                                   ? 'bg-green-100 text-green-800' 
@@ -781,91 +829,216 @@ const Dashboard: React.FC = () => {
                 )}
 
         {/* Template Preview Modal */}
-        {showTemplatePreview && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Template Preview: {selectedTemplate}
-                </h2>
-                <button
-                  onClick={() => setShowTemplatePreview(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="h-6 w-6" />
-                </button>
+        {showTemplatePreview && previewTemplate && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg w-full max-w-5xl max-h-[95vh] overflow-y-auto">
+              {/* Header */}
+              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-lg">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">
+                      Template Preview
+                    </h2>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {previewTemplate.name}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowTemplatePreview(false)}
+                    className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
               </div>
-              
-              <div className="space-y-6">
-                {/* Template Preview */}
-                <div className="border-2 border-gray-200 rounded-lg p-6 bg-white">
-                  <div className="space-y-4">
-                    {/* Sample Template Content */}
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <pre className="whitespace-pre-wrap text-sm text-gray-800">
-                        {`Dear #FirstName #LastName,
 
-We are excited to announce our new product launch for #ProductName.
-
-Key Features:
-- Advanced technology
-- User-friendly interface
-- 24/7 support
-
-Best regards,
-The Team`}
-                      </pre>
-                    </div>
-                    
-                    {/* Sample Message Preview */}
-                    <div className="mt-6">
-                      <h4 className="font-medium text-gray-900 mb-3">
-                        Sample Message Preview (as it will be sent to users):
-                      </h4>
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                        <div className="bg-white p-3 rounded border">
-                          <pre className="whitespace-pre-wrap text-sm text-gray-800">
-                            {`Dear John Doe,
-
-We are excited to announce our new product launch for Product X.
-
-Key Features:
-- Advanced technology
-- User-friendly interface
-- 24/7 support
-
-Best regards,
-The Team`}
-                          </pre>
+              {/* Content */}
+              <div className="p-6 space-y-8">
+                {/* WhatsApp Message Preview - Main Focus */}
+                <div className="bg-gradient-to-br from-green-50 to-blue-50 p-6 rounded-xl">
+                  <div className="flex items-center mb-4">
+                    <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                    <h3 className="text-lg font-semibold text-gray-800">WhatsApp Message Preview</h3>
+                  </div>
+                  
+                  <div className="flex justify-center">
+                    <div className="bg-white rounded-3xl rounded-tl-lg shadow-2xl max-w-sm w-full overflow-hidden">
+                      {/* Header Image */}
+                      {previewTemplate.imageUrl && previewTemplate.imageUrl.trim() !== '' ? (
+                        <div className="w-full">
+                          <img 
+                            src={previewTemplate.imageUrl} 
+                            alt="Header"
+                            className="w-full h-64 object-cover"
+                            onError={(e) => {
+                              console.error('WhatsApp preview header image failed to load:', previewTemplate.imageUrl);
+                              e.currentTarget.style.display = 'none';
+                              // Show fallback
+                              const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                              if (fallback) {
+                                fallback.style.display = 'flex';
+                              }
+                            }}
+                            onLoad={(e) => {
+                              console.log('WhatsApp preview header image loaded successfully:', previewTemplate.imageUrl);
+                              // Hide fallback if image loads
+                              const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                              if (fallback) {
+                                fallback.style.display = 'none';
+                              }
+                            }}
+                          />
+                          <div className="w-full h-32 bg-gray-100 flex items-center justify-center" style={{display: 'none'}}>
+                            <span className="text-gray-500 text-sm">Header image failed to load</span>
+                          </div>
                         </div>
-                        <p className="text-xs text-gray-500 mt-2">
-                          * This shows how the message will appear to recipients with sample parameter values
-                        </p>
+                      ) : (
+                        <div className="w-full h-32 bg-gray-100 flex items-center justify-center">
+                          <span className="text-gray-500 text-sm">No header image</span>
+                        </div>
+                      )}
+                      
+                      {/* Message Content */}
+                      <div className="p-4">
+                        <div className="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap">
+                          {(() => {
+                            let processedContent = previewTemplate.content;
+                            
+                            // Sample parameter values for preview
+                            const sampleParams = {
+                              'FirstName': 'John',
+                              'LastName': 'Doe',
+                              'MRId': 'MR001',
+                              'GroupName': 'North Zone',
+                              'PhoneNumber': '+919876543210',
+                              'Name': 'John Doe',
+                              'Company': 'D-MAK',
+                              'Product': 'New Product',
+                              'ProductName': 'New Product',
+                              'Date': new Date().toLocaleDateString(),
+                              'Time': new Date().toLocaleTimeString(),
+                              'Month': new Date().toLocaleDateString('en-US', { month: 'long' }),
+                              'Year': new Date().getFullYear().toString(),
+                              'Target': '100',
+                              'Achievement': '85',
+                              'Location': 'Mumbai',
+                              'City': 'Mumbai',
+                              'State': 'Maharashtra',
+                              'Country': 'India'
+                            };
+                            
+                            // Replace parameters with sample values
+                            for (const [param, value] of Object.entries(sampleParams)) {
+                              const regex = new RegExp(`#${param}\\b`, 'g');
+                              processedContent = processedContent.replace(regex, value);
+                            }
+                            
+                            // Replace any remaining parameters with [Sample Value]
+                            processedContent = processedContent.replace(/#[A-Za-z0-9_]+/g, '[Sample Value]');
+                            
+                            return processedContent;
+                          })()}
+                        </div>
+                      </div>
+                      
+                      {/* Footer Image */}
+                      {previewTemplate.footerImageUrl && previewTemplate.footerImageUrl.trim() !== '' ? (
+                        <div className="px-4 pb-4">
+                          <img 
+                            src={previewTemplate.footerImageUrl} 
+                            alt="Footer"
+                            className="w-full h-32 object-cover rounded-lg"
+                            onError={(e) => {
+                              console.error('Footer image failed to load:', previewTemplate.footerImageUrl);
+                              e.currentTarget.style.display = 'none';
+                              // Show fallback
+                              const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                              if (fallback) {
+                                fallback.style.display = 'flex';
+                              }
+                            }}
+                            onLoad={(e) => {
+                              console.log('Footer image loaded successfully:', previewTemplate.footerImageUrl);
+                              // Hide fallback if image loads
+                              const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                              if (fallback) {
+                                fallback.style.display = 'none';
+                              }
+                            }}
+                          />
+                          <div className="w-full h-24 bg-gray-100 rounded-lg flex items-center justify-center" style={{display: 'none'}}>
+                            <span className="text-gray-500 text-xs">Footer image failed to load</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="px-4 pb-4">
+                          <div className="w-full h-24 bg-gray-100 rounded-lg flex items-center justify-center">
+                            <span className="text-gray-500 text-xs">No footer image</span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* WhatsApp message time and status */}
+                      <div className="px-4 pb-3">
+                        <div className="flex justify-end items-center">
+                          <span className="text-xs text-gray-500 mr-1">
+                            {new Date().toLocaleTimeString('en-US', { 
+                              hour: '2-digit', 
+                              minute: '2-digit',
+                              hour12: true 
+                            })}
+                          </span>
+                          <span className="text-xs text-gray-500">✓✓</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-                
-                {/* Template Details */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-2">
-                      Template Type:
-                    </h4>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                      Text
-                    </span>
-                  </div>
                   
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-2">
-                      Parameters Used:
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">#FirstName</span>
-                      <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">#LastName</span>
-                      <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">#ProductName</span>
+                  <div className="mt-3 text-left">
+                    <p className="text-xs text-gray-600">
+                      * This shows how the message will appear in WhatsApp with sample parameter values
+                    </p>
+                    <div className="mt-2 text-xs text-gray-500">
+                      <p>Header Image: {previewTemplate.imageUrl && previewTemplate.imageUrl.trim() !== '' ? '✅ Present' : '❌ Not found'}</p>
+                      <p>Footer Image: {previewTemplate.footerImageUrl && previewTemplate.footerImageUrl.trim() !== '' ? '✅ Present' : '❌ Not found'}</p>
                     </div>
+                  </div>
+                </div>
+
+                {/* Template Details */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Template Information */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-6">
+                    <h4 className="text-lg font-semibold text-gray-800 mb-4">Template Information</h4>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Template Name</label>
+                        <p className="text-gray-900">{previewTemplate.name}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Content Length</label>
+                        <p className="text-gray-900">{previewTemplate.content.length} characters</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Parameters */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-6">
+                    <h4 className="text-lg font-semibold text-gray-800 mb-4">Parameters Used:</h4>
+                    {previewTemplate.parameters && previewTemplate.parameters.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {previewTemplate.parameters.map((param: string, index: number) => (
+                          <span 
+                            key={index}
+                            className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
+                          >
+                            #{param}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 text-sm">No parameters found in this template</p>
+                    )}
                   </div>
                 </div>
               </div>
