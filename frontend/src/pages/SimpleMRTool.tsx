@@ -115,6 +115,10 @@ const SimpleMRTool: React.FC = () => {
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
+  // Delete states
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
@@ -264,21 +268,23 @@ const SimpleMRTool: React.FC = () => {
     }
   };
 
-  const deleteContact = async (id: string) => {
-    const contact = contacts.find(c => c.id === id);
-    if (!contact) return;
+  const handleDeleteClick = (contact: Contact) => {
+    setContactToDelete(contact);
+    setShowDeleteDialog(true);
+  };
 
-    if (!window.confirm(`Are you sure you want to delete MR ${contact.mrId} (${contact.firstName} ${contact.lastName})?`)) {
-      return;
-    }
+  const handleDeleteConfirm = async () => {
+    if (!contactToDelete) return;
 
     try {
-      await mockApi.delete(`/mrs/${id}`);
+      await mockApi.delete(`/mrs/${contactToDelete.id}`);
       // Remove from local state
-      const updatedContacts = contacts.filter(c => c.id !== id);
+      const updatedContacts = contacts.filter(c => c.id !== contactToDelete.id);
       setContacts(updatedContacts);
       // Save to localStorage
       localStorage.setItem('mr_contacts', JSON.stringify(updatedContacts));
+      setShowDeleteDialog(false);
+      setContactToDelete(null);
       alert('MR deleted successfully!');
     } catch (error: any) {
       console.error('Error deleting contact:', error);
@@ -286,7 +292,14 @@ const SimpleMRTool: React.FC = () => {
     }
   };
 
+  const handleDeleteCancel = () => {
+    setShowDeleteDialog(false);
+    setContactToDelete(null);
+  };
+
   const handleEditContact = (contact: Contact) => {
+    console.log('Editing contact:', contact);
+    console.log('Available groups:', groups);
     setEditingContact(contact);
     setIsEditDialogOpen(true);
   };
@@ -743,7 +756,7 @@ const SimpleMRTool: React.FC = () => {
                                   <Edit className="h-4 w-4" />
                                 </button>
                           <button
-                            onClick={() => deleteContact(contact.id)}
+                            onClick={() => handleDeleteClick(contact)}
                                 className="text-red-600 hover:text-red-800"
                                   title="Delete Contact"
                           >
@@ -843,6 +856,41 @@ const SimpleMRTool: React.FC = () => {
           contact={editingContact}
           groups={groups}
         />
+
+        {/* Delete Confirmation Dialog */}
+        {showDeleteDialog && contactToDelete && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+              <div className="flex items-center mb-4">
+                <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                  <Trash2 className="h-6 w-6 text-red-600" />
+                </div>
+              </div>
+              <div className="text-center">
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Delete MR
+                </h3>
+                <p className="text-sm text-gray-500 mb-6">
+                  Are you sure you want to delete MR <strong>{contactToDelete.mrId}</strong> ({contactToDelete.firstName} {contactToDelete.lastName})? This action cannot be undone.
+                </p>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={handleDeleteCancel}
+                    className="flex-1 px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteConfirm}
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>
