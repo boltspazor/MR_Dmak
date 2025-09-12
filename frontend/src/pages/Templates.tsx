@@ -9,8 +9,7 @@ import {
   Copy,
   Upload,
   Download,
-  X,
-  RefreshCw
+  X
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { Template, AvailableParameters } from '../types';
@@ -63,7 +62,7 @@ const Templates: React.FC = () => {
       setTemplates(JSON.parse(cachedTemplates));
       setLoading(false);
     } else {
-      fetchTemplates();
+    fetchTemplates();
     }
 
     // Fetch parameters in parallel (non-blocking)
@@ -624,12 +623,12 @@ const Templates: React.FC = () => {
           <div className="border-b-2 border-indigo-500 my-6"></div>
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Template Management</h2>
           
-          <div className="animate-pulse space-y-6">
-            <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="bg-white rounded-lg h-32 border border-gray-200"></div>
-              ))}
+        <div className="animate-pulse space-y-6">
+          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="bg-white rounded-lg h-32 border border-gray-200"></div>
+            ))}
             </div>
           </div>
         </div>
@@ -693,14 +692,6 @@ const Templates: React.FC = () => {
             >
               Create Template
             </button>
-            <button
-              onClick={() => fetchTemplates(true)}
-              className="px-4 py-2 bg-gray-600 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 flex items-center"
-              title="Refresh Templates"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </button>
           </div>
         </div>
 
@@ -726,16 +717,16 @@ const Templates: React.FC = () => {
                     className="w-full pl-10 pr-4 py-2 rounded-lg border-0 bg-gray-100"
                   />
                 </div>
-                <div className="relative">
+              <div className="relative">
                   <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
+                <input
+                  type="text"
                     placeholder="Search by template content..."
                     value={contentSearchTerm}
                     onChange={(e) => setContentSearchTerm(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 rounded-lg border-0 bg-gray-100"
-                  />
-                </div>
+                />
+              </div>
               </div>
               </div>
               
@@ -918,7 +909,7 @@ const Templates: React.FC = () => {
                       <Upload className="h-5 w-5 text-gray-400 mr-2" />
                       <span className="text-sm text-gray-600">Click to upload header image</span>
                     </label>
-                  </div>
+                </div>
                 </div>
 
                 {/* Template Content */}
@@ -928,16 +919,16 @@ const Templates: React.FC = () => {
                 </label>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div>
-                    <textarea
+                <textarea
                         required
-                      value={formData.content}
-                      onChange={(e) => setFormData({...formData, content: e.target.value})}
-                      rows={6}
+                  value={formData.content}
+                  onChange={(e) => setFormData({...formData, content: e.target.value})}
+                  rows={6}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         placeholder="Enter template content with parameters like #FirstName, #LastName, #Month, #Target..."
-                      />
-                  </div>
-                  
+                />
+              </div>
+
                   {/* Live Preview */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1018,7 +1009,7 @@ const Templates: React.FC = () => {
                       </p>
                       <div className="flex flex-wrap gap-2">
                         {availableParameters.parameters.map((param, index) => (
-                          <button
+                <button
                             key={index}
                             type="button"
                             onClick={() => {
@@ -1028,7 +1019,7 @@ const Templates: React.FC = () => {
                             className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded hover:bg-blue-200 cursor-pointer"
                           >
                             {param}
-                          </button>
+                </button>
                         ))}
               </div>
                       <p className="text-xs text-gray-500 mt-1">
@@ -1085,7 +1076,7 @@ const Templates: React.FC = () => {
                     className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
                   >
                     {editingTemplate ? 'Update Template' : 'Create Template'}
-                  </button>
+                </button>
               </div>
             </form>
           </div>
@@ -1101,21 +1092,21 @@ const Templates: React.FC = () => {
               <div className="flex justify-between items-center">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">
-                    Template Preview
-                  </h2>
+                Template Preview
+              </h2>
                   <p className="text-sm text-gray-600 mt-1">
                     {previewTemplate.name} • Created {new Date(previewTemplate.createdAt).toLocaleDateString()}
                   </p>
                 </div>
-                <button
-                  onClick={() => setShowPreview(false)}
+              <button
+                onClick={() => setShowPreview(false)}
                   className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100"
-                >
+              >
                   <X className="h-6 w-6" />
-                </button>
+              </button>
               </div>
             </div>
-
+            
             {/* Content */}
             <div className="p-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -1132,8 +1123,8 @@ const Templates: React.FC = () => {
                         {/* Header Image */}
                         {previewTemplate.imageUrl && previewTemplate.imageUrl.trim() !== '' ? (
                           <div className="w-full">
-                            <img 
-                              src={previewTemplate.imageUrl} 
+                    <img 
+                      src={previewTemplate.imageUrl} 
                               alt="Header"
                               className="w-full h-64 object-cover"
                               onError={(e) => {
@@ -1198,9 +1189,9 @@ const Templates: React.FC = () => {
                               
                               return processedContent;
                             })()}
-                          </div>
-                        </div>
-                        
+                </div>
+              </div>
+              
                         {/* Footer Image */}
                         {previewTemplate.footerImageUrl && previewTemplate.footerImageUrl.trim() !== '' ? (
                           <div className="px-4 pb-4">
@@ -1255,16 +1246,16 @@ const Templates: React.FC = () => {
                         <p className="text-sm text-gray-600 mb-3">
                           The following parameters were found in the template content:
                         </p>
-                        <div className="flex flex-wrap gap-2">
-                          {previewTemplate.parameters.map((param, index) => (
-                            <span 
-                              key={index}
+                <div className="flex flex-wrap gap-2">
+                  {previewTemplate.parameters.map((param, index) => (
+                    <span 
+                      key={index}
                               className="px-3 py-2 bg-blue-100 text-blue-800 text-sm rounded-lg font-medium"
-                            >
-                              #{param}
-                            </span>
-                          ))}
-                        </div>
+                    >
+                      #{param}
+                    </span>
+                  ))}
+                </div>
                         <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                           <p className="text-xs text-gray-600 mb-2">
                             <strong>Recipient List Format:</strong>
@@ -1274,21 +1265,21 @@ const Templates: React.FC = () => {
                             • Headers: MR id, First Name, Last Name, {previewTemplate.parameters.join(', ')}<br/>
                             • Each parameter will have its own column in the recipient list
                           </p>
-                        </div>
-                      </div>
+              </div>
+            </div>
                     ) : (
                       <div className="text-center py-8">
                         <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                           <FileText className="h-8 w-8 text-gray-400" />
-                        </div>
+          </div>
                         <p className="text-gray-500 text-sm">
                           No parameters found in this template
                         </p>
                         <p className="text-xs text-gray-400 mt-1">
                           Use #ParameterName in your template content to create dynamic parameters
                         </p>
-                      </div>
-                    )}
+        </div>
+      )}
                   </div>
 
                   {/* Template Information */}
