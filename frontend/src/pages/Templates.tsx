@@ -63,6 +63,12 @@ const Templates: React.FC = () => {
       if (!token) return;
 
       const response = await api.get('/templates');
+      console.log('Fetched templates response:', response.data);
+      console.log('Templates data:', response.data.data);
+      if (response.data.data && response.data.data.length > 0) {
+        console.log('First template imageUrl:', response.data.data[0].imageUrl);
+        console.log('First template footerImageUrl:', response.data.data[0].footerImageUrl);
+      }
       setTemplates(response.data.data || []);
     } catch (error: any) {
       console.error('Error fetching templates:', error);
@@ -147,12 +153,18 @@ const Templates: React.FC = () => {
         console.log('Uploading header image...');
         imageUrl = await uploadImage(headerImage, 'header');
         console.log('Header image uploaded:', imageUrl);
+      } else if (formData.imageUrl) {
+        console.log('Using existing header image URL:', formData.imageUrl);
+        imageUrl = formData.imageUrl;
       }
       
       if (footerImage) {
         console.log('Uploading footer image...');
         footerImageUrl = await uploadImage(footerImage, 'footer');
         console.log('Footer image uploaded:', footerImageUrl);
+      } else if (formData.footerImageUrl) {
+        console.log('Using existing footer image URL:', formData.footerImageUrl);
+        footerImageUrl = formData.footerImageUrl;
       }
 
       // Extract parameters from content if not provided
@@ -174,12 +186,16 @@ const Templates: React.FC = () => {
       };
 
       console.log('Creating template with data:', templateData);
+      console.log('Final imageUrl:', imageUrl);
+      console.log('Final footerImageUrl:', footerImageUrl);
+      console.log('Template data imageUrl:', templateData.imageUrl);
+      console.log('Template data footerImageUrl:', templateData.footerImageUrl);
       console.log('API base URL:', api.defaults.baseURL);
       console.log('Request headers:', api.defaults.headers);
 
       if (editingTemplate) {
         console.log('Updating template:', editingTemplate.name);
-        await api.put(`/templates/${editingTemplate.name}`, templateData);
+        await api.put(`/templates/${editingTemplate._id}`, templateData);
       } else {
         console.log('Creating new template...');
         await api.post('/templates', templateData);
@@ -243,7 +259,7 @@ const Templates: React.FC = () => {
       const token = localStorage.getItem('authToken');
       if (!token) return;
 
-      await api.delete(`/templates/${templateToDelete.name}`);
+      await api.delete(`/templates/${templateToDelete._id}`);
       await fetchTemplates();
       setShowDeleteDialog(false);
       setTemplateToDelete(null);
