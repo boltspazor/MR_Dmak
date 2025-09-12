@@ -510,7 +510,7 @@ The Team`,
                         className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
                         onClick={() => handleSort('campaignId')}
                       >
-                        <div className="flex items-center justify-center">
+                        <div className="flex items-center justify-left">
                           Campaign ID
                           {sortField === 'campaignId' && (
                             <span className="ml-1">
@@ -523,7 +523,7 @@ The Team`,
                         className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
                         onClick={() => handleSort('date')}
                       >
-                        <div className="flex items-center justify-center">
+                        <div className="flex items-center justify-left">
                           Date
                           {sortField === 'date' && (
                             <span className="ml-1">
@@ -536,7 +536,7 @@ The Team`,
                         className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
                         onClick={() => handleSort('campaignName')}
                       >
-                        <div className="flex items-center justify-center">
+                        <div className="flex items-center justify-left">
                           Campaign Name
                           {sortField === 'campaignName' && (
                             <span className="ml-1">
@@ -549,7 +549,7 @@ The Team`,
                         className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
                         onClick={() => handleSort('template')}
                       >
-                        <div className="flex items-center justify-center">
+                        <div className="flex items-center justify-left">
                           Template Used
                           {sortField === 'template' && (
                             <span className="ml-1">
@@ -562,7 +562,7 @@ The Team`,
                         className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
                         onClick={() => handleSort('recipientList')}
                       >
-                        <div className="flex items-center justify-center">
+                        <div className="flex items-center justify-left">
                           Recipient List
                           {sortField === 'recipientList' && (
                             <span className="ml-1">
@@ -575,7 +575,7 @@ The Team`,
                         className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
                         onClick={() => handleSort('sendStatus')}
                       >
-                        <div className="flex items-center justify-center">
+                        <div className="flex items-center justify-left">
                           Status
                           {sortField === 'sendStatus' && (
                             <span className="ml-1">
@@ -610,7 +610,7 @@ The Team`,
                             </button>
                           </td>
                           <td className="py-3 px-6 text-sm text-left">
-                            <div className="flex items-center justify-center">
+                            <div className="flex items-center justify-left">
                               {getStatusIcon(campaign.sendStatus)}
                               <span className={`ml-2 ${getStatusColor(campaign.sendStatus)}`}>
                                 {campaign.sendStatus}
@@ -1005,41 +1005,23 @@ The Team`,
                   </div>
                 </div>
 
-                {/* Template Details */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Template Information */}
-                  <div className="bg-white border border-gray-200 rounded-lg p-6">
-                    <h4 className="text-lg font-semibold text-gray-800 mb-4">Template Information</h4>
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-sm font-medium text-gray-600">Template Name</label>
-                        <p className="text-gray-900">{previewTemplate.name}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-600">Content Length</label>
-                        <p className="text-gray-900">{previewTemplate.content.length} characters</p>
-                      </div>
+                {/* Parameters Section - Below Template Preview */}
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4">Parameters Used:</h4>
+                  {previewTemplate.parameters && previewTemplate.parameters.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {previewTemplate.parameters.map((param: string, index: number) => (
+                        <span 
+                          key={index}
+                          className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
+                        >
+                          #{param}
+                        </span>
+                      ))}
                     </div>
-                  </div>
-
-                  {/* Parameters */}
-                  <div className="bg-white border border-gray-200 rounded-lg p-6">
-                    <h4 className="text-lg font-semibold text-gray-800 mb-4">Parameters Used:</h4>
-                    {previewTemplate.parameters && previewTemplate.parameters.length > 0 ? (
-                      <div className="flex flex-wrap gap-2">
-                        {previewTemplate.parameters.map((param: string, index: number) => (
-                          <span 
-                            key={index}
-                            className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
-                          >
-                            #{param}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-gray-500 text-sm">No parameters found in this template</p>
-                    )}
-                  </div>
+                  ) : (
+                    <p className="text-gray-500 text-sm">No parameters found in this template</p>
+                  )}
                 </div>
               </div>
             </div>
