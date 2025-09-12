@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   FileText, 
@@ -9,7 +9,8 @@ import {
   Copy,
   Upload,
   Download,
-  X
+  X,
+  RefreshCw
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { Template, AvailableParameters } from '../types';
@@ -53,23 +54,41 @@ const Templates: React.FC = () => {
 
 
   useEffect(() => {
-    fetchTemplates();
+    // Check if templates are cached
+    const cachedTemplates = localStorage.getItem('cached_templates');
+    const cacheTimestamp = localStorage.getItem('templates_cache_timestamp');
+    const isCacheValid = cacheTimestamp && (Date.now() - parseInt(cacheTimestamp)) < 300000; // 5 minutes
+
+    if (cachedTemplates && isCacheValid) {
+      setTemplates(JSON.parse(cachedTemplates));
+      setLoading(false);
+    } else {
+      fetchTemplates();
+    }
+
+    // Fetch parameters in parallel (non-blocking)
     fetchAvailableParameters();
   }, []);
 
-  const fetchTemplates = async () => {
+  const fetchTemplates = async (forceRefresh = false) => {
     try {
       const token = localStorage.getItem('authToken');
       if (!token) return;
 
-      const response = await api.get('/templates');
-      console.log('Fetched templates response:', response.data);
-      console.log('Templates data:', response.data.data);
-      if (response.data.data && response.data.data.length > 0) {
-        console.log('First template imageUrl:', response.data.data[0].imageUrl);
-        console.log('First template footerImageUrl:', response.data.data[0].footerImageUrl);
+      // Clear cache if force refresh
+      if (forceRefresh) {
+        localStorage.removeItem('cached_templates');
+        localStorage.removeItem('templates_cache_timestamp');
       }
-      setTemplates(response.data.data || []);
+
+      const response = await api.get('/templates');
+      const templatesData = response.data.data || [];
+      
+      setTemplates(templatesData);
+      
+      // Cache templates for 5 minutes
+      localStorage.setItem('cached_templates', JSON.stringify(templatesData));
+      localStorage.setItem('templates_cache_timestamp', Date.now().toString());
     } catch (error: any) {
       console.error('Error fetching templates:', error);
     } finally {
@@ -201,7 +220,7 @@ const Templates: React.FC = () => {
         await api.post('/templates', templateData);
       }
 
-      await fetchTemplates();
+      await fetchTemplates(true); // Force refresh to get latest data
       setShowCreateForm(false);
       setEditingTemplate(null);
       setFormData({
@@ -260,7 +279,7 @@ const Templates: React.FC = () => {
       if (!token) return;
 
       await api.delete(`/templates/${templateToDelete._id}`);
-      await fetchTemplates();
+      await fetchTemplates(true); // Force refresh to get latest data
       setShowDeleteDialog(false);
       setTemplateToDelete(null);
     } catch (error: any) {
@@ -277,6 +296,14 @@ const Templates: React.FC = () => {
     setPreviewTemplate(template);
     setShowPreview(true);
   };
+
+  // Clear cache when component unmounts to ensure fresh data on next visit
+  useEffect(() => {
+    return () => {
+      // Optional: Clear cache on unmount if needed
+      // localStorage.removeItem('cached_templates');
+    };
+  }, []);
 
 
   const duplicateTemplate = async (template: Template) => {
@@ -395,33 +422,36 @@ const Templates: React.FC = () => {
     }
   };
 
-  const filteredTemplates = templates
-    .filter(template => {
-      const matchesNameSearch = !nameSearchTerm || 
-        template.name.toLowerCase().includes(nameSearchTerm.toLowerCase());
-      
-      const matchesContentSearch = !contentSearchTerm || 
-        template.content.toLowerCase().includes(contentSearchTerm.toLowerCase()) ||
-        template.parameters.some(param => param.toLowerCase().includes(contentSearchTerm.toLowerCase()));
-      
-      return matchesNameSearch && matchesContentSearch;
-    })
-    .sort((a, b) => {
-      let aValue: string | number;
-      let bValue: string | number;
-      
-      if (sortField === 'name') {
-        aValue = a.name.toLowerCase();
-        bValue = b.name.toLowerCase();
-      } else {
-        aValue = new Date(a.createdAt).getTime();
-        bValue = new Date(b.createdAt).getTime();
-      }
-      
-      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
-    });
+  // Memoize filtered and sorted templates to prevent unnecessary recalculations
+  const filteredTemplates = useMemo(() => {
+    return templates
+      .filter(template => {
+        const matchesNameSearch = !nameSearchTerm || 
+          template.name.toLowerCase().includes(nameSearchTerm.toLowerCase());
+        
+        const matchesContentSearch = !contentSearchTerm || 
+          template.content.toLowerCase().includes(contentSearchTerm.toLowerCase()) ||
+          template.parameters.some(param => param.toLowerCase().includes(contentSearchTerm.toLowerCase()));
+        
+        return matchesNameSearch && matchesContentSearch;
+      })
+      .sort((a, b) => {
+        let aValue: string | number;
+        let bValue: string | number;
+        
+        if (sortField === 'name') {
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+        } else {
+          aValue = new Date(a.createdAt).getTime();
+          bValue = new Date(b.createdAt).getTime();
+        }
+        
+        if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+  }, [templates, nameSearchTerm, contentSearchTerm, sortField, sortDirection]);
 
   // Sorting function
   const handleSort = (field: 'name' | 'createdAt') => {
@@ -576,12 +606,31 @@ const Templates: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100">
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="bg-white rounded-lg h-32 border border-gray-200"></div>
-            ))}
+        <Sidebar 
+          activePage="templates"
+          onNavigate={handleSidebarNavigation}
+          onLogout={handleLogout}
+          userName={user?.name || "User"}
+          userRole={user?.role || "Super Admin"}
+        />
+        <div className="ml-24 p-8">
+          <Header 
+            title="D-MAK"
+            subtitle="Digital - Marketing, Automate & Konnect"
+            onExportCSV={exportTemplatesToCSV}
+            onExportPDF={exportTemplatesToPDF}
+            showExportButtons={false}
+          />
+          <div className="border-b-2 border-indigo-500 my-6"></div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Template Management</h2>
+          
+          <div className="animate-pulse space-y-6">
+            <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="bg-white rounded-lg h-32 border border-gray-200"></div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -643,6 +692,14 @@ const Templates: React.FC = () => {
                   className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
             >
               Create Template
+            </button>
+            <button
+              onClick={() => fetchTemplates(true)}
+              className="px-4 py-2 bg-gray-600 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 flex items-center"
+              title="Refresh Templates"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
             </button>
           </div>
         </div>
