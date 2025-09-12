@@ -842,7 +842,7 @@ The Team`,
                     <p className="text-sm text-gray-600 mt-1">
                       {previewTemplate.name}
                     </p>
-                  </div>
+              </div>
                   <button
                     onClick={() => setShowTemplatePreview(false)}
                     className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100"
