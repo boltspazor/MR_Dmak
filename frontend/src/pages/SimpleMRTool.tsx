@@ -748,7 +748,7 @@ const SimpleMRTool: React.FC = () => {
                             <td className="py-3 px-6 text-sm text-gray-900 text-center">{contact.comments || '-'}</td>
                             <td className="py-3 px-6 text-sm text-center">
                               <div className="flex items-center justify-center space-x-2">
-                                <button
+                          <button
                                   onClick={() => handleEditContact(contact)}
                                   className="text-blue-600 hover:text-blue-800"
                                   title="Edit Contact"
@@ -864,8 +864,8 @@ const SimpleMRTool: React.FC = () => {
               <div className="flex items-center mb-4">
                 <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
                   <Trash2 className="h-6 w-6 text-red-600" />
-                </div>
               </div>
+                          </div>
               <div className="text-center">
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
                   Delete MR

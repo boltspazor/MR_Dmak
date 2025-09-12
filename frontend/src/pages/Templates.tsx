@@ -9,8 +9,7 @@ import {
   Copy,
   Upload,
   Download,
-  X,
-  ChevronDown
+  X
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { Template, AvailableParameters } from '../types';
@@ -24,8 +23,8 @@ const Templates: React.FC = () => {
   const { user } = useAuth();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [searchType, setSearchType] = useState<'name' | 'content'>('name');
+  const [nameSearchTerm, setNameSearchTerm] = useState('');
+  const [contentSearchTerm, setContentSearchTerm] = useState('');
   const [sortField, setSortField] = useState<'name' | 'createdAt'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -386,14 +385,14 @@ const Templates: React.FC = () => {
 
   const filteredTemplates = templates
     .filter(template => {
-      if (!searchTerm) return true;
+      const matchesNameSearch = !nameSearchTerm || 
+        template.name.toLowerCase().includes(nameSearchTerm.toLowerCase());
       
-      if (searchType === 'name') {
-        return template.name.toLowerCase().includes(searchTerm.toLowerCase());
-      } else {
-        return template.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-               template.parameters.some(param => param.toLowerCase().includes(searchTerm.toLowerCase()));
-      }
+      const matchesContentSearch = !contentSearchTerm || 
+        template.content.toLowerCase().includes(contentSearchTerm.toLowerCase()) ||
+        template.parameters.some(param => param.toLowerCase().includes(contentSearchTerm.toLowerCase()));
+      
+      return matchesNameSearch && matchesContentSearch;
     })
     .sort((a, b) => {
       let aValue: string | number;
@@ -597,22 +596,21 @@ const Templates: React.FC = () => {
                   <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                   <input
                     type="text"
-                    placeholder={searchType === 'name' ? 'Search by template name...' : 'Search by template content...'}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search by template name..."
+                    value={nameSearchTerm}
+                    onChange={(e) => setNameSearchTerm(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 rounded-lg border-0 bg-gray-100"
                   />
                 </div>
                 <div className="relative">
-                  <select
-                    value={searchType}
-                    onChange={(e) => setSearchType(e.target.value as 'name' | 'content')}
-                    className="w-full px-3 py-2 pr-10 rounded-lg border-0 bg-gray-100 appearance-none cursor-pointer"
-                  >
-                    <option value="name">Search by Name</option>
-                    <option value="content">Search by Content</option>
-                  </select>
-                  <ChevronDown className="h-5 w-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by template content..."
+                    value={contentSearchTerm}
+                    onChange={(e) => setContentSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 rounded-lg border-0 bg-gray-100"
+                  />
                 </div>
               </div>
               </div>
@@ -1117,10 +1115,6 @@ const Templates: React.FC = () => {
                       <p className="text-gray-900">{previewTemplate.name}</p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-600">Type</label>
-                      <p className="text-gray-900 capitalize">{previewTemplate.type}</p>
-                    </div>
-                    <div>
                       <label className="text-sm font-medium text-gray-600">Created</label>
                       <p className="text-gray-900">{new Date(previewTemplate.createdAt).toLocaleString()}</p>
                     </div>
@@ -1151,24 +1145,6 @@ const Templates: React.FC = () => {
                 </div>
               </div>
 
-              {/* Parameters Information */}
-              <div className="bg-white border border-gray-200 rounded-lg p-6">
-                <h4 className="text-lg font-semibold text-gray-800 mb-4">Parameters Used:</h4>
-                {previewTemplate.parameters.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {previewTemplate.parameters.map((param, index) => (
-                      <span 
-                        key={index}
-                        className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full font-medium"
-                      >
-                        #{param}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-500 text-sm">No parameters found in this template</p>
-                )}
-              </div>
 
               {/* Images Preview */}
               {(previewTemplate.imageUrl || previewTemplate.footerImageUrl) && (
