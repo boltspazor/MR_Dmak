@@ -1,12 +1,10 @@
 import React from 'react';
 import { 
-  Users, 
   MessageSquare, 
   FileText, 
   BarChart3, 
   LogOut, 
-  Shield, 
-  Activity 
+  Shield
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -78,8 +76,8 @@ const Sidebar: React.FC<SidebarProps> = ({
             onClick={onLogout}
             className="flex flex-col items-center p-2 rounded-lg w-16 h-16 hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
           >
-            <LogOut className="h-7 w-7 text-white mb-1" />
-            <span className="text-xs text-black text-center">Logout</span>
+            <LogOut className="h-7 w-7 text-black mb-1 font-bold" />
+            <span className="text-xs text-black text-center font-semibold">Logout</span>
           </button>
           
           {/* DVK Logo */}
