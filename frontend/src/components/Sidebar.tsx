@@ -85,9 +85,9 @@ const Sidebar: React.FC<SidebarProps> = ({
           {/* DVK Logo */}
           <div className="mt-2">
             <img 
-              src="/dvk.svg" 
+              src="/dvk-simple.svg" 
               alt="DVK" 
-              className="w-12 h-10"
+              className="w-12 h-10 drop-shadow-lg"
             />
           </div>
         </div>
