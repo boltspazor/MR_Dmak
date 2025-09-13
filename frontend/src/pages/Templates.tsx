@@ -621,7 +621,7 @@ const Templates: React.FC = () => {
             showExportButtons={false}
           />
           <div className="border-b-2 border-indigo-500 my-6"></div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Template Management</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Template</h2>
           
         <div className="animate-pulse space-y-6">
           <div className="h-8 bg-gray-200 rounded w-1/4"></div>
@@ -662,7 +662,7 @@ const Templates: React.FC = () => {
         <div className="border-b-2 border-indigo-500 my-6"></div>
 
         {/* Template Management Header */}
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Template Management</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Template</h2>
 
         {/* Main Content Area */}
         <CommonFeatures

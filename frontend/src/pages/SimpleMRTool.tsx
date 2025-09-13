@@ -588,7 +588,7 @@ const SimpleMRTool: React.FC = () => {
         <div className="border-b-2 border-indigo-500 my-6"></div>
 
         {/* MR Management Header */}
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">MR Management</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">MR</h2>
 
         {/* Main Content Area */}
         {activeTab === 'contacts' && (
