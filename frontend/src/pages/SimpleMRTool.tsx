@@ -680,7 +680,7 @@ const SimpleMRTool: React.FC = () => {
                     <thead>
                       <tr className="bg-indigo-50 border-b">
                         <th 
-                          className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                          className="text-left py-3 px-6 text-sm font-bold text-gray-700 cursor-pointer hover:bg-indigo-100"
                           onClick={() => handleSort('mrId')}
                         >
                           <div className="flex items-center justify-center">
@@ -693,7 +693,7 @@ const SimpleMRTool: React.FC = () => {
                           </div>
                         </th>
                         <th 
-                          className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                          className="text-left py-3 px-6 text-sm font-bold text-gray-700 cursor-pointer hover:bg-indigo-100"
                           onClick={() => handleSort('firstName')}
                         >
                           <div className="flex items-center justify-center">
@@ -706,7 +706,7 @@ const SimpleMRTool: React.FC = () => {
                           </div>
                         </th>
                         <th 
-                          className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                          className="text-left py-3 px-6 text-sm font-bold text-gray-700 cursor-pointer hover:bg-indigo-100"
                           onClick={() => handleSort('phone')}
                         >
                           <div className="flex items-center justify-center">
@@ -719,7 +719,7 @@ const SimpleMRTool: React.FC = () => {
                           </div>
                         </th>
                         <th 
-                          className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                          className="text-left py-3 px-6 text-sm font-bold text-gray-700 cursor-pointer hover:bg-indigo-100"
                           onClick={() => handleSort('group')}
                         >
                           <div className="flex items-center justify-center">
@@ -731,8 +731,8 @@ const SimpleMRTool: React.FC = () => {
                             )}
                           </div>
                         </th>
-                        <th className="text-left py-3 px-6 text-sm font-medium text-gray-700">Comments</th>
-                        <th className="text-left py-3 px-6 text-sm font-medium text-gray-700">Actions</th>
+                        <th className="text-left py-3 px-6 text-sm font-bold text-gray-700">Comments</th>
+                        <th className="text-left py-3 px-6 text-sm font-bold text-gray-700">Actions</th>
                     </tr>
                   </thead>
                     <tbody>

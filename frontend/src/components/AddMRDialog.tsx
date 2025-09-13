@@ -81,7 +81,7 @@ const AddMRDialog: React.FC<AddMRDialogProps> = ({ isOpen, onClose, onAdd, group
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">MR ID*</label>
+            <label className="block text-sm font-bold text-gray-700 mb-1">MR ID*</label>
             <input
               type="text"
               value={formData.mrId}
@@ -92,7 +92,7 @@ const AddMRDialog: React.FC<AddMRDialogProps> = ({ isOpen, onClose, onAdd, group
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">First Name*</label>
+            <label className="block text-sm font-bold text-gray-700 mb-1">First Name*</label>
             <input
               type="text"
               value={formData.firstName}
@@ -103,7 +103,7 @@ const AddMRDialog: React.FC<AddMRDialogProps> = ({ isOpen, onClose, onAdd, group
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Last Name*</label>
+            <label className="block text-sm font-bold text-gray-700 mb-1">Last Name*</label>
             <input
               type="text"
               value={formData.lastName}
@@ -114,7 +114,7 @@ const AddMRDialog: React.FC<AddMRDialogProps> = ({ isOpen, onClose, onAdd, group
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number*</label>
+            <label className="block text-sm font-bold text-gray-700 mb-1">Phone Number*</label>
             <input
               type="tel"
               value={formData.phone}
@@ -125,7 +125,7 @@ const AddMRDialog: React.FC<AddMRDialogProps> = ({ isOpen, onClose, onAdd, group
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Select Group*</label>
+            <label className="block text-sm font-bold text-gray-700 mb-1">Select Group*</label>
             <div className="relative">
               <select
                 value={formData.group}
@@ -142,7 +142,7 @@ const AddMRDialog: React.FC<AddMRDialogProps> = ({ isOpen, onClose, onAdd, group
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Comments</label>
+            <label className="block text-sm font-bold text-gray-700 mb-1">Comments</label>
             <textarea
               value={formData.comments}
               onChange={(e) => handleChange('comments', e.target.value)}

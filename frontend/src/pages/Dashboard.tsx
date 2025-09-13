@@ -520,7 +520,7 @@ The Team`,
                         </div>
                       </th>
                       <th 
-                        className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                        className="text-left py-3 px-6 text-sm font-bold text-gray-700 cursor-pointer hover:bg-indigo-100"
                         onClick={() => handleSort('date')}
                       >
                         <div className="flex items-center justify-left">
@@ -533,7 +533,7 @@ The Team`,
                         </div>
                       </th>
                       <th 
-                        className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                        className="text-left py-3 px-6 text-sm font-bold text-gray-700 cursor-pointer hover:bg-indigo-100"
                         onClick={() => handleSort('campaignName')}
                       >
                         <div className="flex items-center justify-left">
@@ -546,7 +546,7 @@ The Team`,
                         </div>
                       </th>
                       <th 
-                        className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                        className="text-left py-3 px-6 text-sm font-bold text-gray-700 cursor-pointer hover:bg-indigo-100"
                         onClick={() => handleSort('template')}
                       >
                         <div className="flex items-center justify-left">
@@ -559,7 +559,7 @@ The Team`,
                         </div>
                       </th>
                       <th 
-                        className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                        className="text-left py-3 px-6 text-sm font-bold text-gray-700 cursor-pointer hover:bg-indigo-100"
                         onClick={() => handleSort('recipientList')}
                       >
                         <div className="flex items-center justify-left">
@@ -572,7 +572,7 @@ The Team`,
                         </div>
                       </th>
                       <th 
-                        className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                        className="text-left py-3 px-6 text-sm font-bold text-gray-700 cursor-pointer hover:bg-indigo-100"
                         onClick={() => handleSort('sendStatus')}
                       >
                         <div className="flex items-center justify-left">

@@ -34,7 +34,7 @@ const CommonFeatures: React.FC<CommonFeaturesProps> = ({
                 {item.icon}
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">{item.title}</p>
+                <p className="text-sm font-bold text-gray-600">{item.title}</p>
                 <p className="text-2xl font-semibold text-gray-900">{item.value}</p>
               </div>
             </div>

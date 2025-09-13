@@ -87,7 +87,7 @@ const EditMRDialog: React.FC<EditMRDialogProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">MR ID *</label>
+            <label className="block text-sm font-bold text-gray-700 mb-1">MR ID *</label>
             <input
               type="text"
               name="mrId"
@@ -101,7 +101,7 @@ const EditMRDialog: React.FC<EditMRDialogProps> = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+              <label className="block text-sm font-bold text-gray-700 mb-1">First Name *</label>
               <input
                 type="text"
                 name="firstName"
@@ -112,7 +112,7 @@ const EditMRDialog: React.FC<EditMRDialogProps> = ({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Last Name *</label>
               <input
                 type="text"
                 name="lastName"
@@ -125,7 +125,7 @@ const EditMRDialog: React.FC<EditMRDialogProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
+            <label className="block text-sm font-bold text-gray-700 mb-1">Phone Number *</label>
             <input
               type="tel"
               name="phone"
@@ -137,7 +137,7 @@ const EditMRDialog: React.FC<EditMRDialogProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Group *</label>
+            <label className="block text-sm font-bold text-gray-700 mb-1">Group *</label>
             <select
               name="group"
               value={formData.group}
@@ -155,7 +155,7 @@ const EditMRDialog: React.FC<EditMRDialogProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Comments</label>
+            <label className="block text-sm font-bold text-gray-700 mb-1">Comments</label>
             <textarea
               name="comments"
               value={formData.comments}

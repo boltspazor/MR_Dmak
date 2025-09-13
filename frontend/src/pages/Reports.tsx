@@ -214,7 +214,7 @@ const Reports: React.FC = () => {
                   <MessageSquare className="h-6 w-6" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total Campaigns</p>
+                  <p className="text-sm font-bold text-gray-600">Total Campaigns</p>
                   <p className="text-2xl font-semibold text-gray-900">{campaigns.length}</p>
                 </div>
               </div>
@@ -228,7 +228,7 @@ const Reports: React.FC = () => {
                   <Users className="h-6 w-6" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total Recipients</p>
+                  <p className="text-sm font-bold text-gray-600">Total Recipients</p>
                   <p className="text-2xl font-semibold text-gray-900">{getTotalRecipients()}</p>
                 </div>
               </div>
@@ -242,7 +242,7 @@ const Reports: React.FC = () => {
                   <CheckCircle className="h-6 w-6" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Success Rate</p>
+                  <p className="text-sm font-bold text-gray-600">Success Rate</p>
                   <p className="text-2xl font-semibold text-gray-900">
                     {getSuccessRate(getTotalSent(), getTotalRecipients())}%
                   </p>
@@ -258,7 +258,7 @@ const Reports: React.FC = () => {
                   <TrendingUp className="h-6 w-6" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total Sent</p>
+                  <p className="text-sm font-bold text-gray-600">Total Sent</p>
                   <p className="text-2xl font-semibold text-gray-900">{getTotalSent()}</p>
                 </div>
               </div>

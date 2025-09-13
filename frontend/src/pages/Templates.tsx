@@ -736,7 +736,7 @@ const Templates: React.FC = () => {
                   <thead>
                     <tr className="bg-indigo-50 border-b">
                       <th 
-                        className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                        className="text-left py-3 px-6 text-sm font-bold text-gray-700 cursor-pointer hover:bg-indigo-100"
                         onClick={() => handleSort('name')}
                       >
                         <div className="flex items-center justify-start">
@@ -749,7 +749,7 @@ const Templates: React.FC = () => {
               </div>
                       </th>
                       <th 
-                        className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
+                        className="text-left py-3 px-6 text-sm font-bold text-gray-700 cursor-pointer hover:bg-indigo-100"
                         onClick={() => handleSort('createdAt')}
                       >
                         <div className="flex items-center justify-start">
@@ -761,8 +761,8 @@ const Templates: React.FC = () => {
                           )}
             </div>
                       </th>
-                      <th className="text-left py-3 px-6 text-sm font-medium text-gray-700">Actions</th>
-                      <th className="text-left py-3 px-6 text-sm font-medium text-gray-700">Download Recipient Template</th>
+                      <th className="text-left py-3 px-6 text-sm font-bold text-gray-700">Actions</th>
+                      <th className="text-left py-3 px-6 text-sm font-bold text-gray-700">Download Recipient Template</th>
                     </tr>
                   </thead>
                   <tbody>
