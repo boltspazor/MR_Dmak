@@ -119,7 +119,7 @@ export class TemplateController {
   async createTemplate(req: Request, res: Response): Promise<void> {
     try {
       const userId = (req as any).user.userId;
-      const { name, content, type, parameters, imageUrl, footerImageUrl } = req.body;
+      const { name, content, type, parameters, imageUrl, imageFileName, footerImageUrl, footerImageFileName } = req.body;
 
       // Check if template name already exists
       const existingTemplate = await Template.findOne({ 
@@ -150,13 +150,17 @@ export class TemplateController {
         content,
         type: type || 'text',
         imageUrl: imageUrl || '',
+        imageFileName: imageFileName || '',
         parameters: extractedParameters,
         createdBy: userId
       };
 
-      // Only add footerImageUrl if it exists (for backward compatibility)
+      // Only add footerImageUrl and footerImageFileName if they exist (for backward compatibility)
       if (footerImageUrl) {
         templateData.footerImageUrl = footerImageUrl;
+      }
+      if (footerImageFileName) {
+        templateData.footerImageFileName = footerImageFileName;
       }
 
       const template = await Template.create(templateData);
@@ -191,7 +195,7 @@ export class TemplateController {
     try {
       const { id } = req.params;
       const userId = (req as any).user.userId;
-      const { name, content, type, parameters, imageUrl, footerImageUrl } = req.body;
+      const { name, content, type, parameters, imageUrl, imageFileName, footerImageUrl, footerImageFileName } = req.body;
 
       const template = await Template.findOne({ 
         _id: id, 
@@ -239,12 +243,16 @@ export class TemplateController {
         content: content || template.content,
         type: type || template.type,
         imageUrl: imageUrl !== undefined ? imageUrl : template.imageUrl,
+        imageFileName: imageFileName !== undefined ? imageFileName : template.imageFileName,
         parameters: extractedParameters
       };
 
-      // Only update footerImageUrl if it exists (for backward compatibility)
+      // Only update footerImageUrl and footerImageFileName if they exist (for backward compatibility)
       if (footerImageUrl !== undefined) {
         updateData.footerImageUrl = footerImageUrl;
+      }
+      if (footerImageFileName !== undefined) {
+        updateData.footerImageFileName = footerImageFileName;
       }
 
       const updatedTemplate = await Template.findByIdAndUpdate(
@@ -327,7 +335,7 @@ export class TemplateController {
       // For production, we need to return the full URL
       const baseUrl = process.env.NODE_ENV === 'production' 
         ? 'https://mrbackend-production-2ce3.up.railway.app'
-        : 'http://localhost:5000';
+        : 'http://localhost:5001';
       const imageUrl = `${baseUrl}/uploads/${req.file.filename}`;
 
       logger.info('Template image uploaded successfully', { 
@@ -337,7 +345,11 @@ export class TemplateController {
 
       res.json({
         success: true,
-        data: { imageUrl },
+        data: { 
+          imageUrl,
+          imageFileName: req.file.filename,
+          originalName: req.file.originalname
+        },
         message: 'Image uploaded successfully'
       });
     } catch (error) {

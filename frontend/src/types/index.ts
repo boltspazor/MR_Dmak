@@ -97,7 +97,9 @@ export interface Template {
   content: string;
   type: 'html' | 'text' | 'image';
   imageUrl?: string;
+  imageFileName?: string;
   footerImageUrl?: string;
+  footerImageFileName?: string;
   parameters: string[];
   createdBy: {
     _id: string;

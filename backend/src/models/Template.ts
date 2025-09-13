@@ -6,7 +6,9 @@ export interface ITemplate extends Document {
   content: string; // HTML content or text content with placeholders
   type: 'html' | 'text' | 'image';
   imageUrl?: string; // Header image for templates
+  imageFileName?: string; // Original filename of header image
   footerImageUrl?: string; // Footer image for templates
+  footerImageFileName?: string; // Original filename of footer image
   parameters: string[]; // Array of parameter names like ['Param1', 'Param2', 'Param3']
   createdBy: mongoose.Types.ObjectId; // Marketing manager who created the template
   isActive: boolean;
@@ -34,7 +36,15 @@ const templateSchema = new Schema<ITemplate>({
     type: String,
     trim: true
   },
+  imageFileName: {
+    type: String,
+    trim: true
+  },
   footerImageUrl: {
+    type: String,
+    trim: true
+  },
+  footerImageFileName: {
     type: String,
     trim: true
   },

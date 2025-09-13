@@ -137,7 +137,7 @@ export class MessageController {
       // For production, we need to return the full URL
       const baseUrl = process.env.NODE_ENV === 'production' 
         ? 'https://mrbackend-production-2ce3.up.railway.app'
-        : 'http://localhost:5000';
+        : 'http://localhost:5001';
       const imageUrl = `${baseUrl}/uploads/${req.file.filename}`;
       
       return res.json({ 

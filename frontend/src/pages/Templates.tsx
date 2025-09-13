@@ -41,7 +41,9 @@ const Templates: React.FC = () => {
     content: '',
     type: 'text' as 'html' | 'text' | 'image',
     imageUrl: '',
+    imageFileName: '',
     footerImageUrl: '',
+    footerImageFileName: '',
     parameters: [] as string[]
   });
 
@@ -145,7 +147,11 @@ const Templates: React.FC = () => {
           'Content-Type': 'multipart/form-data',
         },
       });
-      return response.data.imageUrl;
+      return {
+        imageUrl: response.data.data.imageUrl,
+        imageFileName: response.data.data.imageFileName,
+        originalName: response.data.data.originalName
+      };
     } catch (error) {
       console.error('Error uploading image:', error);
       throw error;
@@ -164,25 +170,33 @@ const Templates: React.FC = () => {
       }
 
       let imageUrl = formData.imageUrl;
+      let imageFileName = formData.imageFileName;
       let footerImageUrl = formData.footerImageUrl;
+      let footerImageFileName = formData.footerImageFileName;
 
       // Upload images if they exist
       if (headerImage) {
         console.log('Uploading header image...');
-        imageUrl = await uploadImage(headerImage, 'header');
-        console.log('Header image uploaded:', imageUrl);
+        const uploadResult = await uploadImage(headerImage, 'header');
+        imageUrl = uploadResult.imageUrl;
+        imageFileName = uploadResult.imageFileName;
+        console.log('Header image uploaded:', uploadResult);
       } else if (formData.imageUrl) {
         console.log('Using existing header image URL:', formData.imageUrl);
         imageUrl = formData.imageUrl;
+        imageFileName = formData.imageFileName;
       }
       
       if (footerImage) {
         console.log('Uploading footer image...');
-        footerImageUrl = await uploadImage(footerImage, 'footer');
-        console.log('Footer image uploaded:', footerImageUrl);
+        const uploadResult = await uploadImage(footerImage, 'footer');
+        footerImageUrl = uploadResult.imageUrl;
+        footerImageFileName = uploadResult.imageFileName;
+        console.log('Footer image uploaded:', uploadResult);
       } else if (formData.footerImageUrl) {
         console.log('Using existing footer image URL:', formData.footerImageUrl);
         footerImageUrl = formData.footerImageUrl;
+        footerImageFileName = formData.footerImageFileName;
       }
 
       // Extract parameters from content if not provided
@@ -199,7 +213,9 @@ const Templates: React.FC = () => {
         content: formData.content,
         type: formData.type,
         imageUrl: imageUrl || '',
+        imageFileName: imageFileName || '',
         footerImageUrl: footerImageUrl || '',
+        footerImageFileName: footerImageFileName || '',
         parameters: extractedParameters
       };
 
@@ -227,7 +243,9 @@ const Templates: React.FC = () => {
         content: '',
         type: 'text',
         imageUrl: '',
+        imageFileName: '',
         footerImageUrl: '',
+        footerImageFileName: '',
         parameters: []
       });
       
@@ -252,7 +270,9 @@ const Templates: React.FC = () => {
       content: template.content,
       type: template.type,
       imageUrl: template.imageUrl || '',
+      imageFileName: template.imageFileName || '',
       footerImageUrl: template.footerImageUrl || '',
+      footerImageFileName: template.footerImageFileName || '',
       parameters: template.parameters
     });
     // Set preview images for editing
@@ -312,7 +332,9 @@ const Templates: React.FC = () => {
       content: template.content,
       type: template.type,
       imageUrl: template.imageUrl || '',
+      imageFileName: template.imageFileName || '',
       footerImageUrl: template.footerImageUrl || '',
+      footerImageFileName: template.footerImageFileName || '',
       parameters: template.parameters
     });
     setShowCreateForm(true);
@@ -475,9 +497,9 @@ const Templates: React.FC = () => {
 
   const exportTemplatesToCSV = () => {
     const csvContent = [
-      'Name,Type,Parameters,Content,Created At',
+      'Name,Type,Parameters,Content,Header Image,Footer Image,Created At',
       ...templates.map(template => 
-        `${template.name},${template.type},${template.parameters.join(';')},${template.content.replace(/,/g, ';')},${new Date(template.createdAt).toLocaleDateString()}`
+        `${template.name},${template.type},${template.parameters.join(';')},${template.content.replace(/,/g, ';')},${template.imageFileName || ''},${template.footerImageFileName || ''},${new Date(template.createdAt).toLocaleDateString()}`
       )
     ].join('\n');
 
@@ -684,7 +706,9 @@ const Templates: React.FC = () => {
                   content: '',
                   type: 'text',
                   imageUrl: '',
-                      footerImageUrl: '',
+                  imageFileName: '',
+                  footerImageUrl: '',
+                  footerImageFileName: '',
                   parameters: []
                 });
               }}
@@ -761,6 +785,7 @@ const Templates: React.FC = () => {
                           )}
             </div>
                       </th>
+                      <th className="text-left py-3 px-6 text-sm font-bold text-gray-700">Images</th>
                       <th className="text-left py-3 px-6 text-sm font-bold text-gray-700">Actions</th>
                       <th className="text-left py-3 px-6 text-sm font-bold text-gray-700">Download Recipient Template</th>
                     </tr>
@@ -772,6 +797,23 @@ const Templates: React.FC = () => {
                           <td className="py-3 px-6 text-sm text-gray-900 text-left font-medium">{template.name}</td>
                           <td className="py-3 px-6 text-sm text-gray-900 text-left">
                             {new Date(template.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="py-3 px-6 text-sm text-gray-900 text-left">
+                            <div className="space-y-1">
+                              {template.imageFileName && (
+                                <div className="text-xs text-blue-600">
+                                  Header: {template.imageFileName}
+                                </div>
+                              )}
+                              {template.footerImageFileName && (
+                                <div className="text-xs text-green-600">
+                                  Footer: {template.footerImageFileName}
+                                </div>
+                              )}
+                              {!template.imageFileName && !template.footerImageFileName && (
+                                <div className="text-xs text-gray-500">No images</div>
+                              )}
+                            </div>
                           </td>
                           <td className="py-3 px-6 text-sm text-left">
                             <div className="flex items-center justify-start space-x-2">
