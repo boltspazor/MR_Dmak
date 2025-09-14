@@ -28,7 +28,7 @@ export class MessageService {
         targetGroups: payload.targetGroups, // Store group names for reference
         scheduledAt: payload.scheduledAt || new Date(),
         createdBy: userId,
-        status: 'processing',
+        status: 'pending',
         totalRecipients: 0, // Will be updated after counting MRs
         sentCount: 0,
         failedCount: 0,
@@ -265,6 +265,14 @@ export class MessageService {
 
   async createCampaign(campaignData: any, userId: string) {
     try {
+      logger.info('🎯 MessageService.createCampaign started', {
+        campaignType: campaignData.type,
+        userId,
+        hasContent: !!campaignData.content,
+        hasImageUrl: !!campaignData.imageUrl,
+        targetMrsCount: campaignData.targetMrs?.length || 0
+      });
+
       const MedicalRepresentative = (await import('../models/MedicalRepresentative')).default;
       let mrs: any[] = [];
       let messageContent = '';
@@ -273,65 +281,95 @@ export class MessageService {
 
       // Handle different campaign types
       if (campaignData.type === 'with-template') {
+        logger.info('📄 Processing template-based campaign in service');
         // Template-based campaign
         const Template = (await import('../models/Template')).default;
         const RecipientList = (await import('../models/RecipientList')).default;
 
+        logger.info('🔍 Looking up template', { templateId: campaignData.templateId });
         const template = await Template.findById(campaignData.templateId);
         if (!template) {
+          logger.error('❌ Template not found', { templateId: campaignData.templateId });
           throw new Error('Template not found');
         }
+        logger.info('✅ Template found', { templateId: template._id });
 
+        logger.info('🔍 Looking up recipient list', { recipientListId: campaignData.recipientListId });
         const recipientList = await RecipientList.findById(campaignData.recipientListId);
         if (!recipientList) {
+          logger.error('❌ Recipient list not found', { recipientListId: campaignData.recipientListId });
           throw new Error('Recipient list not found');
         }
+        logger.info('✅ Recipient list found', { recipientListId: recipientList._id });
 
         // Get MRs from recipient list data
         const mrIds = recipientList.data
           .map((row: any) => row['MR id'])
           .filter((id: string) => id && id.trim() !== '');
         
+        logger.info('🔍 Looking up MRs from recipient list', { mrIdsCount: mrIds.length, mrIds: mrIds.slice(0, 5) });
         mrs = await MedicalRepresentative.find({
           mrId: { $in: mrIds }
         }).populate('groupId', 'groupName');
+        logger.info('✅ MRs found from recipient list', { mrsCount: mrs.length });
 
         messageContent = template.content;
         imageUrl = template.imageUrl || '';
         campaignName = campaignData.name;
+        logger.info('✅ Template-based campaign data prepared');
 
       } else if (campaignData.type === 'custom-messages') {
+        logger.info('💬 Processing custom message campaign in service');
         // Custom message campaign
         const mrIds = campaignData.targetMrs.map((mr: any) => mr.mrId);
         
+        logger.info('🔍 Looking up MRs for custom campaign', { mrIdsCount: mrIds.length, mrIds: mrIds.slice(0, 5) });
         mrs = await MedicalRepresentative.find({
-          mrId: { $in: mrIds }
+          _id: { $in: mrIds }
         }).populate('groupId', 'groupName');
+        logger.info('✅ MRs found for custom campaign', { mrsCount: mrs.length });
 
         messageContent = campaignData.content;
         imageUrl = campaignData.imageUrl || '';
         campaignName = campaignData.name;
+        logger.info('✅ Custom message campaign data prepared');
 
       } else {
+        logger.error('❌ Invalid campaign type', { type: campaignData.type });
         throw new Error('Invalid campaign type');
       }
 
+      logger.info('🔍 Checking MR count', { mrCount: mrs.length });
       if (mrs.length === 0) {
+        logger.error('❌ No MRs found for campaign', { 
+          campaignType: campaignData.type,
+          targetMrsCount: campaignData.targetMrs?.length || 0,
+          mrIds: campaignData.targetMrs?.map((mr: any) => mr.mrId) || []
+        });
         throw new Error('No MRs found for campaign');
       }
+      logger.info('✅ MR validation passed', { mrCount: mrs.length });
 
       // Create message record
+      logger.info('📝 Creating message record', { 
+        hasContent: !!messageContent,
+        hasImageUrl: !!imageUrl,
+        messageType: imageUrl ? 'image' : 'text'
+      });
       const message = await Message.create({
         content: messageContent,
         imageUrl: imageUrl,
         type: imageUrl ? 'image' : 'text',
         createdBy: userId,
       });
+      logger.info('✅ Message record created', { messageId: message._id });
 
       // Generate unique campaign ID
       const campaignId = `CAMP-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+      logger.info('🆔 Generated campaign ID', { campaignId });
 
       // Create campaign record
+      logger.info('📝 Creating campaign record');
       const campaign = await MessageCampaign.create({
         campaignId,
         messageId: message._id,
@@ -340,13 +378,15 @@ export class MessageService {
           'Custom Messages',
         scheduledAt: new Date(),
         createdBy: userId,
-        status: 'processing',
+        status: 'pending',
         totalRecipients: mrs.length,
         sentCount: 0,
         failedCount: 0,
       });
+      logger.info('✅ Campaign record created', { campaignId: campaign._id });
 
       // Create message logs for each MR
+      logger.info('📝 Creating message logs', { mrCount: mrs.length });
       const messageLogs = await Promise.all(
         mrs.map((mr: any) =>
           MessageLog.create({
@@ -357,11 +397,14 @@ export class MessageService {
           })
         )
       );
+      logger.info('✅ Message logs created', { logCount: messageLogs.length });
 
       // Queue messages for processing
+      logger.info('🚀 Starting message queueing process');
       const { addMessageToQueue } = await import('./queue.service');
       
       for (const mr of mrs) {
+        logger.info('📤 Adding message to queue', { mrId: mr._id, phone: mr.phone });
         await addMessageToQueue({
           campaignId: (campaign as any)._id.toString(),
           mrId: (mr as any)._id.toString(),
@@ -370,20 +413,22 @@ export class MessageService {
           imageUrl: imageUrl,
         });
       }
+      logger.info('✅ All messages queued successfully');
 
       // Update campaign status to 'pending' after queuing all messages
+      logger.info('📝 Updating campaign status to pending');
       await MessageCampaign.findByIdAndUpdate(campaign._id, {
         status: 'pending'
       });
 
-      logger.info('Campaign created successfully', {
+      logger.info('🎉 Campaign created successfully', {
         campaignId: (campaign as any)._id,
         totalRecipients: mrs.length,
         campaignName: campaignName,
         type: campaignData.type
       });
 
-      return {
+      const result = {
         campaignId: (campaign as any)._id.toString(),
         messageId: (message as any)._id.toString(),
         totalRecipients: mrs.length,
@@ -391,8 +436,15 @@ export class MessageService {
         campaignName: campaignName,
         type: campaignData.type
       };
+
+      logger.info('✅ Returning campaign creation result', { result });
+      return result;
     } catch (error) {
-      logger.error('Failed to create campaign', { error, campaignData });
+      logger.error('❌ Failed to create campaign in service', { 
+        error: error.message,
+        stack: error.stack,
+        campaignData 
+      });
       throw error;
     }
   }

@@ -4,7 +4,8 @@ import {
   FileText, 
   BarChart3, 
   LogOut, 
-  Shield
+  Shield,
+  Phone
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -25,6 +26,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const menuItems = [
     { id: 'dashboard', label: 'Campaigns Dashboard', icon: BarChart3, route: '/dashboard' },
     { id: 'dmak', label: 'MR', icon: BarChart3, route: '/dmak' },
+    { id: 'dmat', label: 'WhatsApp', icon: Phone, route: '/dmat' },
     { id: 'templates', label: 'Templates', icon: FileText, route: '/templates' },
     { id: 'campaigns', label: 'Konnect', icon: MessageSquare, route: '/campaigns' },
     { id: 'super-admin', label: 'Super Admin', icon: Shield, route: '/super-admin' },

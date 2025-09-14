@@ -153,6 +153,148 @@ export class WhatsAppService {
         // Update message log status in database
       });
     }
-    
+  }
+
+  // WhatsApp Business API - Allowed Recipients Management
+  // Using local database since WhatsApp Business API doesn't provide allowed_recipients field
+  async getAllowedRecipients(): Promise<{ success: boolean; recipients?: string[]; error?: string }> {
+    try {
+      const AllowedRecipient = (await import('../models/AllowedRecipient')).default;
+      
+      const recipients = await AllowedRecipient.find({ isActive: true })
+        .select('phoneNumber formattedPhoneNumber addedAt')
+        .sort({ addedAt: -1 });
+
+      const phoneNumbers = recipients.map(recipient => recipient.phoneNumber);
+
+      logger.info('Retrieved allowed recipients from database', {
+        count: phoneNumbers.length
+      });
+
+      return {
+        success: true,
+        recipients: phoneNumbers
+      };
+    } catch (error: any) {
+      logger.error('Failed to get allowed recipients', {
+        error: error.message
+      });
+
+      return {
+        success: false,
+        error: error.message || 'Failed to get allowed recipients',
+      };
+    }
+  }
+
+  async addAllowedRecipients(phoneNumbers: string[], userId?: string): Promise<{ success: boolean; added?: string[]; error?: string }> {
+    try {
+      const AllowedRecipient = (await import('../models/AllowedRecipient')).default;
+      
+      // Format phone numbers (remove + and non-digits)
+      const formattedNumbers = phoneNumbers.map(num => this.formatPhoneNumber(num));
+      
+      const addedRecipients = [];
+      
+      for (const phoneNumber of formattedNumbers) {
+        try {
+          // Check if recipient already exists
+          const existingRecipient = await AllowedRecipient.findOne({ phoneNumber });
+          
+          if (existingRecipient) {
+            // Reactivate if inactive
+            if (!existingRecipient.isActive) {
+              await AllowedRecipient.findByIdAndUpdate(existingRecipient._id, { 
+                isActive: true,
+                addedAt: new Date()
+              });
+              addedRecipients.push(phoneNumber);
+            }
+          } else {
+            // Create new recipient
+            await AllowedRecipient.create({
+              phoneNumber,
+              formattedPhoneNumber: phoneNumber.startsWith('+') ? phoneNumber : `+${phoneNumber}`,
+              addedBy: userId || null,
+              isActive: true
+            });
+            addedRecipients.push(phoneNumber);
+          }
+        } catch (error: any) {
+          logger.warn('Failed to add individual recipient', { phoneNumber, error: error.message });
+        }
+      }
+
+      logger.info('Added recipients to allowed list', {
+        count: addedRecipients.length,
+        numbers: addedRecipients
+      });
+
+      return {
+        success: true,
+        added: addedRecipients
+      };
+    } catch (error: any) {
+      logger.error('Failed to add allowed recipients', {
+        phoneNumbers,
+        error: error.message
+      });
+
+      return {
+        success: false,
+        error: error.message || 'Failed to add allowed recipients',
+      };
+    }
+  }
+
+  async removeAllowedRecipients(phoneNumbers: string[]): Promise<{ success: boolean; removed?: string[]; error?: string }> {
+    try {
+      const AllowedRecipient = (await import('../models/AllowedRecipient')).default;
+      
+      // Format phone numbers to remove
+      const formattedNumbers = phoneNumbers.map(num => this.formatPhoneNumber(num));
+      
+      // Soft delete by setting isActive to false
+      const result = await AllowedRecipient.updateMany(
+        { phoneNumber: { $in: formattedNumbers } },
+        { isActive: false }
+      );
+
+      logger.info('Removed recipients from allowed list', {
+        count: result.modifiedCount,
+        numbers: formattedNumbers
+      });
+
+      return {
+        success: true,
+        removed: formattedNumbers
+      };
+    } catch (error: any) {
+      logger.error('Failed to remove allowed recipients', {
+        phoneNumbers,
+        error: error.message
+      });
+
+      return {
+        success: false,
+        error: error.message || 'Failed to remove allowed recipients',
+      };
+    }
+  }
+
+  async addSingleAllowedRecipient(phoneNumber: string): Promise<{ success: boolean; error?: string }> {
+    const result = await this.addAllowedRecipients([phoneNumber]);
+    return {
+      success: result.success,
+      error: result.error
+    };
+  }
+
+  async removeSingleAllowedRecipient(phoneNumber: string): Promise<{ success: boolean; error?: string }> {
+    const result = await this.removeAllowedRecipients([phoneNumber]);
+    return {
+      success: result.success,
+      error: result.error
+    };
   }
 }

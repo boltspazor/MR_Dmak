@@ -230,9 +230,33 @@ messageQueue.on('stalled', (job) => {
 });
 
 export const addMessageToQueue = async (data: MessageJobData, delay?: number) => {
-  return await messageQueue.add('send-message', data, {
-    delay: delay || 0,
-  });
+  try {
+    logger.info('🚀 Adding message to queue', { 
+      campaignId: data.campaignId,
+      mrId: data.mrId,
+      phoneNumber: data.phoneNumber,
+      delay: delay || 0
+    });
+    
+    const result = await messageQueue.add('send-message', data, {
+      delay: delay || 0,
+    });
+    
+    logger.info('✅ Message added to queue successfully', { 
+      jobId: result.id,
+      campaignId: data.campaignId,
+      mrId: data.mrId
+    });
+    
+    return result;
+  } catch (error) {
+    logger.error('❌ Failed to add message to queue', {
+      error: error.message,
+      campaignId: data.campaignId,
+      mrId: data.mrId
+    });
+    throw error;
+  }
 };
 
 export const getQueueStats = async () => {

@@ -2,8 +2,15 @@ import MedicalRepresentative from '../models/MedicalRepresentative';
 import Group from '../models/Group';
 import { CreateMRForm, UpdateMRForm } from '../types/mongodb';
 import logger from '../utils/logger';
+import { WhatsAppService } from './whatsapp.service';
 
 export class MRService {
+  private whatsappService: WhatsAppService;
+
+  constructor() {
+    this.whatsappService = new WhatsAppService();
+  }
+
   async createMR(data: CreateMRForm, userId: string) {
     try {
       // Check if MR ID already exists in the same group
@@ -28,6 +35,28 @@ export class MRService {
 
       const populatedMR = await MedicalRepresentative.findById(mr._id)
         .populate('groupId', 'groupName description');
+
+      // Automatically add phone number to WhatsApp allowed recipients list
+      try {
+        if (data.phone) {
+          logger.info('📱 Adding MR phone number to WhatsApp allowed list', { phone: data.phone });
+          const whatsappResult = await this.whatsappService.addAllowedRecipients([data.phone], userId?.toString());
+          if (whatsappResult.success) {
+            logger.info('✅ MR phone number added to WhatsApp allowed list', { phone: data.phone });
+          } else {
+            logger.warn('⚠️ Failed to add MR phone number to WhatsApp allowed list', { 
+              phone: data.phone, 
+              error: whatsappResult.error 
+            });
+          }
+        }
+      } catch (whatsappError) {
+        // Don't fail MR creation if WhatsApp addition fails
+        logger.warn('⚠️ WhatsApp allowed list update failed for MR creation', { 
+          phone: data.phone, 
+          error: whatsappError 
+        });
+      }
 
       logger.info('MR created successfully', { mrId: (mr as any)._id, userId });
       return populatedMR;
@@ -436,7 +465,8 @@ export class MRService {
       const results = {
         created: 0,
         errors: [] as string[],
-        totalProcessed: mrData.length
+        totalProcessed: mrData.length,
+        phoneNumbers: [] as string[] // Collect phone numbers for WhatsApp allowed list
       };
 
       // Get all groups for the user to map group names to IDs
@@ -490,9 +520,38 @@ export class MRService {
             marketingManagerId: userId
           });
 
+          // Collect phone number for WhatsApp allowed list
+          if (data.phone) {
+            results.phoneNumbers.push(data.phone);
+          }
+
           results.created++;
         } catch (error: any) {
           results.errors.push(`Row ${i + 1}: ${error.message}`);
+        }
+      }
+
+      // Automatically add all phone numbers to WhatsApp allowed recipients list
+      if (results.phoneNumbers.length > 0) {
+        try {
+          logger.info('📱 Adding bulk MR phone numbers to WhatsApp allowed list', { 
+            count: results.phoneNumbers.length 
+          });
+          const whatsappResult = await this.whatsappService.addAllowedRecipients(results.phoneNumbers, userId?.toString());
+          if (whatsappResult.success) {
+            logger.info('✅ Bulk MR phone numbers added to WhatsApp allowed list', { 
+              count: whatsappResult.added?.length || 0 
+            });
+          } else {
+            logger.warn('⚠️ Failed to add bulk MR phone numbers to WhatsApp allowed list', { 
+              error: whatsappResult.error 
+            });
+          }
+        } catch (whatsappError) {
+          // Don't fail bulk creation if WhatsApp addition fails
+          logger.warn('⚠️ WhatsApp allowed list update failed for bulk MR creation', { 
+            error: whatsappError 
+          });
         }
       }
 

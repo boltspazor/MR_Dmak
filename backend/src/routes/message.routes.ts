@@ -11,7 +11,7 @@ const messageController = new MessageController();
 router.use(authenticateToken);
 
 router.post('/send', validateRequest(schemas.message.send), messageController.sendMessage);
-router.post('/campaigns', upload.single('image'), messageController.createCampaign);
+router.post('/campaigns', upload.any(), messageController.createCampaign);
 router.post('/upload-image', upload.single('image'), messageController.uploadImage);
 router.get('/campaigns', messageController.getAllCampaigns);
 router.get('/campaigns/stats', messageController.getCampaignStats);
