@@ -21,7 +21,7 @@ export class WhatsAppController {
         phoneNumber: recipient.phoneNumber,
         formatted: recipient.formattedPhoneNumber,
         addedDate: recipient.addedAt.toISOString(),
-        addedBy: recipient.addedBy?.name || 'System'
+        addedBy: (recipient.addedBy as any)?.name || 'System'
       }));
 
       logger.info('✅ Retrieved allowed recipients list', { count: formattedRecipients.length });
@@ -196,6 +196,67 @@ export class WhatsAppController {
       }
     } catch (error: any) {
       logger.error('❌ Failed to remove recipients from allowed list', { error: error.message });
+      return res.status(500).json({ 
+        success: false, 
+        error: error.message 
+      });
+    }
+  }
+
+  // Test template message
+  async testTemplateMessage(req: any, res: Response) {
+    try {
+      const { phoneNumber, templateName, languageCode, parameters } = req.body;
+      
+      if (!phoneNumber) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Phone number is required' 
+        });
+      }
+
+      const templateNameToUse = templateName || 'hello_world';
+      const languageCodeToUse = languageCode || 'en_US';
+
+      logger.info('🧪 Testing template message', { 
+        phoneNumber, 
+        templateName: templateNameToUse, 
+        languageCode: languageCodeToUse 
+      });
+      
+      const templateMessage = whatsappService.createTemplateMessage(
+        phoneNumber, 
+        templateNameToUse, 
+        languageCodeToUse, 
+        parameters
+      );
+      
+      const result = await whatsappService.sendMessage(templateMessage);
+      
+      if (result.success) {
+        logger.info('✅ Template message sent successfully', { 
+          phoneNumber, 
+          messageId: result.messageId 
+        });
+        return res.json({
+          success: true,
+          message: 'Template message sent successfully',
+          messageId: result.messageId,
+          phoneNumber,
+          templateName: templateNameToUse
+        });
+      } else {
+        logger.error('❌ Failed to send template message', { 
+          phoneNumber, 
+          error: result.error 
+        });
+        return res.status(500).json({ 
+          success: false, 
+          error: result.error 
+        });
+      }
+    } catch (error: any) {
+      logger.error('❌ Failed to send template message', { error: error.message });
       return res.status(500).json({ 
         success: false, 
         error: error.message 

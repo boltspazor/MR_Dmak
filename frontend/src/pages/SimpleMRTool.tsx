@@ -4,16 +4,16 @@ import { useAuth } from '../contexts/AuthContext';
 import { 
   Users, 
   Trash2, 
-  Search,
   FileText,
-  Edit,
-  ChevronDown
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import CommonFeatures from '../components/CommonFeatures';
 import AddMRDialog from '../components/AddMRDialog';
 import EditMRDialog from '../components/EditMRDialog';
+import MRActionButtons from '../components/mr/MRActionButtons';
+import MRSearchAndFilter from '../components/mr/MRSearchAndFilter';
+import MRTable from '../components/mr/MRTable';
 
 interface Contact {
   id: string;
@@ -600,193 +600,32 @@ const SimpleMRTool: React.FC = () => {
             <div className="space-y-8">
 
               {/* Action Buttons */}
-              <div className="flex justify-between items-center">
-                <div className="flex space-x-4">
-              <button
-                    onClick={() => setIsAddMRDialogOpen(true)}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
-                  >
-                    Add Individual MR
-              </button>
-                  
-                  <div className="flex items-center space-x-2">
-                <input
-                  type="file"
-                  accept=".csv"
-                      onChange={handleCSVImport}
-                          className="hidden"
-                          id="csv-upload"
-                        />
-                        <label
-                          htmlFor="csv-upload"
-                      className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-semibold cursor-pointer hover:bg-indigo-200"
-                    >
-                      Import MR
-                        </label>
-                <button
-                  onClick={downloadCSVTemplate}
-                      className="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-semibold hover:bg-gray-900"
-                      >
-                  Download Template
-                </button>
+              <MRActionButtons
+                onAddIndividual={() => setIsAddMRDialogOpen(true)}
+                onCSVImport={handleCSVImport}
+                onDownloadTemplate={downloadCSVTemplate}
+              />
+
               </div>
-            </div>
-                      </div>
 
             {/* Contacts Table */}
               <div className="bg-white bg-opacity-40 rounded-lg">
-                {/* Table Header */}
-                <div className="p-6 border-b bg-indigo-50">
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="text-sm text-gray-700 font-bold">
-                      {filteredContacts.length} of {contacts.length}
-                    </span>
-                  </div>
-                  
-                  {/* Search and Filter Controls */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="relative">
-                        <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="Search MR ID, Name, or Phone..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 rounded-lg border-0 bg-gray-100"
-                      />
-                    </div>
-                    
-                    <div className="relative">
-                      <select
-                        value={groupFilter}
-                        onChange={(e) => setGroupFilter(e.target.value)}
-                        className="w-full px-3 py-2 pr-10 rounded-lg border-0 bg-gray-100 appearance-none cursor-pointer"
-                      >
-                        <option value="">All Groups</option>
-                        {groups.map(group => (
-                          <option key={group.id} value={group.name}>
-                            {group.name}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="h-5 w-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
-                  </div>
-                </div>
-              </div>
+                <MRSearchAndFilter
+                  searchTerm={searchTerm}
+                  onSearchChange={setSearchTerm}
+                  selectedGroup={groupFilter}
+                  onGroupChange={setGroupFilter}
+                  groups={groups}
+                  filteredCount={filteredContacts.length}
+                  totalCount={contacts.length}
+                />
                 
                 {/* Table */}
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-indigo-50 border-b">
-                        <th 
-                          className="text-left py-3 px-6 text-sm font-bold text-gray-700 cursor-pointer hover:bg-indigo-100"
-                          onClick={() => handleSort('mrId')}
-                        >
-                          <div className="flex items-center justify-center">
-                            MR ID
-                            {sortField === 'mrId' && (
-                              <span className="ml-1">
-                                {sortDirection === 'asc' ? '↑' : '↓'}
-                              </span>
-                            )}
-                          </div>
-                        </th>
-                        <th 
-                          className="text-left py-3 px-6 text-sm font-bold text-gray-700 cursor-pointer hover:bg-indigo-100"
-                          onClick={() => handleSort('firstName')}
-                        >
-                          <div className="flex items-center justify-center">
-                            Name
-                            {sortField === 'firstName' && (
-                              <span className="ml-1">
-                                {sortDirection === 'asc' ? '↑' : '↓'}
-                              </span>
-                            )}
-                          </div>
-                        </th>
-                        <th 
-                          className="text-left py-3 px-6 text-sm font-bold text-gray-700 cursor-pointer hover:bg-indigo-100"
-                          onClick={() => handleSort('phone')}
-                        >
-                          <div className="flex items-center justify-center">
-                            Phone No.
-                            {sortField === 'phone' && (
-                              <span className="ml-1">
-                                {sortDirection === 'asc' ? '↑' : '↓'}
-                              </span>
-                            )}
-                          </div>
-                        </th>
-                        <th 
-                          className="text-left py-3 px-6 text-sm font-bold text-gray-700 cursor-pointer hover:bg-indigo-100"
-                          onClick={() => handleSort('group')}
-                        >
-                          <div className="flex items-center justify-center">
-                            Group
-                            {sortField === 'group' && (
-                              <span className="ml-1">
-                                {sortDirection === 'asc' ? '↑' : '↓'}
-                              </span>
-                            )}
-                          </div>
-                        </th>
-                        <th className="text-left py-3 px-6 text-sm font-bold text-gray-700">Comments</th>
-                        <th className="text-left py-3 px-6 text-sm font-bold text-gray-700">Actions</th>
-                    </tr>
-                  </thead>
-                    <tbody>
-                      {paginatedContacts.length > 0 ? (
-                        paginatedContacts.map(contact => (
-                          <tr key={contact.id} className="border-b hover:bg-gray-50">
-                            <td className="py-3 px-6 text-sm text-gray-900 text-left">{contact.mrId}</td>
-                            <td className="py-3 px-6 text-sm text-gray-900 text-left">
-                              {contact.firstName} {contact.lastName}
-                            </td>
-                            <td className="py-3 px-6 text-sm text-gray-900 text-left">{contact.phone}</td>
-                            <td className="py-3 px-6 text-sm text-gray-900 text-left">{contact.group}</td>
-                            <td className="py-3 px-6 text-sm text-gray-900 text-left">{contact.comments || '-'}</td>
-                            <td className="py-3 px-6 text-sm text-left">
-                              <div className="flex items-center justify-center space-x-2">
-                          <button
-                                  onClick={() => handleEditContact(contact)}
-                                  className="text-blue-600 hover:text-blue-800"
-                                  title="Edit Contact"
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </button>
-                          <button
-                            onClick={() => handleDeleteClick(contact)}
-                                className="text-red-600 hover:text-red-800"
-                                  title="Delete Contact"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                              </div>
-                        </td>
-                      </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={6} className="text-left py-12">
-                            <div className="flex flex-col items-center">
-                              <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4">
-                                <Users className="h-12 w-12 text-gray-400" />
-                              </div>
-                              <h3 className="text-lg font-bold mb-2 text-indigo-600">
-                                No Contacts Found
-                              </h3>
-                              <p className="text-sm text-indigo-600">
-                                Add your first contact above or import from CSV
-                              </p>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                  </tbody>
-                </table>
-            </div>
-          </div>
+                <MRTable
+                  contacts={paginatedContacts}
+                  onEdit={handleEditContact}
+                  onDelete={handleDeleteClick}
+                />
 
           {/* Pagination Controls */}
           {totalPages > 1 && (

@@ -28,10 +28,3 @@ export const formatPhoneNumber = (phone: string): string => {
     return phoneRegex.test(phone);
   };
   
-  export const generateMRId = (): string => {
-    return `MR${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  };
-  
-  export const sanitizeString = (str: string): string => {
-    return str.trim().replace(/[<>]/g, '');
-  };

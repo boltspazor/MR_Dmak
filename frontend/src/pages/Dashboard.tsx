@@ -12,6 +12,9 @@ import {
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import CommonFeatures from '../components/CommonFeatures';
+import CampaignStats from '../components/dashboard/CampaignStats';
+import CampaignTable from '../components/dashboard/CampaignTable';
+import RecipientsModal from '../components/dashboard/RecipientsModal';
 import { api } from '../lib/api';
 
 interface CampaignRecord {
@@ -57,76 +60,6 @@ const Dashboard: React.FC = () => {
   // Template preview popup states
   const [showTemplatePreview, setShowTemplatePreview] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<any>(null);
-
-  // Mock data for demonstration
-  useEffect(() => {
-    const mockCampaigns: CampaignRecord[] = [
-      {
-        id: '1',
-        campaignName: 'Q1 Product Launch',
-        campaignId: 'CAMP-001',
-        template: 'Product Launch Template',
-        recipientList: ['North Zone', 'South Zone'],
-        date: '2024-01-15',
-        sendStatus: 'completed',
-        totalRecipients: 150,
-        sentCount: 145,
-        failedCount: 5
-      },
-      {
-        id: '2',
-        campaignName: 'Monthly Training Update',
-        campaignId: 'CAMP-002',
-        template: 'Training Reminder Template',
-        recipientList: ['East Zone', 'West Zone'],
-        date: '2024-01-14',
-        sendStatus: 'in progress',
-        totalRecipients: 200,
-        sentCount: 120,
-        failedCount: 80
-      },
-      {
-        id: '3',
-        campaignName: 'Q1 Sales Review',
-        campaignId: 'CAMP-003',
-        template: 'Sales Review Template',
-        recipientList: ['Central Zone'],
-        date: '2024-01-13',
-        sendStatus: 'in progress',
-        totalRecipients: 75,
-        sentCount: 0,
-        failedCount: 0
-      },
-      {
-        id: '4',
-        campaignName: 'New Product Announcement',
-        campaignId: 'CAMP-004',
-        template: 'Product Announcement Template',
-        recipientList: ['North Zone', 'East Zone'],
-        date: '2024-01-12',
-        sendStatus: 'completed',
-        totalRecipients: 180,
-        sentCount: 175,
-        failedCount: 5
-      },
-      {
-        id: '5',
-        campaignName: 'Holiday Campaign',
-        campaignId: 'CAMP-005',
-        template: 'Holiday Special Template',
-        recipientList: ['South Zone', 'West Zone', 'Central Zone'],
-        date: '2024-01-11',
-        sendStatus: 'completed',
-        totalRecipients: 300,
-        sentCount: 295,
-        failedCount: 5
-      }
-    ];
-
-    setCampaigns(mockCampaigns);
-    setFilteredCampaigns(mockCampaigns);
-    setLoading(false);
-  }, []);
 
   // Filter and sort campaigns
   useEffect(() => {
@@ -451,6 +384,9 @@ The Team`,
 
         {/* Separator Line */}
         <div className="border-b-2 border-indigo-500 my-6"></div>
+
+        {/* Campaign Stats */}
+        <CampaignStats campaigns={campaigns || []} />
 
         {/* Main Content Area */}
         <CommonFeatures

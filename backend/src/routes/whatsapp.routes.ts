@@ -14,4 +14,7 @@ router.post('/allowed-recipients/add-multiple', whatsappController.addAllowedRec
 router.post('/allowed-recipients/remove', whatsappController.removeAllowedRecipient);
 router.post('/allowed-recipients/remove-multiple', whatsappController.removeAllowedRecipients);
 
+// WhatsApp template message testing
+router.post('/test-template', whatsappController.testTemplateMessage);
+
 export default router;

@@ -34,28 +34,25 @@ export interface MedicalRepresentativeResponse {
     updatedAt: Date;
 }
   
-  export interface MessagePayload {
-    content: string;
-    imageUrl?: string;
-    targetGroups: string[];
-    scheduledAt?: Date;
-  }
   
   export interface WhatsAppMessage {
     to: string;
-    type: 'text' | 'image';
+    type: 'text' | 'image' | 'template';
     text?: { body: string };
     image?: { link: string; caption?: string };
+    template?: {
+      name: string;
+      language: { code: string };
+      components?: Array<{
+        type: string;
+        parameters: Array<{
+          type: string;
+          text: string;
+        }>;
+      }>;
+    };
   }
   
-  export interface AuthUser {
-    id: string;
-    email: string;
-    name: string;
-    role: string;
-    isMarketingManager: boolean;
-    marketingManagerId?: string;
-  }
   
   export interface JwtPayload {
     userId: string;
@@ -68,12 +65,3 @@ export interface MedicalRepresentativeResponse {
     errors: string[];
   }
   
-  export interface CampaignReport {
-    campaign: any;
-    stats: {
-      total: number;
-      sent: number;
-      failed: number;
-      pending: number;
-    };
-  }
