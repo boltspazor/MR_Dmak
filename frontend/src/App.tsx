@@ -11,7 +11,6 @@ import MedicalReps from './pages/MedicalReps';
 import Campaigns from './pages/Campaigns';
 import Templates from './pages/Templates';
 import SuperAdmin from './pages/SuperAdmin';
-import WhatsAppManagement from './pages/WhatsAppManagement';
 
 function App() {
   return (
@@ -74,14 +73,6 @@ function App() {
               element={
                 <ProtectedRoute>
                   <SimpleMRTool />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dmat"
-              element={
-                <ProtectedRoute>
-                  <WhatsAppManagement />
                 </ProtectedRoute>
               }
             />
