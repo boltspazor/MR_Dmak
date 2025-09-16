@@ -15,6 +15,7 @@ import superAdminRoutes from './routes/super-admin.routes';
 import templateRoutes from './routes/template.routes';
 import recipientListRoutes from './routes/recipientList.routes';
 import whatsappRoutes from './routes/whatsapp.routes';
+import cacheRoutes from './routes/cache.routes';
 
 import logger from './utils/logger';
 import { WhatsAppService } from './services/whatsapp.service';
@@ -85,6 +86,7 @@ app.use('/api/super-admin', superAdminRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api/recipient-lists', recipientListRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/cache', cacheRoutes);
 
 // WhatsApp Webhook
 const whatsappService = new WhatsAppService();
