@@ -1,5 +1,5 @@
-# Build stage
-FROM node:20-alpine as build
+# Use Node.js for both build and runtime
+FROM node:20-alpine
 
 WORKDIR /app
 
@@ -15,17 +15,19 @@ COPY . .
 # Build the application
 RUN npm run build
 
-# Production stage
-FROM nginx:alpine
+# Install serve globally for serving static files
+RUN npm install -g serve
 
-# Copy built files to nginx
-COPY --from=build /app/dist /usr/share/nginx/html
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nodejs -u 1001
 
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/nginx.conf
+# Change ownership of app directory
+RUN chown -R nodejs:nodejs /app
+USER nodejs
 
 # Expose port
 EXPOSE 3000
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Serve the built application
+CMD ["serve", "-s", "dist", "-l", "3000"]
