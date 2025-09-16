@@ -281,7 +281,7 @@ export const addMessageToQueue = async (data: MessageJobData, delay?: number) =>
     });
     
     return result;
-  } catch (error) {
+  } catch (error: any) {
     logger.error('❌ Failed to add message to queue', {
       error: error.message,
       campaignId: data.campaignId,
