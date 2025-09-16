@@ -10,7 +10,7 @@ export class WhatsAppService {
 
   constructor() {
     this.apiUrl = whatsappConfig.apiUrl;
-    this.accessToken = "EAAKppxOoyRABPbBFyHJ2ZBibo3c3kC2yKZAnZCcuDVliID3DToUg2gPZAATso2QiuVX4ZBEDht5WaiOZAg4etGE3qxNrBPKa1YjuQ8sEnHlSzzo0xD4VJsMzm0r7rwQa2SCz5VqmlWTFJIjEBZBZBZAz31ZBcnXQ6c12wfKLXUjs64oXjznQmxlXytnXZB6sUPl7RKb3HXNNDsGxrH8ZAsbVuqFkThzeqc9qTGhx2bGrNc3IGZCFKogZDZD";
+    this.accessToken = whatsappConfig.accessToken;
     this.phoneNumberId = whatsappConfig.phoneNumberId!;
     
     // Log configuration status for debugging

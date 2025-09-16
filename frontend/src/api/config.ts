@@ -5,14 +5,10 @@ import toast from 'react-hot-toast';
 const getApiBaseUrl = () => {
   // Check if we're in production (Railway)
   if (window.location.hostname.includes('railway.app')) {
-    // For Railway production, try different possible service names
-    const possibleUrls = [
-      'https://mrbackend-production-2ce3.up.railway.app/api'
-    ];
-    
-    // Return the first one for now, but log all options
-    console.log('🚀 Railway detected, trying service URLs:', possibleUrls);
-    return possibleUrls[0];
+    // For Railway production, use the correct backend URL
+    const productionUrl = 'https://mrbackend-production-2ce3.up.railway.app/api';
+    console.log('🚀 Railway production detected, using backend URL:', productionUrl);
+    return productionUrl;
   }
   
   // Check for environment variable
