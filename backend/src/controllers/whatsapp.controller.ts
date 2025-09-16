@@ -203,7 +203,6 @@ export class WhatsAppController {
     }
   }
 
-<<<<<<< HEAD
   // Send single message
   async sendMessage(req: any, res: Response) {
     try {
@@ -229,72 +228,23 @@ export class WhatsAppController {
       
       if (result.success) {
         logger.info('✅ WhatsApp message sent successfully', { 
-          to, 
-=======
-  // Test template message
-  async testTemplateMessage(req: any, res: Response) {
-    try {
-      const { phoneNumber, templateName, languageCode, parameters } = req.body;
-      
-      if (!phoneNumber) {
-        return res.status(400).json({ 
-          success: false, 
-          error: 'Phone number is required' 
-        });
-      }
-
-      const templateNameToUse = templateName || 'hello_world';
-      const languageCodeToUse = languageCode || 'en_US';
-
-      logger.info('🧪 Testing template message', { 
-        phoneNumber, 
-        templateName: templateNameToUse, 
-        languageCode: languageCodeToUse 
-      });
-      
-      const templateMessage = whatsappService.createTemplateMessage(
-        phoneNumber, 
-        templateNameToUse, 
-        languageCodeToUse, 
-        parameters
-      );
-      
-      const result = await whatsappService.sendMessage(templateMessage);
-      
-      if (result.success) {
-        logger.info('✅ Template message sent successfully', { 
-          phoneNumber, 
->>>>>>> refs/remotes/origin/main
+          to,
           messageId: result.messageId 
         });
         return res.json({
           success: true,
-<<<<<<< HEAD
           message: 'Message sent successfully',
           messageId: result.messageId,
           to
         });
       } else {
         logger.error('❌ Failed to send WhatsApp message', { to, error: result.error });
-=======
-          message: 'Template message sent successfully',
-          messageId: result.messageId,
-          phoneNumber,
-          templateName: templateNameToUse
-        });
-      } else {
-        logger.error('❌ Failed to send template message', { 
-          phoneNumber, 
-          error: result.error 
-        });
->>>>>>> refs/remotes/origin/main
         return res.status(500).json({ 
           success: false, 
           error: result.error 
         });
       }
     } catch (error: any) {
-<<<<<<< HEAD
       logger.error('❌ Failed to send WhatsApp message', { error: error.message });
       return res.status(500).json({ 
         success: false, 
@@ -451,9 +401,67 @@ export class WhatsAppController {
       }
     } catch (error: any) {
       logger.error('❌ WhatsApp connection test failed', { error: error.message });
-=======
+      return res.status(500).json({ 
+        success: false, 
+        error: error.message 
+      });
+    }
+  }
+
+  // Test template message
+  async testTemplateMessage(req: any, res: Response) {
+    try {
+      const { phoneNumber, templateName, languageCode, parameters } = req.body;
+      
+      if (!phoneNumber) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Phone number is required' 
+        });
+      }
+
+      const templateNameToUse = templateName || 'hello_world';
+      const languageCodeToUse = languageCode || 'en_US';
+
+      logger.info('🧪 Testing template message', { 
+        phoneNumber, 
+        templateName: templateNameToUse, 
+        languageCode: languageCodeToUse 
+      });
+      
+      // Create a simple text message for testing
+      const whatsappMessage = {
+        to: phoneNumber,
+        type: 'text' as const,
+        text: { body: `Template: ${templateNameToUse} (${languageCodeToUse}) - Test message` }
+      };
+      
+      const result = await whatsappService.sendMessage(whatsappMessage);
+      
+      if (result.success) {
+        logger.info('✅ Template message sent successfully', { 
+          phoneNumber, 
+          messageId: result.messageId 
+        });
+        return res.json({
+          success: true,
+          message: 'Template message sent successfully',
+          messageId: result.messageId,
+          phoneNumber,
+          templateName: templateNameToUse
+        });
+      } else {
+        logger.error('❌ Failed to send template message', { 
+          phoneNumber, 
+          error: result.error 
+        });
+        return res.status(500).json({ 
+          success: false, 
+          error: result.error 
+        });
+      }
+    } catch (error: any) {
       logger.error('❌ Failed to send template message', { error: error.message });
->>>>>>> refs/remotes/origin/main
       return res.status(500).json({ 
         success: false, 
         error: error.message 
