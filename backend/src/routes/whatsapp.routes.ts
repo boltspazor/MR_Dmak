@@ -14,10 +14,15 @@ router.post('/allowed-recipients/add-multiple', whatsappController.addAllowedRec
 router.post('/allowed-recipients/remove', whatsappController.removeAllowedRecipient);
 router.post('/allowed-recipients/remove-multiple', whatsappController.removeAllowedRecipients);
 
+<<<<<<< HEAD
 // WhatsApp message sending routes
 router.post('/send-message', whatsappController.sendMessage);
 router.post('/send-bulk-messages', whatsappController.sendBulkMessages);
 router.post('/send-to-all', whatsappController.sendMessageToAllRecipients);
 router.get('/test-connection', whatsappController.testConnection);
+=======
+// WhatsApp template message testing
+router.post('/test-template', whatsappController.testTemplateMessage);
+>>>>>>> refs/remotes/origin/main
 
 export default router;

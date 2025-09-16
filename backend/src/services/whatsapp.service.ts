@@ -10,7 +10,7 @@ export class WhatsAppService {
 
   constructor() {
     this.apiUrl = whatsappConfig.apiUrl;
-    this.accessToken = whatsappConfig.accessToken!;
+    this.accessToken = "EAAKppxOoyRABPbBFyHJ2ZBibo3c3kC2yKZAnZCcuDVliID3DToUg2gPZAATso2QiuVX4ZBEDht5WaiOZAg4etGE3qxNrBPKa1YjuQ8sEnHlSzzo0xD4VJsMzm0r7rwQa2SCz5VqmlWTFJIjEBZBZBZAz31ZBcnXQ6c12wfKLXUjs64oXjznQmxlXytnXZB6sUPl7RKb3HXNNDsGxrH8ZAsbVuqFkThzeqc9qTGhx2bGrNc3IGZCFKogZDZD";
     this.phoneNumberId = whatsappConfig.phoneNumberId!;
     
     // Log configuration status for debugging
@@ -36,6 +36,7 @@ export class WhatsAppService {
         type: message.type,
         ...((message.type === 'text' && message.text) ? { text: message.text } : {}),
         ...((message.type === 'image' && message.image) ? { image: message.image } : {}),
+        ...((message.type === 'template' && message.template) ? { template: message.template } : {}),
       };
 
       const response = await axios.post(url, payload, {
@@ -61,9 +62,19 @@ export class WhatsAppService {
         error: error.response?.data || error.message
       });
 
+      // Check if it's a verification issue
+      const errorMessage = error.response?.data?.error?.message || error.message || 'Failed to send message';
+      let userFriendlyError = errorMessage;
+      
+      if (errorMessage.includes('verification') || errorMessage.includes('not verified')) {
+        userFriendlyError = 'Phone number not verified. Please verify your WhatsApp Business phone number in Meta Business Manager.';
+      } else if (errorMessage.includes('rate limit') || errorMessage.includes('too many requests')) {
+        userFriendlyError = 'Rate limit exceeded. Please try again later.';
+      }
+
       return {
         success: false,
-        error: error.response?.data?.error?.message || error.message || 'Failed to send message',
+        error: userFriendlyError,
       };
     }
   }
@@ -88,6 +99,51 @@ export class WhatsAppService {
   formatPhoneNumber(phone: string): string {
     // Remove + and any non-digit characters for WhatsApp API
     return phone.replace(/^\+/, '').replace(/\D/g, '');
+  }
+
+  // Helper method to create template messages
+  createTemplateMessage(to: string, templateName: string, languageCode: string = 'en_US', parameters?: Array<{ type: string; text: string }>): WhatsAppMessage {
+    const template: WhatsAppMessage = {
+      to,
+      type: 'template',
+      template: {
+        name: templateName,
+        language: { code: languageCode }
+      }
+    };
+
+    // Add parameters if provided
+    if (parameters && parameters.length > 0) {
+      template.template!.components = [{
+        type: 'body',
+        parameters: parameters
+      }];
+    }
+
+    return template;
+  }
+
+  // Helper method to create hello_world template message
+  createHelloWorldMessage(to: string): WhatsAppMessage {
+    return this.createTemplateMessage(to, 'hello_world', 'en_US');
+  }
+
+  // Helper method to create a custom template message with user content
+  createCustomTemplateMessage(to: string, content: string, templateName: string = 'hello_world'): WhatsAppMessage {
+    // For now, we'll use hello_world template but we can create a custom one
+    // If you have a custom template approved, replace 'hello_world' with your template name
+    return this.createTemplateMessage(to, templateName, 'en_US', [
+      { type: 'text', text: content }
+    ]);
+  }
+
+  // Helper method to create a text message (fallback for when templates don't work)
+  createTextMessage(to: string, content: string): WhatsAppMessage {
+    return {
+      to,
+      type: 'text',
+      text: { body: content }
+    };
   }
 
   async verifyWebhook(mode: string, token: string, challenge: string): Promise<string | null> {

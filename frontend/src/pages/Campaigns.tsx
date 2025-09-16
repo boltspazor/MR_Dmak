@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  MessageSquare, 
+import {
+  MessageSquare,
   Send,
   Upload,
   X,
@@ -23,14 +23,14 @@ const Campaigns: React.FC = () => {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'with-template' | 'custom-messages'>('with-template');
-  
+
   // With Template Tab States
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [showTemplatePreview, setShowTemplatePreview] = useState(false);
   const [selectedTemplateDropdown, setSelectedTemplateDropdown] = useState<string>('');
   const [campaignName, setCampaignName] = useState('');
   const [selectedRecipientList, setSelectedRecipientList] = useState<RecipientList | null>(null);
-  
+
   // Preview states
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
   const [previewGroup] = useState<any>(null);
@@ -75,7 +75,7 @@ const Campaigns: React.FC = () => {
         api.get('/templates'),
         api.get('/mrs')
       ]);
-      
+
       // Handle different response structures safely
       setCampaigns(campaignsRes.data?.data || campaignsRes.data || []);
       setTemplates(templatesRes.data?.data || templatesRes.data || []);
@@ -93,14 +93,14 @@ const Campaigns: React.FC = () => {
 
 
   const handleMrSelection = (mrId: string) => {
-    setSelectedMrs(prev => 
-      prev.includes(mrId) 
+    setSelectedMrs(prev =>
+      prev.includes(mrId)
         ? prev.filter(id => id !== mrId)
         : [...prev, mrId]
     );
   };
 
-  const filteredMrs = mrs.filter(mr => 
+  const filteredMrs = mrs.filter(mr =>
     mr.firstName?.toLowerCase().includes(mrSearchTerm.toLowerCase()) ||
     mr.lastName?.toLowerCase().includes(mrSearchTerm.toLowerCase()) ||
     mr.mrId?.toLowerCase().includes(mrSearchTerm.toLowerCase()) ||
@@ -168,8 +168,8 @@ const Campaigns: React.FC = () => {
   const handleWithTemplateSubmit = async () => {
     if (!selectedTemplate || !selectedRecipientList || !campaignName.trim()) {
       showError('Missing Information', 'Please select a template, recipient list, and enter a campaign name');
-        return;
-      }
+      return;
+    }
 
     try {
       const campaignData = {
@@ -181,7 +181,7 @@ const Campaigns: React.FC = () => {
 
       await api.post('/messages/campaigns', campaignData);
       setShowSendConfirmation(true);
-      
+
       // Reset form
       setSelectedTemplate(null);
       setSelectedRecipientList(null);
@@ -196,8 +196,8 @@ const Campaigns: React.FC = () => {
   const handleWithoutTemplateSubmit = async () => {
     if (!messageContent.trim() || selectedMrs.length === 0 || !campaignName.trim()) {
       showError('Missing Information', 'Please enter message content, select MRs, and enter a campaign name');
-        return;
-      }
+      return;
+    }
 
     try {
       const campaignData = {
@@ -224,9 +224,9 @@ const Campaigns: React.FC = () => {
       await api.post('/messages/campaigns', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      
+
       setShowSendConfirmation(true);
-      
+
       // Reset form
       setMessageContent('');
       setSelectedMrs([]);
@@ -311,21 +311,21 @@ const Campaigns: React.FC = () => {
     if (templateParameters.length > 0 && parameterRow) {
       // Extract parameters from CSV (skip first 3 columns: empty, MR id, First Name, Last Name)
       const csvParameters = parameterRow.slice(3).filter(param => param.trim() !== '');
-      
+
       // Check if all template parameters are present in CSV
-      const missingParameters = templateParameters.filter(templateParam => 
+      const missingParameters = templateParameters.filter(templateParam =>
         !csvParameters.some(csvParam => csvParam === templateParam)
       );
-      
+
       if (missingParameters.length > 0) {
         errors.push(`Missing parameters in recipient list: ${missingParameters.join(', ')}. These parameters are required based on the template content.`);
       }
 
       // Check if CSV has extra parameters not in template
-      const extraParameters = csvParameters.filter(csvParam => 
+      const extraParameters = csvParameters.filter(csvParam =>
         !templateParameters.includes(csvParam)
       );
-      
+
       if (extraParameters.length > 0) {
         errors.push(`Extra parameters in recipient list: ${extraParameters.join(', ')}. These parameters are not used in the template content.`);
       }
@@ -391,7 +391,7 @@ const Campaigns: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Sidebar */}
-      <Sidebar 
+      <Sidebar
         activePage="campaigns"
         onNavigate={handleSidebarNavigation}
         onLogout={handleLogout}
@@ -402,7 +402,7 @@ const Campaigns: React.FC = () => {
       {/* Main Content */}
       <div className="ml-24 p-8">
         {/* Header */}
-        <Header 
+        <Header
           title="D-MAK"
           subtitle="Digital - Marketing, Automate & Konnect"
           showExportButtons={false}
@@ -427,17 +427,16 @@ const Campaigns: React.FC = () => {
                 { key: 'with-template', label: 'With Template' },
                 { key: 'custom-messages', label: 'Custom Messages' }
               ].map((tab) => (
-          <button 
+                <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key as any)}
-                  className={`pb-2 border-b-2 text-lg font-medium capitalize ${
-                    activeTab === tab.key 
-                      ? 'border-indigo-600 text-gray-900' 
+                  className={`pb-2 border-b-2 text-lg font-medium capitalize ${activeTab === tab.key
+                      ? 'border-indigo-600 text-gray-900'
                       : 'border-transparent text-gray-600 hover:text-gray-900'
-                  }`}
+                    }`}
                 >
                   {tab.label}
-          </button>
+                </button>
               ))}
             </div>
 
@@ -454,8 +453,8 @@ const Campaigns: React.FC = () => {
                     placeholder="Enter campaign name"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
-          </div>
-          
+                </div>
+
                 {/* Template Selection Dropdown */}
                 <div className="bg-white bg-opacity-40 rounded-lg p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Template</h3>
@@ -484,14 +483,14 @@ const Campaigns: React.FC = () => {
                           <div className="flex justify-between items-start mb-2">
                             <h4 className="font-medium text-gray-900">{selectedTemplate.name}</h4>
                             <div className="flex space-x-2">
-                              <button 
+                              <button
                                 onClick={() => handleTemplatePreview(selectedTemplate)}
                                 className="text-blue-600 hover:text-blue-800 text-sm"
                                 title="Preview Template"
                               >
                                 Preview
                               </button>
-                              <button 
+                              <button
                                 onClick={() => {
                                   setSelectedTemplate(null);
                                   setSelectedTemplateDropdown('');
@@ -511,48 +510,48 @@ const Campaigns: React.FC = () => {
                               <p className="text-xs font-medium text-gray-500 mb-1">Parameters Used:</p>
                               <div className="flex flex-wrap gap-1">
                                 {selectedTemplate.parameters.map((param, index) => (
-                                  <span 
+                                  <span
                                     key={index}
                                     className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
                                   >
                                     #{param}
                                   </span>
                                 ))}
-          </div>
-        </div>
+                              </div>
+                            </div>
                           )}
-      </div>
-            </div>
+                        </div>
+                      </div>
                     )}
-            </div>
-          </div>
-          
+                  </div>
+                </div>
+
                 {/* Add Recipient List Button */}
                 <div className="bg-white bg-opacity-40 rounded-lg p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Recipient List</h3>
-            <button
+                  <button
                     onClick={() => setShowCreateRecipientList(true)}
                     className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
-          >
+                  >
                     Upload Recipient List
-            </button>
-          
+                  </button>
+
                   {/* Selected Recipient List Display */}
                   {selectedRecipientList && (
                     <div className="mt-4 space-y-2">
                       <p className="text-sm font-medium text-gray-700">Selected Recipient List:</p>
                       <div className="flex items-center space-x-2 bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm">
                         <span>{selectedRecipientList.name} ({selectedRecipientList.data.length} records)</span>
-            <button
+                        <button
                           onClick={() => setSelectedRecipientList(null)}
                           className="text-indigo-600 hover:text-indigo-800"
-          >
+                        >
                           <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+                        </button>
+                      </div>
+                    </div>
                   )}
-              </div>
+                </div>
 
                 {/* Konnect Button */}
                 <div className="flex justify-end">
@@ -574,14 +573,14 @@ const Campaigns: React.FC = () => {
                 {/* Campaign Name */}
                 <div className="bg-white bg-opacity-40 rounded-lg p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Campaign Name</h3>
-                <input
-                  type="text"
+                  <input
+                    type="text"
                     value={campaignName}
                     onChange={(e) => setCampaignName(e.target.value)}
                     placeholder="Enter campaign name"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
+                  />
+                </div>
 
                 {/* MR Selection */}
                 <div className="bg-white bg-opacity-40 rounded-lg p-6">
@@ -596,17 +595,17 @@ const Campaigns: React.FC = () => {
                           onChange={(e) => setMrSearchTerm(e.target.value)}
                           className="w-full px-3 py-2 rounded-lg border-0 bg-gray-100"
                         />
-              </div>
-            </div>
+                      </div>
+                    </div>
 
                     {/* MR Selection Dropdown */}
-              <div className="relative">
+                    <div className="relative">
                       <div className="border border-gray-200 rounded-lg max-h-64 overflow-y-auto">
                         <div className="space-y-1 p-2">
                           {filteredMrs.length > 0 ? (
                             filteredMrs.map(mr => (
                               <div key={mr._id || mr.id} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded cursor-pointer">
-                <input
+                                <input
                                   type="checkbox"
                                   checked={selectedMrs.includes(mr._id || mr.id)}
                                   onChange={() => handleMrSelection(mr._id || mr.id)}
@@ -619,14 +618,14 @@ const Campaigns: React.FC = () => {
                                   <p className="text-xs text-gray-500">
                                     {mr.mrId} • {mr.phone}
                                   </p>
-              </div>
-              </div>
+                                </div>
+                              </div>
                             ))
                           ) : (
                             <p className="text-sm text-gray-500 text-left py-4 px-2">No MRs found</p>
                           )}
-            </div>
-                </div>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Selected MRs Display */}
@@ -639,19 +638,19 @@ const Campaigns: React.FC = () => {
                             return (
                               <div key={mrId} className="flex items-center space-x-2 bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm">
                                 <span>{mr?.firstName} {mr?.lastName}</span>
-                <button
+                                <button
                                   onClick={() => handleMrSelection(mrId)}
                                   className="text-indigo-600 hover:text-indigo-800"
                                 >
                                   <X className="h-4 w-4" />
-                </button>
-              </div>
+                                </button>
+                              </div>
                             );
                           })}
                         </div>
-                            </div>
-                          )}
-                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Message Composition */}
@@ -665,7 +664,7 @@ const Campaigns: React.FC = () => {
                           Header Image (Optional)
                         </label>
                         <div className="space-y-2">
-                <input
+                          <input
                             type="file"
                             accept="image/*"
                             onChange={handleImageUpload}
@@ -687,13 +686,13 @@ const Campaigns: React.FC = () => {
                                 alt="Header preview"
                                 className="w-full h-32 object-cover rounded-lg"
                               />
-                <button
+                              <button
                                 type="button"
                                 onClick={removeImage}
                                 className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                          >
+                              >
                                 <X className="h-4 w-4" />
-                </button>
+                              </button>
                             </div>
                           )}
                         </div>
@@ -712,7 +711,7 @@ const Campaigns: React.FC = () => {
                         <p className="text-xs text-gray-500 mt-1">
                           Use #ParameterName for dynamic parameters (e.g., #FN, #LN, #Month, #Target)
                         </p>
-                          </div>
+                      </div>
 
                       {/* Footer Image Upload */}
                       <div>
@@ -752,7 +751,7 @@ const Campaigns: React.FC = () => {
                                 alt="Footer preview"
                                 className="w-full h-32 object-cover rounded-lg"
                               />
-                        <button
+                              <button
                                 type="button"
                                 onClick={() => {
                                   setFooterImage(null);
@@ -761,10 +760,10 @@ const Campaigns: React.FC = () => {
                                 className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
                               >
                                 <X className="h-4 w-4" />
-                        </button>
-                      </div>
+                              </button>
+                            </div>
                           )}
-                    </div>
+                        </div>
                       </div>
                     </div>
 
@@ -777,20 +776,20 @@ const Campaigns: React.FC = () => {
                         <div className="bg-white rounded-2xl rounded-tl-md shadow-sm max-w-xs mx-auto">
                           {imagePreview && (
                             <div className="w-full">
-                              <img 
-                                src={imagePreview} 
+                              <img
+                                src={imagePreview}
                                 alt="Header"
                                 className="w-full h-24 object-cover rounded-t-2xl"
-                        />
-                      </div>
-                    )}
+                              />
+                            </div>
+                          )}
                           <div className="p-3">
                             <div className="text-gray-800 text-xs leading-relaxed whitespace-pre-wrap">
                               {(() => {
                                 if (!messageContent) return 'Start typing your message...';
-                                
+
                                 let processedContent = messageContent;
-                                
+
                                 // Sample parameter values for live preview
                                 const sampleParams = {
                                   'FN': 'John',
@@ -814,34 +813,34 @@ const Campaigns: React.FC = () => {
                                   'State': 'Maharashtra',
                                   'Country': 'India'
                                 };
-                                
+
                                 // Replace parameters with sample values
                                 for (const [param, value] of Object.entries(sampleParams)) {
                                   const regex = new RegExp(`#${param}\\b`, 'g');
                                   processedContent = processedContent.replace(regex, value);
                                 }
-                                
+
                                 // Replace any remaining parameters with [Sample Value]
                                 processedContent = processedContent.replace(/#[A-Za-z0-9_]+/g, '[Sample Value]');
-                                
+
                                 return processedContent;
                               })()}
                             </div>
                           </div>
                           {footerImagePreview && (
                             <div className="px-3 pb-3">
-                              <img 
-                                src={footerImagePreview} 
+                              <img
+                                src={footerImagePreview}
                                 alt="Footer"
                                 className="w-full h-16 object-cover rounded-lg"
-                        />
-                      </div>
+                              />
+                            </div>
                           )}
+                        </div>
                       </div>
                     </div>
                   </div>
-              </div>
-          </div>
+                </div>
 
                 {/* Konnect Button */}
                 <div className="flex justify-end">
@@ -853,15 +852,15 @@ const Campaigns: React.FC = () => {
                     <Send className="h-5 w-5 mr-2" />
                     Send
                   </button>
-        </div>
-      </div>
+                </div>
+              </div>
             )}
           </div>
         </CommonFeatures>
 
         {/* Create Recipient List Modal */}
         {showCreateRecipientList && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold text-gray-900">Create Recipient List</h2>
@@ -882,25 +881,25 @@ const Campaigns: React.FC = () => {
 
               <div className="space-y-6">
                 {/* Recipient List Name */}
-              <div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     List Name *
-                </label>
+                  </label>
                   <input
                     type="text"
-                  required
+                    required
                     value={recipientListName}
                     onChange={(e) => setRecipientListName(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     placeholder="Enter recipient list name"
                   />
-              </div>
+                </div>
 
                 {/* Description */}
-              <div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Description
-                </label>
+                  </label>
                   <textarea
                     value={recipientListDescription}
                     onChange={(e) => setRecipientListDescription(e.target.value)}
@@ -908,40 +907,40 @@ const Campaigns: React.FC = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     placeholder="Enter description (optional)"
                   />
-              </div>
+                </div>
 
                 {/* CSV Upload */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Upload CSV File *
                   </label>
-                    <div className="space-y-2">
-                          <input
-                            type="file"
+                  <div className="space-y-2">
+                    <input
+                      type="file"
                       accept=".csv"
                       onChange={handleCSVUpload}
-                            className="hidden"
+                      className="hidden"
                       id="csv-upload"
-                          />
-                          <label 
+                    />
+                    <label
                       htmlFor="csv-upload"
                       className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-indigo-400 transition-colors"
-                          >
+                    >
                       <Upload className="h-5 w-5 text-gray-400 mr-2" />
                       <span className="text-sm text-gray-600">Click to upload CSV file</span>
-                          </label>
+                    </label>
 
                     {csvFile && (
                       <p className="text-sm text-green-600">
                         File selected: {csvFile.name}
                       </p>
                     )}
-                        </div>
+                  </div>
                   <p className="text-xs text-gray-500 mt-1">
                     CSV should have columns like: MR id, First Name, Last Name, #FN, #LN, #Month, #week, #Target, #lastmonth, #doctor
                   </p>
-                      </div>
-                      
+                </div>
+
                 {/* CSV Preview */}
                 {showCsvPreview && csvData.length > 0 && (
                   <div>
@@ -974,8 +973,8 @@ const Campaigns: React.FC = () => {
                 )}
 
                 <div className="flex space-x-3 pt-4">
-                          <button
-                            type="button"
+                  <button
+                    type="button"
                     onClick={() => {
                       setShowCreateRecipientList(false);
                       setRecipientListName('');
@@ -993,13 +992,13 @@ const Campaigns: React.FC = () => {
                     className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
                   >
                     Create Recipient List
-                          </button>
-                        </div>
-                          </div>
-                        </div>
-                        </div>
-                      )}
-                      
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Template Preview Modal */}
         {showTemplatePreview && previewTemplate && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1008,13 +1007,13 @@ const Campaigns: React.FC = () => {
                 <h2 className="text-xl font-semibold text-gray-900">
                   Template Preview: {previewTemplate.name}
                 </h2>
-                        <button
+                <button
                   onClick={() => setShowTemplatePreview(false)}
                   className="text-gray-400 hover:text-gray-600"
-                        >
+                >
                   <X className="h-6 w-6" />
-                        </button>
-                          </div>
+                </button>
+              </div>
 
               <div className="space-y-6">
                 {/* Template Preview */}
@@ -1028,8 +1027,8 @@ const Campaigns: React.FC = () => {
                           alt="Header"
                           className="max-w-full h-48 object-contain mx-auto rounded"
                         />
-                        </div>
-                      )}
+                      </div>
+                    )}
 
                     {/* Content */}
                     <div className="bg-gray-50 p-4 rounded-lg">
@@ -1053,7 +1052,7 @@ const Campaigns: React.FC = () => {
 
                 {/* Template Details */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+                  <div>
                     <h4 className="font-medium text-gray-900 mb-2">
                       Template Type:
                     </h4>
@@ -1069,8 +1068,8 @@ const Campaigns: React.FC = () => {
                     <span className="text-sm text-gray-600">
                       {new Date(previewTemplate.createdAt).toLocaleDateString()}
                     </span>
+                  </div>
                 </div>
-              </div>
 
                 {/* Parameters */}
                 {(() => {
@@ -1112,8 +1111,8 @@ const Campaigns: React.FC = () => {
                 })()}
               </div>
             </div>
-                      </div>
-                    )}
+          </div>
+        )}
 
         {/* Group Preview Modal */}
         {showGroupPreview && previewGroup && (
@@ -1123,13 +1122,13 @@ const Campaigns: React.FC = () => {
                 <h2 className="text-xl font-semibold text-gray-900">
                   Group Preview: {previewGroup.groupName}
                 </h2>
-                        <button
+                <button
                   onClick={() => setShowGroupPreview(false)}
                   className="text-gray-400 hover:text-gray-600"
-                        >
+                >
                   <X className="h-6 w-6" />
-                        </button>
-                      </div>
+                </button>
+              </div>
 
               <div className="space-y-6">
                 {/* Group Details */}
@@ -1141,11 +1140,11 @@ const Campaigns: React.FC = () => {
                     <div>
                       <span className="text-gray-600">Group Name:</span>
                       <span className="ml-2 font-medium">{previewGroup.groupName}</span>
-                  </div>
+                    </div>
                     <div>
                       <span className="text-gray-600">Total Contacts:</span>
                       <span className="ml-2 font-medium">{previewGroup.mrCount || 0}</span>
-                </div>
+                    </div>
                   </div>
                 </div>
 
@@ -1176,10 +1175,10 @@ const Campaigns: React.FC = () => {
                   </div>
                 </div>
               </div>
+            </div>
           </div>
-        </div>
-      )}
-              </div>
+        )}
+      </div>
 
       {/* Send Confirmation Popup */}
       {showSendConfirmation && (
@@ -1197,12 +1196,12 @@ const Campaigns: React.FC = () => {
               <div className="text-sm text-gray-500 mb-6">
                 Your messages have been queued for sending. Please check the Dashboard in 5 minutes to see the status.
               </div>
-                <button
+              <button
                 onClick={() => setShowSendConfirmation(false)}
                 className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 OK
-                </button>
+              </button>
             </div>
           </div>
         </div>
@@ -1213,9 +1212,8 @@ const Campaigns: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
             <div className="flex items-center mb-4">
-              <div className={`mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full ${
-                (window as any).lastPopupIsSuccess ? 'bg-green-100' : 'bg-red-100'
-              }`}>
+              <div className={`mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full ${(window as any).lastPopupIsSuccess ? 'bg-green-100' : 'bg-red-100'
+                }`}>
                 {(window as any).lastPopupIsSuccess ? (
                   <CheckCircle className="h-6 w-6 text-green-600" />
                 ) : (
@@ -1230,17 +1228,16 @@ const Campaigns: React.FC = () => {
               <div className="text-sm text-gray-500 mb-6 whitespace-pre-line text-left">
                 {errorMessage}
               </div>
-                <button
+              <button
                 onClick={() => setShowErrorPopup(false)}
-                className={`w-full px-4 py-2 text-white rounded-lg ${
-                  (window as any).lastPopupIsSuccess 
-                    ? 'bg-green-600 hover:bg-green-700' 
+                className={`w-full px-4 py-2 text-white rounded-lg ${(window as any).lastPopupIsSuccess
+                    ? 'bg-green-600 hover:bg-green-700'
                     : 'bg-red-600 hover:bg-red-700'
-                }`}
+                  }`}
               >
                 Close
-                </button>
-              </div>
+              </button>
+            </div>
           </div>
         </div>
       )}

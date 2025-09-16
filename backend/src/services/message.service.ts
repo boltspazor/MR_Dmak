@@ -79,6 +79,7 @@ export class MessageService {
           phoneNumber: mr.phone,
           content: payload.content,
           imageUrl: payload.imageUrl,
+          messageType: 'text' // Use text messages to send user content
         }, delay > 0 ? delay : undefined);
       }
 
@@ -411,6 +412,7 @@ export class MessageService {
           phoneNumber: mr.phone,
           content: messageContent,
           imageUrl: imageUrl,
+          messageType: 'text' // Use text messages to send user content
         });
       }
       logger.info('✅ All messages queued successfully');

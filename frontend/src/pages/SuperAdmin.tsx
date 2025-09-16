@@ -5,13 +5,9 @@ import {
   UserPlus, 
   Edit, 
   Trash2, 
-  BarChart3,
-  Activity,
-  TrendingUp,
   UserCheck,
   MessageSquare,
-  Building2,
-  Globe
+  Building2
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';

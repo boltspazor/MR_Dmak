@@ -53,24 +53,42 @@ interface MessageJobData {
   phoneNumber: string;
   content: string;
   imageUrl?: string;
+  messageType?: 'text' | 'image' | 'template';
+  templateName?: string;
+  templateLanguage?: string;
+  templateParameters?: Array<{ type: string; text: string }>;
 }
 
 // Direct message processing function for when Redis is not available
 async function processMessageDirectly(data: MessageJobData) {
-  const { campaignId, mrId, phoneNumber, content, imageUrl } = data;
+  const { campaignId, mrId, phoneNumber, content, imageUrl, messageType, templateName, templateLanguage, templateParameters } = data;
   
   try {
-    logger.info('Processing message directly', { campaignId, mrId, phoneNumber });
+    logger.info('Processing message directly', { campaignId, mrId, phoneNumber, messageType });
     
-    const whatsappMessage = {
-      to: phoneNumber,
-      type: imageUrl ? 'image' : 'text' as 'text' | 'image',
-      ...(imageUrl ? {
+    let whatsappMessage;
+    
+    if (messageType === 'template' && templateName) {
+      // Create template message
+      whatsappMessage = whatsappService.createTemplateMessage(
+        phoneNumber, 
+        templateName, 
+        templateLanguage || 'en_US', 
+        templateParameters
+      );
+    } else if (imageUrl) {
+      // Create image message
+      whatsappMessage = {
+        to: phoneNumber,
+        type: 'image' as 'text' | 'image' | 'template',
         image: { link: imageUrl, caption: content }
-      } : {
-        text: { body: content }
-      })
-    };
+      };
+    } else {
+      // For unverified numbers, we need to use templates
+      // But since hello_world doesn't accept custom content, we'll use text messages
+      // and handle the verification error gracefully
+      whatsappMessage = whatsappService.createTextMessage(phoneNumber, content);
+    }
 
     const result = await whatsappService.sendMessage(whatsappMessage);
     
@@ -138,20 +156,34 @@ async function processMessageDirectly(data: MessageJobData) {
 }
 
 messageQueue.process('send-message', async (job) => {
-  const { campaignId, mrId, phoneNumber, content, imageUrl }: MessageJobData = job.data;
+  const { campaignId, mrId, phoneNumber, content, imageUrl, messageType, templateName, templateLanguage, templateParameters }: MessageJobData = job.data;
   
   try {
-    logger.info('Processing message job', { campaignId, mrId, phoneNumber });
+    logger.info('Processing message job', { campaignId, mrId, phoneNumber, messageType });
     
-    const whatsappMessage = {
-      to: phoneNumber,
-      type: imageUrl ? 'image' : 'text' as 'text' | 'image',
-      ...(imageUrl ? {
+    let whatsappMessage;
+    
+    if (messageType === 'template' && templateName) {
+      // Create template message
+      whatsappMessage = whatsappService.createTemplateMessage(
+        phoneNumber, 
+        templateName, 
+        templateLanguage || 'en_US', 
+        templateParameters
+      );
+    } else if (imageUrl) {
+      // Create image message
+      whatsappMessage = {
+        to: phoneNumber,
+        type: 'image' as 'text' | 'image' | 'template',
         image: { link: imageUrl, caption: content }
-      } : {
-        text: { body: content }
-      })
-    };
+      };
+    } else {
+      // For unverified numbers, we need to use templates
+      // But since hello_world doesn't accept custom content, we'll use text messages
+      // and handle the verification error gracefully
+      whatsappMessage = whatsappService.createTextMessage(phoneNumber, content);
+    }
 
     const result = await whatsappService.sendMessage(whatsappMessage);
     
@@ -257,6 +289,30 @@ export const addMessageToQueue = async (data: MessageJobData, delay?: number) =>
     });
     throw error;
   }
+};
+
+// New method to add template messages to queue
+export const addTemplateMessageToQueue = async (
+  campaignId: string,
+  mrId: string,
+  phoneNumber: string,
+  templateName: string,
+  templateLanguage: string = 'en_US',
+  templateParameters?: Array<{ type: string; text: string }>,
+  delay?: number
+) => {
+  const data: MessageJobData = {
+    campaignId,
+    mrId,
+    phoneNumber,
+    content: '', // Not used for templates
+    messageType: 'template',
+    templateName,
+    templateLanguage,
+    templateParameters
+  };
+
+  return addMessageToQueue(data, delay);
 };
 
 export const getQueueStats = async () => {
