@@ -21,7 +21,7 @@ export class WhatsAppController {
         phoneNumber: recipient.phoneNumber,
         formatted: recipient.formattedPhoneNumber,
         addedDate: recipient.addedAt.toISOString(),
-        addedBy: recipient.addedBy?.name || 'System'
+        addedBy: (recipient.addedBy as any)?.name || 'System'
       }));
 
       logger.info('✅ Retrieved allowed recipients list', { count: formattedRecipients.length });

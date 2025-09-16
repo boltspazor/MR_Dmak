@@ -441,8 +441,8 @@ export class MessageService {
       return result;
     } catch (error) {
       logger.error('❌ Failed to create campaign in service', { 
-        error: error.message,
-        stack: error.stack,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
         campaignData 
       });
       throw error;
