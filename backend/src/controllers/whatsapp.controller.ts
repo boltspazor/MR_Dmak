@@ -202,4 +202,209 @@ export class WhatsAppController {
       });
     }
   }
+
+  // Send single message
+  async sendMessage(req: any, res: Response) {
+    try {
+      const { to, message, type = 'text' } = req.body;
+      
+      if (!to || !message) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Phone number and message are required' 
+        });
+      }
+
+      logger.info('📤 Sending WhatsApp message', { to, type, messageLength: message.length });
+      
+      const whatsappMessage = {
+        to,
+        type,
+        text: type === 'text' ? message : undefined,
+        image: type === 'image' ? { link: message } : undefined
+      };
+
+      const result = await whatsappService.sendMessage(whatsappMessage);
+      
+      if (result.success) {
+        logger.info('✅ WhatsApp message sent successfully', { 
+          to, 
+          messageId: result.messageId 
+        });
+        return res.json({
+          success: true,
+          message: 'Message sent successfully',
+          messageId: result.messageId,
+          to
+        });
+      } else {
+        logger.error('❌ Failed to send WhatsApp message', { to, error: result.error });
+        return res.status(500).json({ 
+          success: false, 
+          error: result.error 
+        });
+      }
+    } catch (error: any) {
+      logger.error('❌ Failed to send WhatsApp message', { error: error.message });
+      return res.status(500).json({ 
+        success: false, 
+        error: error.message 
+      });
+    }
+  }
+
+  // Send bulk messages
+  async sendBulkMessages(req: any, res: Response) {
+    try {
+      const { messages } = req.body;
+      
+      if (!messages || !Array.isArray(messages) || messages.length === 0) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Messages array is required' 
+        });
+      }
+
+      // Validate each message
+      for (const message of messages) {
+        if (!message.to || !message.message) {
+          return res.status(400).json({ 
+            success: false, 
+            error: 'Each message must have "to" and "message" fields' 
+          });
+        }
+      }
+
+      logger.info('📤 Sending bulk WhatsApp messages', { count: messages.length });
+      
+      const whatsappMessages = messages.map(msg => ({
+        to: msg.to,
+        type: msg.type || 'text',
+        text: msg.type === 'text' || !msg.type ? msg.message : undefined,
+        image: msg.type === 'image' ? { link: msg.message } : undefined
+      }));
+
+      const results = await whatsappService.sendBulkMessages(whatsappMessages);
+      
+      const successCount = results.filter(r => r.success).length;
+      const failureCount = results.filter(r => !r.success).length;
+      
+      logger.info('✅ Bulk WhatsApp messages completed', { 
+        total: messages.length,
+        success: successCount,
+        failed: failureCount
+      });
+
+      return res.json({
+        success: true,
+        message: `Bulk messages processed: ${successCount} sent, ${failureCount} failed`,
+        results,
+        summary: {
+          total: messages.length,
+          success: successCount,
+          failed: failureCount
+        }
+      });
+    } catch (error: any) {
+      logger.error('❌ Failed to send bulk WhatsApp messages', { error: error.message });
+      return res.status(500).json({ 
+        success: false, 
+        error: error.message 
+      });
+    }
+  }
+
+  // Send message to all allowed recipients
+  async sendMessageToAllRecipients(req: any, res: Response) {
+    try {
+      const { message, type = 'text' } = req.body;
+      
+      if (!message) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Message is required' 
+        });
+      }
+
+      logger.info('📤 Sending WhatsApp message to all allowed recipients', { type, messageLength: message.length });
+      
+      // Get all allowed recipients
+      const AllowedRecipient = (await import('../models/AllowedRecipient')).default;
+      const recipients = await AllowedRecipient.find({ isActive: true }).select('phoneNumber');
+      
+      if (recipients.length === 0) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'No allowed recipients found' 
+        });
+      }
+
+      // Create messages for all recipients
+      const whatsappMessages = recipients.map(recipient => ({
+        to: recipient.phoneNumber,
+        type,
+        text: type === 'text' ? message : undefined,
+        image: type === 'image' ? { link: message } : undefined
+      }));
+
+      const results = await whatsappService.sendBulkMessages(whatsappMessages);
+      
+      const successCount = results.filter(r => r.success).length;
+      const failureCount = results.filter(r => !r.success).length;
+      
+      logger.info('✅ Message sent to all allowed recipients', { 
+        total: recipients.length,
+        success: successCount,
+        failed: failureCount
+      });
+
+      return res.json({
+        success: true,
+        message: `Message sent to all recipients: ${successCount} sent, ${failureCount} failed`,
+        results,
+        summary: {
+          total: recipients.length,
+          success: successCount,
+          failed: failureCount
+        }
+      });
+    } catch (error: any) {
+      logger.error('❌ Failed to send message to all recipients', { error: error.message });
+      return res.status(500).json({ 
+        success: false, 
+        error: error.message 
+      });
+    }
+  }
+
+  // Test WhatsApp connection
+  async testConnection(req: any, res: Response) {
+    try {
+      logger.info('🔍 Testing WhatsApp connection');
+      
+      // Try to get allowed recipients to test the connection
+      const result = await whatsappService.getAllowedRecipients();
+      
+      if (result.success) {
+        logger.info('✅ WhatsApp connection test successful');
+        return res.json({
+          success: true,
+          message: 'WhatsApp connection is working',
+          recipientsCount: result.recipients?.length || 0
+        });
+      } else {
+        logger.error('❌ WhatsApp connection test failed', { error: result.error });
+        return res.status(500).json({ 
+          success: false, 
+          error: result.error 
+        });
+      }
+    } catch (error: any) {
+      logger.error('❌ WhatsApp connection test failed', { error: error.message });
+      return res.status(500).json({ 
+        success: false, 
+        error: error.message 
+      });
+    }
+  }
 }

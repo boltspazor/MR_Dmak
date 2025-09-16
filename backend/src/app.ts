@@ -89,12 +89,19 @@ app.use('/api/whatsapp', whatsappRoutes);
 // WhatsApp Webhook
 const whatsappService = new WhatsAppService();
 
+// Webhook verification endpoint (GET)
 app.get('/api/webhook', async (req, res) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
 
-  console.log('Webhook GET request:', { mode, token, challenge });
+  logger.info('Webhook verification request', { 
+    mode, 
+    token: token ? `${(token as string).substring(0, 4)}...` : 'undefined',
+    challenge: challenge ? `${(challenge as string).substring(0, 4)}...` : 'undefined',
+    ip: req.ip,
+    userAgent: req.get('User-Agent')
+  });
 
   try {
     const result = await whatsappService.verifyWebhook(
@@ -103,22 +110,73 @@ app.get('/api/webhook', async (req, res) => {
       challenge as string
     );
 
-    console.log('Webhook verification result:', result);
-
     if (result) {
+      logger.info('Webhook verification successful', { 
+        challenge: challenge ? `${(challenge as string).substring(0, 4)}...` : 'undefined',
+        ip: req.ip
+      });
       return res.status(200).send(result);
     } else {
+      logger.warn('Webhook verification failed', { 
+        mode, 
+        token: token ? `${(token as string).substring(0, 4)}...` : 'undefined',
+        ip: req.ip
+      });
       return res.status(403).send('Forbidden');
     }
   } catch (error) {
-    console.error('Webhook verification error:', error);
+    logger.error('Webhook verification error', { 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      mode, 
+      token: token ? `${(token as string).substring(0, 4)}...` : 'undefined',
+      ip: req.ip
+    });
     return res.status(500).send('Internal Server Error');
   }
 });
 
-app.post('/api/webhook', (req, res) => {
-  whatsappService.processWebhookEvent(req.body);
-  return res.status(200).send('OK');
+// Webhook event processing endpoint (POST)
+app.post('/api/webhook', async (req, res) => {
+  const startTime = Date.now();
+  
+  logger.info('Webhook event received', { 
+    ip: req.ip,
+    userAgent: req.get('User-Agent'),
+    contentType: req.get('Content-Type'),
+    contentLength: req.get('Content-Length'),
+    bodySize: JSON.stringify(req.body).length
+  });
+
+  try {
+    // Validate request body
+    if (!req.body || typeof req.body !== 'object') {
+      logger.warn('Invalid webhook payload', { 
+        body: req.body,
+        ip: req.ip
+      });
+      return res.status(400).send('Bad Request');
+    }
+
+    // Process webhook event asynchronously
+    setImmediate(() => {
+      whatsappService.processWebhookEvent(req.body);
+    });
+
+    const processingTime = Date.now() - startTime;
+    logger.info('Webhook event processed', { 
+      processingTime: `${processingTime}ms`,
+      ip: req.ip
+    });
+
+    return res.status(200).send('OK');
+  } catch (error) {
+    logger.error('Webhook event processing error', { 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      ip: req.ip,
+      body: req.body
+    });
+    return res.status(500).send('Internal Server Error');
+  }
 });
 
 // Health check
@@ -128,6 +186,28 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     version: process.env.npm_package_version || '1.0.0',
     environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Webhook status endpoint
+app.get('/api/webhook/status', (req, res) => {
+  const whatsappConfig = {
+    hasAccessToken: !!process.env.WHATSAPP_ACCESS_TOKEN,
+    hasPhoneNumberId: !!process.env.WHATSAPP_PHONE_NUMBER_ID,
+    hasVerifyToken: !!process.env.WHATSAPP_VERIFY_TOKEN,
+    apiUrl: process.env.WHATSAPP_API_URL || 'https://graph.facebook.com/v18.0'
+  };
+
+  return res.json({
+    status: 'OK',
+    webhook: {
+      endpoint: '/api/webhook',
+      verification: 'GET /api/webhook',
+      events: 'POST /api/webhook',
+      configured: whatsappConfig.hasAccessToken && whatsappConfig.hasPhoneNumberId && whatsappConfig.hasVerifyToken
+    },
+    whatsapp: whatsappConfig,
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -143,7 +223,28 @@ app.get('/api', (req, res) => {
       messages: '/api/messages',
       reports: '/api/reports',
       superAdmin: '/api/super-admin',
+      templates: '/api/templates',
+      recipientLists: '/api/recipient-lists',
+      whatsapp: {
+        base: '/api/whatsapp',
+        recipients: '/api/whatsapp/allowed-recipients',
+        sendMessage: 'POST /api/whatsapp/send-message',
+        sendBulk: 'POST /api/whatsapp/send-bulk-messages',
+        sendToAll: 'POST /api/whatsapp/send-to-all',
+        testConnection: 'GET /api/whatsapp/test-connection'
+      },
+      webhook: {
+        verification: 'GET /api/webhook',
+        events: 'POST /api/webhook',
+        status: 'GET /api/webhook/status'
+      },
       health: '/api/health'
+    },
+    webhook: {
+      description: 'WhatsApp Business API webhook endpoints',
+      verification: 'Handles Meta webhook verification challenge',
+      events: 'Processes incoming WhatsApp events and messages',
+      status: 'Shows webhook configuration status'
     }
   });
 });

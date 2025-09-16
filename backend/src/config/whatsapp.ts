@@ -1,6 +1,6 @@
 export const whatsappConfig = {
     apiUrl: process.env.WHATSAPP_API_URL || 'https://graph.facebook.com/v18.0',
-    accessToken: "EAAKppxOoyRABPS4WRHE4HSiRzKZAUZAOxhmmWFq2OWHfmQYDs8iG7OfPDp3YsO0vS9ggGzWWelDFmeh8pVc7MXYZBPMwZC5ZCM1mwL1yJSOAWMZCLciRabG5ACrCTnKrp4vYVUy6WZCNswIw35sgMBzE9IWe3focN5GlApKlOPbZBjZB4oZBxlaZAd4ZBEYcbOeqQ4OsvQZDZD",
-    phoneNumberId: "778806801982541",
-    verifyToken: "token1234",
+    accessToken: process.env.WHATSAPP_ACCESS_TOKEN || "qt3yb4Lgty5SjeJeflqEYvdWJy9id8IzpC3Ha4C1M5jtaBomySZFJ4aXQIRN4uN4",
+    phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || "778806801982541",
+    verifyToken: process.env.WHATSAPP_VERIFY_TOKEN || "token1234",
   };

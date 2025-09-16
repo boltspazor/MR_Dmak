@@ -124,35 +124,180 @@ export class WhatsAppService {
 
   processWebhookEvent(body: any): void {
     try {
-      // Process webhook events (delivery status, etc.)
+      logger.info('Processing webhook event', { 
+        object: body.object,
+        entryCount: body.entry?.length || 0
+      });
+
+      // Process webhook events (delivery status, incoming messages, etc.)
       if (body.entry) {
         body.entry.forEach((entry: any) => {
           if (entry.changes) {
             entry.changes.forEach((change: any) => {
               if (change.field === 'messages') {
-                this.handleMessageStatus(change.value);
+                this.handleMessageEvents(change.value);
               }
             });
           }
         });
       }
     } catch (error) {
-      logger.error('Failed to process webhook event', { error, body });
+      logger.error('Failed to process webhook event', { 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        body: JSON.stringify(body, null, 2)
+      });
     }
   }
 
-  private handleMessageStatus(value: any): void {
+  private handleMessageEvents(value: any): void {
+    // Handle incoming messages
+    if (value.messages) {
+      value.messages.forEach((message: any) => {
+        this.handleIncomingMessage(message);
+      });
+    }
+
     // Handle message status updates
     if (value.statuses) {
       value.statuses.forEach((status: any) => {
-        logger.info('Message status update', {
-          messageId: status.id,
-          status: status.status,
-          timestamp: status.timestamp
-        });
-        // Update message log status in database
+        this.handleMessageStatus(status);
       });
     }
+  }
+
+  private handleIncomingMessage(message: any): void {
+    try {
+      logger.info('Incoming WhatsApp message', {
+        messageId: message.id,
+        from: message.from,
+        type: message.type,
+        timestamp: message.timestamp
+      });
+
+      // Process different message types
+      switch (message.type) {
+        case 'text':
+          this.handleTextMessage(message);
+          break;
+        case 'image':
+          this.handleImageMessage(message);
+          break;
+        case 'document':
+          this.handleDocumentMessage(message);
+          break;
+        case 'audio':
+          this.handleAudioMessage(message);
+          break;
+        case 'video':
+          this.handleVideoMessage(message);
+          break;
+        case 'location':
+          this.handleLocationMessage(message);
+          break;
+        case 'contacts':
+          this.handleContactMessage(message);
+          break;
+        default:
+          logger.warn('Unsupported message type', { 
+            type: message.type,
+            messageId: message.id 
+          });
+      }
+    } catch (error) {
+      logger.error('Failed to handle incoming message', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        messageId: message.id,
+        from: message.from
+      });
+    }
+  }
+
+  private handleTextMessage(message: any): void {
+    const text = message.text?.body || '';
+    logger.info('Text message received', {
+      messageId: message.id,
+      from: message.from,
+      text: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
+      length: text.length
+    });
+
+    // Here you can add logic to:
+    // - Store the message in database
+    // - Process commands
+    // - Send auto-replies
+    // - Forward to appropriate handlers
+  }
+
+  private handleImageMessage(message: any): void {
+    logger.info('Image message received', {
+      messageId: message.id,
+      from: message.from,
+      imageId: message.image?.id,
+      mimeType: message.image?.mime_type,
+      sha256: message.image?.sha256
+    });
+  }
+
+  private handleDocumentMessage(message: any): void {
+    logger.info('Document message received', {
+      messageId: message.id,
+      from: message.from,
+      documentId: message.document?.id,
+      filename: message.document?.filename,
+      mimeType: message.document?.mime_type
+    });
+  }
+
+  private handleAudioMessage(message: any): void {
+    logger.info('Audio message received', {
+      messageId: message.id,
+      from: message.from,
+      audioId: message.audio?.id,
+      mimeType: message.audio?.mime_type
+    });
+  }
+
+  private handleVideoMessage(message: any): void {
+    logger.info('Video message received', {
+      messageId: message.id,
+      from: message.from,
+      videoId: message.video?.id,
+      mimeType: message.video?.mime_type
+    });
+  }
+
+  private handleLocationMessage(message: any): void {
+    logger.info('Location message received', {
+      messageId: message.id,
+      from: message.from,
+      latitude: message.location?.latitude,
+      longitude: message.location?.longitude,
+      name: message.location?.name,
+      address: message.location?.address
+    });
+  }
+
+  private handleContactMessage(message: any): void {
+    logger.info('Contact message received', {
+      messageId: message.id,
+      from: message.from,
+      contactCount: message.contacts?.length || 0
+    });
+  }
+
+  private handleMessageStatus(status: any): void {
+    logger.info('Message status update', {
+      messageId: status.id,
+      status: status.status,
+      timestamp: status.timestamp,
+      recipientId: status.recipient_id
+    });
+
+    // Here you can add logic to:
+    // - Update message status in database
+    // - Track delivery metrics
+    // - Handle failed messages
+    // - Update user interface
   }
 
   // WhatsApp Business API - Allowed Recipients Management
