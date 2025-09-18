@@ -28,7 +28,7 @@ export interface CreateMRForm {
   lastName: string;
   phone: string;
   email?: string;
-  groupId: string;
+  groupId?: string;
   comments?: string;
 }
 

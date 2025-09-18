@@ -35,6 +35,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const login = async (email: string, password: string) => {
+    // Check if we're in frontend-only development mode
+    const isDevelopmentMode = (import.meta as any).env?.VITE_DEVELOPMENT_MODE === 'frontend-only';
+    
+    if (isDevelopmentMode) {
+      // Mock login for frontend-only development
+      console.log('🔧 Frontend-only mode: Mocking login');
+      
+      const mockUser = {
+        id: 'dev-user-123',
+        name: 'Development User',
+        email: email,
+        role: 'Super Admin'
+      };
+      
+      const mockToken = 'mock-jwt-token-for-development';
+      
+      setUser(mockUser);
+      setToken(mockToken);
+      localStorage.setItem('authToken', mockToken);
+      localStorage.setItem('user', JSON.stringify(mockUser));
+      
+      toast.success('Login successful! (Development Mode)');
+      return;
+    }
+
     try {
       console.log('Attempting login to:', `${api.defaults.baseURL}/auth/login`);
       console.log('Login data:', { email, password: '***' });
@@ -62,6 +87,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const register = async (email: string, password: string, name: string) => {
+    // Check if we're in frontend-only development mode
+    const isDevelopmentMode = (import.meta as any).env?.VITE_DEVELOPMENT_MODE === 'frontend-only';
+    
+    if (isDevelopmentMode) {
+      // Mock registration for frontend-only development
+      console.log('🔧 Frontend-only mode: Mocking registration');
+      toast.success('Registration successful! (Development Mode)');
+      
+      // After registration, automatically log them in
+      await login(email, password);
+      return;
+    }
+
     try {
       const response = await api.post('/auth/register', { email, password, name });
       const userData = response.data.user;

@@ -68,6 +68,24 @@ const RecipientsModal: React.FC<RecipientsModalProps> = ({
         </div>
 
         <div className="p-6">
+          {/* Summary */}
+          <div className="bg-gray-50 rounded-lg p-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-900">{campaign.recipientList.length}</p>
+                <p className="text-sm text-gray-600">Number of Messages Attempted</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-green-600">{campaign.recipientList.filter(r => r.status === 'sent').length}</p>
+                <p className="text-sm text-gray-600">Successfully Sent</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-red-600">{campaign.recipientList.filter(r => r.status === 'failed').length}</p>
+                <p className="text-sm text-gray-600">Failed</p>
+              </div>
+            </div>
+          </div>
+
           {/* Filters */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="relative">
@@ -117,19 +135,19 @@ const RecipientsModal: React.FC<RecipientsModalProps> = ({
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                     Name
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                     Phone
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                     Email
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                     Group
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                     Status
                   </th>
                 </tr>

@@ -14,6 +14,7 @@ import EditMRDialog from '../components/EditMRDialog';
 import MRActionButtons from '../components/mr/MRActionButtons';
 import MRSearchAndFilter from '../components/mr/MRSearchAndFilter';
 import MRTable from '../components/mr/MRTable';
+import { mrService, MRData } from '../services/mr.service';
 
 interface Contact {
   id: string;
@@ -108,8 +109,7 @@ const SimpleMRTool: React.FC = () => {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [isAddMRDialogOpen, setIsAddMRDialogOpen] = useState(false);
 
-  // Filter states
-  const [groupFilter, setGroupFilter] = useState('');
+  // Filter states - group filter removed, now handled in search
 
   // Edit states
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
@@ -121,7 +121,7 @@ const SimpleMRTool: React.FC = () => {
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 50;
 
 
 
@@ -225,21 +225,22 @@ const SimpleMRTool: React.FC = () => {
     try {
       // Validate phone number
       if (!contactData.phone.startsWith('+91')) {
-        alert('Phone number must start with +91');
-      return;
-    }
+        throw new Error('Phone number must start with +91');
+      }
 
       // Check for unique MR ID
       if (contacts.some(contact => contact.mrId === contactData.mrId)) {
-        alert('MR ID already exists. Please use a unique MR ID.');
-        return;
+        throw new Error('MR ID already exists. Please use a unique MR ID.');
       }
 
-      // Find the group ID by name
-      const selectedGroup = groups.find(g => g.name === contactData.group);
-      if (!selectedGroup) {
-        alert('Selected group not found');
-        return;
+      // Find the group ID by name, if group is provided
+      let groupId = '';
+      if (contactData.group && contactData.group.trim() !== '') {
+        const selectedGroup = groups.find(g => g.name === contactData.group);
+        if (!selectedGroup) {
+          throw new Error('Selected group not found');
+        }
+        groupId = selectedGroup.id;
       }
 
       await mockApi.post('/mrs', {
@@ -247,7 +248,7 @@ const SimpleMRTool: React.FC = () => {
         firstName: contactData.firstName,
         lastName: contactData.lastName,
         phone: contactData.phone,
-        groupId: selectedGroup.id,
+        groupId: groupId,
         comments: contactData.comments
       });
 
@@ -264,7 +265,23 @@ const SimpleMRTool: React.FC = () => {
       alert('MR added successfully!');
     } catch (error: any) {
       console.error('Error adding MR:', error);
-      alert('Failed to add MR');
+      let errorMessage = error.message || 'Failed to add MR';
+      
+      // Clean up error messages to replace technical details with app name
+      errorMessage = errorMessage
+        .replace(/app\.railway\.app/gi, 'D-MAK')
+        .replace(/railway\.app/gi, 'D-MAK')
+        .replace(/\.railway\./gi, ' D-MAK ')
+        .replace(/mrbackend-production-[a-zA-Z0-9-]+\.up\.railway\.app/gi, 'D-MAK server')
+        .replace(/https?:\/\/[a-zA-Z0-9-]+\.up\.railway\.app/gi, 'D-MAK server')
+        .replace(/production-[a-zA-Z0-9-]+\.up/gi, 'D-MAK')
+        .replace(/\b[a-zA-Z0-9-]+\.up\.railway\.app\b/gi, 'D-MAK server')
+        .replace(/\s+/g, ' ')
+        .replace(/D-MAK\s+server/gi, 'D-MAK server')
+        .trim();
+      
+      // Re-throw the error with cleaned message so AddMRDialog can catch it
+      throw new Error(errorMessage);
     }
   };
 
@@ -310,15 +327,13 @@ const SimpleMRTool: React.FC = () => {
     try {
       // Validate phone number
       if (!updatedContact.phone.startsWith('+91')) {
-        alert('Phone number must start with +91');
-      return;
-    }
+        throw new Error('Phone number must start with +91');
+      }
 
       // Check for unique MR ID (excluding current contact)
       if (contacts.some(contact => contact.mrId === updatedContact.mrId && contact.id !== editingContact.id)) {
-        alert('MR ID already exists. Please use a unique MR ID.');
-      return;
-    }
+        throw new Error('MR ID already exists. Please use a unique MR ID.');
+      }
 
       await mockApi.post(`/mrs/${editingContact.id}`, updatedContact);
       
@@ -337,7 +352,23 @@ const SimpleMRTool: React.FC = () => {
       alert('MR updated successfully!');
     } catch (error: any) {
       console.error('Error updating contact:', error);
-      alert('Failed to update MR');
+      let errorMessage = error.message || 'Failed to update MR';
+      
+      // Clean up error messages to replace technical details with app name
+      errorMessage = errorMessage
+        .replace(/app\.railway\.app/gi, 'D-MAK')
+        .replace(/railway\.app/gi, 'D-MAK')
+        .replace(/\.railway\./gi, ' D-MAK ')
+        .replace(/mrbackend-production-[a-zA-Z0-9-]+\.up\.railway\.app/gi, 'D-MAK server')
+        .replace(/https?:\/\/[a-zA-Z0-9-]+\.up\.railway\.app/gi, 'D-MAK server')
+        .replace(/production-[a-zA-Z0-9-]+\.up/gi, 'D-MAK')
+        .replace(/\b[a-zA-Z0-9-]+\.up\.railway\.app\b/gi, 'D-MAK server')
+        .replace(/\s+/g, ' ')
+        .replace(/D-MAK\s+server/gi, 'D-MAK server')
+        .trim();
+      
+      // Re-throw the error with cleaned message so EditMRDialog can catch it
+      throw new Error(errorMessage);
     }
   };
 
@@ -413,7 +444,8 @@ const SimpleMRTool: React.FC = () => {
   };
 
   const downloadCSVTemplate = () => {
-    const template = 'MR ID,First Name,Last Name,Phone,Group,Comments\nMR001,John,Doe,+919876543210,North Zone,Senior MR\nMR002,Jane,Smith,+919876543211,South Zone,';
+    // Remove sample row - only include headers as requested
+    const template = 'MR ID,First Name,Last Name,Phone,Group,Comments';
     const blob = new Blob([template], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -438,38 +470,79 @@ const SimpleMRTool: React.FC = () => {
       
       for (let i = 1; i < lines.length; i++) {
         const line = lines[i].trim();
-        if (!line) continue;
+        
+        // Skip empty lines at end of file (don't report as error)
+        if (!line && i === lines.length - 1) continue;
+        if (!line) {
+          errors.push(`❌ Row ${i + 1}: Empty row found`);
+          continue;
+        }
         
         const values = line.split(',');
-        if (values.length >= 5) {
-          // Validate phone number
-          if (!values[3].startsWith('+91')) {
-            errors.push(`Line ${i + 1}: Phone number must start with +91`);
-            continue;
-          }
-
-          // Check for unique MR ID
-          if (contacts.some(contact => contact.mrId === values[0]) || 
-              newContacts.some(contact => contact.mrId === values[0])) {
-            errors.push(`Line ${i + 1}: MR ID ${values[0]} already exists`);
-            continue;
-          }
-
-          const newContact: Contact = {
-            id: Date.now().toString() + i,
-            mrId: values[0],
-            firstName: values[1],
-            lastName: values[2],
-            phone: values[3],
-            group: values[4],
-            comments: values[5] || ''
-          };
-          
-          newContacts.push(newContact);
-          created++;
-      } else {
-          errors.push(`Line ${i + 1}: Invalid format`);
+        
+        // Validate required columns
+        if (values.length < 5) {
+          errors.push(`❌ Row ${i + 1}: Missing required columns (expected 5+ columns, found ${values.length})`);
+          continue;
         }
+
+        // Validate MR ID
+        if (!values[0] || !values[0].trim()) {
+          errors.push(`❌ Row ${i + 1}: MR ID is required`);
+          continue;
+        }
+
+        // Validate names
+        if (!values[1] || !values[1].trim()) {
+          errors.push(`❌ Row ${i + 1}: First Name is required`);
+          continue;
+        }
+        if (!values[2] || !values[2].trim()) {
+          errors.push(`❌ Row ${i + 1}: Last Name is required`);
+          continue;
+        }
+
+        // Validate phone number
+        if (!values[3] || !values[3].trim()) {
+          errors.push(`❌ Row ${i + 1}: Phone number is required`);
+          continue;
+        }
+        if (!values[3].startsWith('+91')) {
+          errors.push(`❌ Row ${i + 1}: Phone number must start with +91 (found: ${values[3]})`);
+          continue;
+        }
+        if (values[3].length !== 13) {
+          errors.push(`❌ Row ${i + 1}: Phone number must be 13 digits including +91 (found: ${values[3]})`);
+          continue;
+        }
+
+        // Check for duplicate MR IDs in existing data
+        if (contacts.some(contact => contact.mrId === values[0].trim())) {
+          errors.push(`❌ Row ${i + 1}: MR ID "${values[0]}" already exists in system`);
+          continue;
+        }
+
+        // Check for duplicate MR IDs within current upload
+        if (newContacts.some(contact => contact.mrId === values[0].trim())) {
+          errors.push(`❌ Row ${i + 1}: Duplicate MR ID "${values[0]}" found in this upload`);
+          continue;
+        }
+
+        // Group is optional now, so no validation needed
+
+        // If all validations pass, create contact
+        const newContact: Contact = {
+          id: Date.now().toString() + i,
+          mrId: values[0].trim(),
+          firstName: values[1].trim(),
+          lastName: values[2].trim(),
+          phone: values[3].trim(),
+          group: values[4] ? values[4].trim() : '',
+          comments: values[5] ? values[5].trim() : ''
+        };
+        
+        newContacts.push(newContact);
+        created++;
       }
       
       // Add all valid contacts at once
@@ -480,7 +553,15 @@ const SimpleMRTool: React.FC = () => {
         localStorage.setItem('mr_contacts', JSON.stringify(updatedContacts));
       }
       
-      alert(`Bulk upload completed!\n\nCreated: ${created} MRs\nTotal Processed: ${lines.length - 1}${errors.length > 0 ? `\n\nErrors (${errors.length}):\n${errors.slice(0, 5).join('\n')}` : ''}`);
+      // Display results with proper error formatting
+      if (errors.length > 0) {
+        const errorMessage = `❌ Bulk Upload Failed. Please address following errors:\n\n📊 Total Rows Processed: ${lines.length - 1}\n❌ Errors Found (${errors.length}):\n\n${errors.map((error, index) => `${index + 1}. ${error}`).join('\n')}\n\n💡 Please fix the errors and try uploading again.`;
+        alert(errorMessage);
+      } else if (created === 0) {
+        alert(`❌ Bulk Upload Failed!\n\n📊 Total Rows Processed: ${lines.length - 1}\n📊 MRs Created: 0\n\n💡 No valid MRs were found in the uploaded file. Please check your file format and try again.`);
+      } else {
+        alert(`✅ Bulk Upload Successful!\n\nCreated: ${created} MRs\nTotal Processed: ${lines.length - 1}\n\nNo errors found!`);
+      }
       
 
       // Reset file input
@@ -492,6 +573,7 @@ const SimpleMRTool: React.FC = () => {
   };
 
 
+
   const filteredContacts = contacts
     .filter(contact => {
       // Search term filter
@@ -501,10 +583,7 @@ const SimpleMRTool: React.FC = () => {
         contact.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
         contact.group.toLowerCase().includes(searchTerm.toLowerCase());
       
-      // Group filter (exact match for dropdown)
-      const matchesGroup = !groupFilter || contact.group === groupFilter;
-      
-      return matchesSearch && matchesGroup;
+      return matchesSearch;
     })
     .sort((a, b) => {
       const aValue = a[sortField] || '';
@@ -524,7 +603,7 @@ const SimpleMRTool: React.FC = () => {
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, groupFilter, sortField, sortDirection]);
+  }, [searchTerm, sortField, sortDirection]);
 
   const handleSort = (field: keyof Contact) => {
     if (sortField === field) {
@@ -588,7 +667,7 @@ const SimpleMRTool: React.FC = () => {
         <div className="border-b-2 border-indigo-500 my-6"></div>
 
         {/* MR Management Header */}
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">MR</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">MR Management</h2>
 
         {/* Main Content Area */}
         {activeTab === 'contacts' && (
@@ -613,9 +692,6 @@ const SimpleMRTool: React.FC = () => {
                 <MRSearchAndFilter
                   searchTerm={searchTerm}
                   onSearchChange={setSearchTerm}
-                  selectedGroup={groupFilter}
-                  onGroupChange={setGroupFilter}
-                  groups={groups}
                   filteredCount={filteredContacts.length}
                   totalCount={contacts.length}
                 />

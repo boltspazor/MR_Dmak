@@ -97,7 +97,21 @@ const MedicalReps: React.FC = () => {
       setError(null);
     } catch (error: any) {
       console.error('Error creating MR:', error);
-      const errorMessage = error.response?.data?.error || error.message || 'Failed to create MR. Please try again.';
+      let errorMessage = error.response?.data?.error || error.message || 'Failed to create MR. Please try again.';
+      
+      // Clean up error messages to replace technical details with app name
+      errorMessage = errorMessage
+        .replace(/app\.railway\.app/gi, 'D-MAK')
+        .replace(/railway\.app/gi, 'D-MAK')
+        .replace(/\.railway\./gi, ' D-MAK ')
+        .replace(/mrbackend-production-[a-zA-Z0-9-]+\.up\.railway\.app/gi, 'D-MAK server')
+        .replace(/https?:\/\/[a-zA-Z0-9-]+\.up\.railway\.app/gi, 'D-MAK server')
+        .replace(/production-[a-zA-Z0-9-]+\.up/gi, 'D-MAK')
+        .replace(/\b[a-zA-Z0-9-]+\.up\.railway\.app\b/gi, 'D-MAK server')
+        .replace(/\s+/g, ' ')
+        .replace(/D-MAK\s+server/gi, 'D-MAK server')
+        .trim();
+      
       setError(errorMessage);
     } finally {
       setIsSubmitting(false);
@@ -149,7 +163,21 @@ const MedicalReps: React.FC = () => {
       setError(null);
     } catch (error: any) {
       console.error('Error updating MR:', error);
-      const errorMessage = error.response?.data?.error || error.message || 'Failed to update MR. Please try again.';
+      let errorMessage = error.response?.data?.error || error.message || 'Failed to update MR. Please try again.';
+      
+      // Clean up error messages to replace technical details with app name
+      errorMessage = errorMessage
+        .replace(/app\.railway\.app/gi, 'D-MAK')
+        .replace(/railway\.app/gi, 'D-MAK')
+        .replace(/\.railway\./gi, ' D-MAK ')
+        .replace(/mrbackend-production-[a-zA-Z0-9-]+\.up\.railway\.app/gi, 'D-MAK server')
+        .replace(/https?:\/\/[a-zA-Z0-9-]+\.up\.railway\.app/gi, 'D-MAK server')
+        .replace(/production-[a-zA-Z0-9-]+\.up/gi, 'D-MAK')
+        .replace(/\b[a-zA-Z0-9-]+\.up\.railway\.app\b/gi, 'D-MAK server')
+        .replace(/\s+/g, ' ')
+        .replace(/D-MAK\s+server/gi, 'D-MAK server')
+        .trim();
+      
       setError(errorMessage);
     } finally {
       setIsSubmitting(false);

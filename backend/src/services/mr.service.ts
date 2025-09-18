@@ -13,10 +13,31 @@ export class MRService {
 
   async createMR(data: CreateMRForm, userId: string) {
     try {
+      // Handle case where no group is provided - create or find default group
+      let groupId = data.groupId;
+      if (!groupId || groupId.trim() === '') {
+        // Find or create a default group for this user
+        let defaultGroup = await Group.findOne({
+          groupName: 'Default Group',
+          createdBy: userId
+        });
+
+        if (!defaultGroup) {
+          defaultGroup = await Group.create({
+            groupName: 'Default Group',
+            description: 'Default group for MRs without specified group',
+            createdBy: userId
+          });
+          logger.info('Created default group for user', { userId, groupId: defaultGroup._id });
+        }
+        
+        groupId = defaultGroup._id.toString();
+      }
+
       // Check if MR ID already exists in the same group
       const existingMR = await MedicalRepresentative.findOne({
         mrId: data.mrId,
-        groupId: data.groupId,
+        groupId: groupId,
       });
 
       if (existingMR) {
@@ -29,8 +50,9 @@ export class MRService {
         lastName: data.lastName,
         phone: data.phone,
         email: data.email,
-        groupId: data.groupId,
+        groupId: groupId,
         comments: data.comments,
+        marketingManagerId: userId,
       });
 
       const populatedMR = await MedicalRepresentative.findById(mr._id)

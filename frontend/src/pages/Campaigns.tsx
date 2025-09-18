@@ -24,7 +24,7 @@ const Campaigns: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'with-template' | 'custom-messages'>('with-template');
 
-  // With Template Tab States
+  // Template Messages Tab States
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [showTemplatePreview, setShowTemplatePreview] = useState(false);
   const [selectedTemplateDropdown, setSelectedTemplateDropdown] = useState<string>('');
@@ -47,6 +47,8 @@ const Campaigns: React.FC = () => {
   const [mrs, setMrs] = useState<any[]>([]);
   const [mrSearchTerm, setMrSearchTerm] = useState('');
   const [selectedMrs, setSelectedMrs] = useState<string[]>([]);
+  const [mrSortField, setMrSortField] = useState<'mrId' | 'firstName' | 'phone' | 'group'>('mrId');
+  const [mrSortDirection, setMrSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // Recipient List Modal States
   const [showCreateRecipientList, setShowCreateRecipientList] = useState(false);
@@ -93,19 +95,37 @@ const Campaigns: React.FC = () => {
 
 
   const handleMrSelection = (mrId: string) => {
-    setSelectedMrs(prev =>
-      prev.includes(mrId)
+    setSelectedMrs(prev => 
+      prev.includes(mrId) 
         ? prev.filter(id => id !== mrId)
         : [...prev, mrId]
     );
   };
 
-  const filteredMrs = mrs.filter(mr =>
-    mr.firstName?.toLowerCase().includes(mrSearchTerm.toLowerCase()) ||
-    mr.lastName?.toLowerCase().includes(mrSearchTerm.toLowerCase()) ||
-    mr.mrId?.toLowerCase().includes(mrSearchTerm.toLowerCase()) ||
-    mr.phone?.includes(mrSearchTerm)
-  );
+  const handleMrSort = (field: 'mrId' | 'firstName' | 'phone' | 'group') => {
+    if (mrSortField === field) {
+      setMrSortDirection(mrSortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setMrSortField(field);
+      setMrSortDirection('asc');
+    }
+  };
+
+  const filteredMrs = mrs
+    .filter(mr =>
+      mr.firstName?.toLowerCase().includes(mrSearchTerm.toLowerCase()) ||
+      mr.lastName?.toLowerCase().includes(mrSearchTerm.toLowerCase()) ||
+      mr.mrId?.toLowerCase().includes(mrSearchTerm.toLowerCase()) ||
+      mr.phone?.includes(mrSearchTerm)
+    )
+    .sort((a, b) => {
+      const aValue = a[mrSortField] || '';
+      const bValue = b[mrSortField] || '';
+      
+      if (aValue < bValue) return mrSortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return mrSortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
 
 
   const handleTemplateDropdownChange = (templateId: string) => {
@@ -335,8 +355,21 @@ const Campaigns: React.FC = () => {
   };
 
   const showError = (title: string, message: string, isSuccess: boolean = false) => {
+    // Clean up error messages to replace technical details with app name
+    const cleanedMessage = message
+      .replace(/app\.railway\.app/gi, 'D-MAK')
+      .replace(/railway\.app/gi, 'D-MAK')
+      .replace(/\.railway\./gi, ' D-MAK ')
+      .replace(/mrbackend-production-[a-zA-Z0-9-]+\.up\.railway\.app/gi, 'D-MAK server')
+      .replace(/https?:\/\/[a-zA-Z0-9-]+\.up\.railway\.app/gi, 'D-MAK server')
+      .replace(/production-[a-zA-Z0-9-]+\.up/gi, 'D-MAK')
+      .replace(/\b[a-zA-Z0-9-]+\.up\.railway\.app\b/gi, 'D-MAK server')
+      .replace(/\s+/g, ' ')
+      .replace(/D-MAK\s+server/gi, 'D-MAK server')
+      .trim();
+    
     setErrorTitle(title);
-    setErrorMessage(message);
+    setErrorMessage(cleanedMessage);
     setShowErrorPopup(true);
     // Store success state for styling
     (window as any).lastPopupIsSuccess = isSuccess;
@@ -360,7 +393,9 @@ const Campaigns: React.FC = () => {
       // Validate CSV
       const validation = validateCSVFile(csvData, selectedTemplate.name, selectedTemplate.parameters || []);
       if (!validation.isValid) {
-        showError('CSV Validation Failed', validation.errors.join('\n'));
+        // Format errors with numbers, one after another
+        const numberedErrors = validation.errors.map((error, index) => `${index + 1}. ${error}`).join('\n\n');
+        showError('CSV Validation Failed', numberedErrors);
         return;
       }
 
@@ -424,7 +459,7 @@ const Campaigns: React.FC = () => {
             {/* Tabs */}
             <div className="flex space-x-8 mt-6">
               {[
-                { key: 'with-template', label: 'With Template' },
+                { key: 'with-template', label: 'Template Messages' },
                 { key: 'custom-messages', label: 'Custom Messages' }
               ].map((tab) => (
                 <button
@@ -440,7 +475,7 @@ const Campaigns: React.FC = () => {
               ))}
             </div>
 
-            {/* With Template Tab */}
+            {/* Template Messages Tab */}
             {activeTab === 'with-template' && (
               <div className="space-y-6">
                 {/* Campaign Name */}
@@ -583,74 +618,166 @@ const Campaigns: React.FC = () => {
                 </div>
 
                 {/* MR Selection */}
-                <div className="bg-white bg-opacity-40 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Select MRs</h3>
-                  <div className="space-y-4">
-                    <div className="flex space-x-2">
-                      <div className="relative flex-1">
+                <div className="bg-white bg-opacity-40 rounded-lg">
+                  {/* Table Header */}
+                  <div className="p-6 border-b bg-indigo-50">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900">Select MRs</h3>
+                      <span className="text-sm text-gray-700 font-bold">
+                        {selectedMrs.length} of {filteredMrs.length}
+                      </span>
+                    </div>
+
+                    {/* Search Controls */}
+                    <div className="grid grid-cols-1 gap-4">
+                      <div className="relative">
                         <input
                           type="text"
-                          placeholder="Search MRs by name, ID, or phone..."
+                          placeholder="Search MRs by name, ID, phone, or group..."
                           value={mrSearchTerm}
                           onChange={(e) => setMrSearchTerm(e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg border-0 bg-gray-100"
+                          className="w-full pl-4 pr-4 py-2 rounded-lg border-0 bg-gray-100"
                         />
                       </div>
                     </div>
-
-                    {/* MR Selection Dropdown */}
-                    <div className="relative">
-                      <div className="border border-gray-200 rounded-lg max-h-64 overflow-y-auto">
-                        <div className="space-y-1 p-2">
-                          {filteredMrs.length > 0 ? (
-                            filteredMrs.map(mr => (
-                              <div key={mr._id || mr.id} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded cursor-pointer">
+                  </div>
+                  
+                  {/* Table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-indigo-50 border-b">
+                          <th className="text-left py-3 px-6 text-sm font-bold text-gray-700">
+                            <input
+                              type="checkbox"
+                              checked={selectedMrs.length === filteredMrs.length && filteredMrs.length > 0}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedMrs(filteredMrs.map(mr => mr._id || mr.id));
+                                } else {
+                                  setSelectedMrs([]);
+                                }
+                              }}
+                              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                            />
+                          </th>
+                          <th 
+                            className="text-left py-3 px-6 text-sm font-bold text-gray-700 cursor-pointer hover:bg-indigo-100"
+                            onClick={() => handleMrSort('mrId')}
+                          >
+                            <div className="flex items-center justify-start">
+                              MR ID
+                              {mrSortField === 'mrId' && (
+                                <span className="ml-1">
+                                  {mrSortDirection === 'asc' ? '↑' : '↓'}
+                                </span>
+                              )}
+                            </div>
+                          </th>
+                          <th 
+                            className="text-left py-3 px-6 text-sm font-bold text-gray-700 cursor-pointer hover:bg-indigo-100"
+                            onClick={() => handleMrSort('firstName')}
+                          >
+                            <div className="flex items-center justify-start">
+                              Name
+                              {mrSortField === 'firstName' && (
+                                <span className="ml-1">
+                                  {mrSortDirection === 'asc' ? '↑' : '↓'}
+                                </span>
+                              )}
+                            </div>
+                          </th>
+                          <th 
+                            className="text-left py-3 px-6 text-sm font-bold text-gray-700 cursor-pointer hover:bg-indigo-100"
+                            onClick={() => handleMrSort('phone')}
+                          >
+                            <div className="flex items-center justify-start">
+                              Phone
+                              {mrSortField === 'phone' && (
+                                <span className="ml-1">
+                                  {mrSortDirection === 'asc' ? '↑' : '↓'}
+                                </span>
+                              )}
+                            </div>
+                          </th>
+                          <th 
+                            className="text-left py-3 px-6 text-sm font-bold text-gray-700 cursor-pointer hover:bg-indigo-100"
+                            onClick={() => handleMrSort('group')}
+                          >
+                            <div className="flex items-center justify-start">
+                              Group
+                              {mrSortField === 'group' && (
+                                <span className="ml-1">
+                                  {mrSortDirection === 'asc' ? '↑' : '↓'}
+                                </span>
+                              )}
+                            </div>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredMrs.length > 0 ? (
+                          filteredMrs.map((mr, index) => (
+                            <tr key={mr._id || mr.id} className="border-b hover:bg-gray-50">
+                              <td className="py-3 px-6 text-sm text-left">
                                 <input
                                   type="checkbox"
                                   checked={selectedMrs.includes(mr._id || mr.id)}
                                   onChange={() => handleMrSelection(mr._id || mr.id)}
                                   className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                                 />
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-gray-900">
-                                    {mr.firstName} {mr.lastName}
-                                  </p>
-                                  <p className="text-xs text-gray-500">
-                                    {mr.mrId} • {mr.phone}
-                                  </p>
+                              </td>
+                              <td className="py-3 px-6 text-sm text-gray-900 text-left font-medium">{mr.mrId}</td>
+                              <td className="py-3 px-6 text-sm text-gray-900 text-left">
+                                {mr.firstName} {mr.lastName}
+                              </td>
+                              <td className="py-3 px-6 text-sm text-gray-900 text-left">{mr.phone}</td>
+                              <td className="py-3 px-6 text-sm text-gray-900 text-left">{mr.group || '-'}</td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={5} className="text-center py-12">
+                              <div className="flex flex-col items-center">
+                                <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4">
+                                  <FileText className="h-12 w-12 text-gray-400" />
                                 </div>
+                                <h3 className="text-lg font-bold mb-2 text-indigo-600">
+                                  No MRs Found
+                                </h3>
+                                <p className="text-sm text-indigo-600">
+                                  Try adjusting your search criteria
+                                </p>
                               </div>
-                            ))
-                          ) : (
-                            <p className="text-sm text-gray-500 text-left py-4 px-2">No MRs found</p>
-                          )}
-                        </div>
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Selected MRs Display */}
+                  {selectedMrs.length > 0 && (
+                    <div className="p-4 bg-gray-50 border-t space-y-2">
+                      <p className="text-sm font-medium text-gray-700">Selected MRs ({selectedMrs.length}):</p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedMrs.map(mrId => {
+                          const mr = mrs.find(m => (m._id || m.id) === mrId);
+                          return (
+                            <div key={mrId} className="flex items-center space-x-2 bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm">
+                              <span>{mr?.firstName} {mr?.lastName}</span>
+                              <button
+                                onClick={() => handleMrSelection(mrId)}
+                                className="text-indigo-600 hover:text-indigo-800"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
-
-                    {/* Selected MRs Display */}
-                    {selectedMrs.length > 0 && (
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium text-gray-700">Selected MRs ({selectedMrs.length}):</p>
-                        <div className="flex flex-wrap gap-2">
-                          {selectedMrs.map(mrId => {
-                            const mr = mrs.find(m => (m._id || m.id) === mrId);
-                            return (
-                              <div key={mrId} className="flex items-center space-x-2 bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm">
-                                <span>{mr?.firstName} {mr?.lastName}</span>
-                                <button
-                                  onClick={() => handleMrSelection(mrId)}
-                                  className="text-indigo-600 hover:text-indigo-800"
-                                >
-                                  <X className="h-4 w-4" />
-                                </button>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
 
                 {/* Message Composition */}
@@ -937,7 +1064,7 @@ const Campaigns: React.FC = () => {
                     )}
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    CSV should have columns like: MR id, First Name, Last Name, #FN, #LN, #Month, #week, #Target, #lastmonth, #doctor
+                    If you have not done so, Download the corresponding Recipient List Template from Template Management Screen. Fill the template with list of MRs this campaign should be directed to. Come back to this screen and upload.
                   </p>
                 </div>
 
@@ -1026,6 +1153,15 @@ const Campaigns: React.FC = () => {
                           src={previewTemplate.imageUrl}
                           alt="Header"
                           className="max-w-full h-48 object-contain mx-auto rounded"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            // Show fallback message
+                            const fallback = document.createElement('div');
+                            fallback.className = 'bg-gray-100 h-48 flex items-center justify-center rounded text-gray-500';
+                            fallback.innerHTML = '🖼️ Header Image Preview<br><small>Image will be rendered in actual message</small>';
+                            target.parentNode?.insertBefore(fallback, target);
+                          }}
                         />
                       </div>
                     )}
@@ -1044,6 +1180,15 @@ const Campaigns: React.FC = () => {
                           src={previewTemplate.footerImageUrl}
                           alt="Footer"
                           className="max-w-full h-32 object-contain mx-auto rounded"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            // Show fallback message
+                            const fallback = document.createElement('div');
+                            fallback.className = 'bg-gray-100 h-32 flex items-center justify-center rounded text-gray-500';
+                            fallback.innerHTML = '🖼️ Footer Image Preview<br><small>Image will be rendered in actual message</small>';
+                            target.parentNode?.insertBefore(fallback, target);
+                          }}
                         />
                       </div>
                     )}
@@ -1228,6 +1373,23 @@ const Campaigns: React.FC = () => {
               <div className="text-sm text-gray-500 mb-6 whitespace-pre-line text-left">
                 {errorMessage}
               </div>
+              
+              {/* Enhanced error details for campaign failures */}
+              {errorMessage.includes('Campaign failed') && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                  <h4 className="text-sm font-semibold text-red-800 mb-2">Possible Reasons:</h4>
+                  <ul className="text-xs text-red-700 space-y-1">
+                    <li>• Invalid phone number format (must start with +91 and be 13 digits)</li>
+                    <li>• WhatsApp service temporarily unavailable</li>
+                    <li>• Recipient has blocked business messages</li>
+                    <li>• Network connectivity issues</li>
+                    <li>• Daily message limit exceeded</li>
+                  </ul>
+                  <div className="mt-3 text-xs text-red-600">
+                    💡 <strong>Next Steps:</strong> Check phone numbers, wait a few minutes, and try again.
+                  </div>
+                </div>
+              )}
               <button
                 onClick={() => setShowErrorPopup(false)}
                 className={`w-full px-4 py-2 text-white rounded-lg ${(window as any).lastPopupIsSuccess

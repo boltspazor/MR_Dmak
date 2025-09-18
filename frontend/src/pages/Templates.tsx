@@ -48,13 +48,58 @@ const Templates: React.FC = () => {
   });
 
   // File upload states
-  const [headerImage, setHeaderImage] = useState<File | null>(null);
-  const [footerImage, setFooterImage] = useState<File | null>(null);
-  const [headerImagePreview, setHeaderImagePreview] = useState<string>('');
-  const [footerImagePreview, setFooterImagePreview] = useState<string>('');
+  const [uploadedImage, setUploadedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
+  const [imagePlacement, setImagePlacement] = useState<'header' | 'footer'>('header');
 
 
   useEffect(() => {
+    const isDevelopmentMode = (import.meta as ImportMeta & { env?: { VITE_DEVELOPMENT_MODE?: string } }).env?.VITE_DEVELOPMENT_MODE === 'frontend-only';
+    
+    if (isDevelopmentMode) {
+      console.log('🔧 Frontend-only mode: Loading instant mock templates');
+      // Instant loading for development
+      const mockTemplates: Template[] = [
+        {
+          _id: '1',
+          name: 'Welcome Template',
+          content: 'Welcome to our platform, #FirstName #LastName!\n\nWe are excited to have you with us.',
+          imageUrl: '/logo.png',
+          footerImageUrl: '',
+          type: 'html',
+          createdAt: '2025-09-15T10:00:00Z',
+          updatedAt: '2025-09-15T10:00:00Z',
+          createdBy: {
+            _id: 'dev-user-123',
+            name: 'Development User',
+            email: 'dev@example.com'
+          },
+          isActive: true,
+          parameters: ['FirstName', 'LastName']
+        },
+        {
+          _id: '2',
+          name: 'Product Launch',
+          content: 'Dear #FirstName,\n\nWe are thrilled to announce the launch of our new product!\n\nKey Features:\n- Advanced technology\n- User-friendly interface\n- 24/7 support\n\nBest regards,\nThe Team',
+          imageUrl: '',
+          footerImageUrl: '/qwerty.jpg',
+          type: 'text',
+          createdAt: '2025-09-14T15:30:00Z',
+          updatedAt: '2025-09-14T15:30:00Z',
+          createdBy: {
+            _id: 'dev-user-123',
+            name: 'Development User',
+            email: 'dev@example.com'
+          },
+          isActive: true,
+          parameters: ['FirstName']
+        }
+      ];
+      setTemplates(mockTemplates);
+      setLoading(false);
+      return;
+    }
+
     // Check if templates are cached
     const cachedTemplates = localStorage.getItem('cached_templates');
     const cacheTimestamp = localStorage.getItem('templates_cache_timestamp');
@@ -64,7 +109,7 @@ const Templates: React.FC = () => {
       setTemplates(JSON.parse(cachedTemplates));
       setLoading(false);
     } else {
-    fetchTemplates();
+      fetchTemplates();
     }
 
     // Fetch parameters in parallel (non-blocking)
@@ -90,7 +135,7 @@ const Templates: React.FC = () => {
       // Cache templates for 5 minutes
       localStorage.setItem('cached_templates', JSON.stringify(templatesData));
       localStorage.setItem('templates_cache_timestamp', Date.now().toString());
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching templates:', error);
     } finally {
       setLoading(false);
@@ -104,31 +149,19 @@ const Templates: React.FC = () => {
 
       const response = await api.get('/recipient-lists/parameters');
       setAvailableParameters(response.data.data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching available parameters:', error);
     }
   };
 
-  // File upload functions
-  const handleHeaderImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  // File upload function
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      setHeaderImage(file);
+      setUploadedImage(file);
       const reader = new FileReader();
       reader.onload = (e) => {
-        setHeaderImagePreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleFooterImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setFooterImage(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setFooterImagePreview(e.target?.result as string);
+        setImagePreview(e.target?.result as string);
       };
       reader.readAsDataURL(file);
     }
@@ -174,29 +207,37 @@ const Templates: React.FC = () => {
       let footerImageUrl = formData.footerImageUrl;
       let footerImageFileName = formData.footerImageFileName;
 
-      // Upload images if they exist
-      if (headerImage) {
-        console.log('Uploading header image...');
-        const uploadResult = await uploadImage(headerImage, 'header');
-        imageUrl = uploadResult.imageUrl;
-        imageFileName = uploadResult.imageFileName;
-        console.log('Header image uploaded:', uploadResult);
-      } else if (formData.imageUrl) {
-        console.log('Using existing header image URL:', formData.imageUrl);
-        imageUrl = formData.imageUrl;
-        imageFileName = formData.imageFileName;
-      }
-      
-      if (footerImage) {
-        console.log('Uploading footer image...');
-        const uploadResult = await uploadImage(footerImage, 'footer');
-        footerImageUrl = uploadResult.imageUrl;
-        footerImageFileName = uploadResult.imageFileName;
-        console.log('Footer image uploaded:', uploadResult);
-      } else if (formData.footerImageUrl) {
-        console.log('Using existing footer image URL:', formData.footerImageUrl);
-        footerImageUrl = formData.footerImageUrl;
-        footerImageFileName = formData.footerImageFileName;
+      // Upload image if it exists
+      if (uploadedImage) {
+        console.log(`Uploading ${imagePlacement} image...`);
+        const uploadResult = await uploadImage(uploadedImage, imagePlacement);
+        
+        if (imagePlacement === 'header') {
+          imageUrl = uploadResult.imageUrl;
+          imageFileName = uploadResult.imageFileName;
+          // Clear footer image when uploading as header
+          footerImageUrl = '';
+          footerImageFileName = '';
+        } else {
+          footerImageUrl = uploadResult.imageUrl;
+          footerImageFileName = uploadResult.imageFileName;
+          // Clear header image when uploading as footer
+          imageUrl = '';
+          imageFileName = '';
+        }
+        console.log(`${imagePlacement} image uploaded:`, uploadResult);
+      } else {
+        // Use existing images if available
+        if (formData.imageUrl) {
+          console.log('Using existing header image URL:', formData.imageUrl);
+          imageUrl = formData.imageUrl;
+          imageFileName = formData.imageFileName;
+        }
+        if (formData.footerImageUrl) {
+          console.log('Using existing footer image URL:', formData.footerImageUrl);
+          footerImageUrl = formData.footerImageUrl;
+          footerImageFileName = formData.footerImageFileName;
+        }
       }
 
       // Extract parameters from content if not provided
@@ -250,16 +291,29 @@ const Templates: React.FC = () => {
       });
       
       // Reset file states
-      setHeaderImage(null);
-      setFooterImage(null);
-      setHeaderImagePreview('');
-      setFooterImagePreview('');
+      setUploadedImage(null);
+      setImagePreview('');
+      setImagePlacement('header');
       
       alert('Template created successfully!');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error saving template:', error);
-      console.error('Error details:', error.response?.data);
-      alert(`Failed to create template: ${error.response?.data?.error || error.message}`);
+      let errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      // Clean up error messages to replace technical details with app name
+      errorMessage = errorMessage
+        .replace(/app\.railway\.app/gi, 'D-MAK')
+        .replace(/railway\.app/gi, 'D-MAK')
+        .replace(/\.railway\./gi, ' D-MAK ')
+        .replace(/mrbackend-production-[a-zA-Z0-9-]+\.up\.railway\.app/gi, 'D-MAK server')
+        .replace(/https?:\/\/[a-zA-Z0-9-]+\.up\.railway\.app/gi, 'D-MAK server')
+        .replace(/production-[a-zA-Z0-9-]+\.up/gi, 'D-MAK')
+        .replace(/\b[a-zA-Z0-9-]+\.up\.railway\.app\b/gi, 'D-MAK server')
+        .replace(/\s+/g, ' ')
+        .replace(/D-MAK\s+server/gi, 'D-MAK server')
+        .trim();
+      
+      alert(`Failed to create template: ${errorMessage}`);
     }
   };
 
@@ -275,12 +329,16 @@ const Templates: React.FC = () => {
       footerImageFileName: template.footerImageFileName || '',
       parameters: template.parameters
     });
-    // Set preview images for editing
+    // Set preview image and placement for editing
     if (template.imageUrl) {
-      setHeaderImagePreview(template.imageUrl);
-    }
-    if (template.footerImageUrl) {
-      setFooterImagePreview(template.footerImageUrl);
+      setImagePreview(template.imageUrl);
+      setImagePlacement('header');
+    } else if (template.footerImageUrl) {
+      setImagePreview(template.footerImageUrl);
+      setImagePlacement('footer');
+    } else {
+      setImagePreview('');
+      setImagePlacement('header');
     }
     setShowCreateForm(true);
   };
@@ -301,7 +359,7 @@ const Templates: React.FC = () => {
       await fetchTemplates(true); // Force refresh to get latest data
       setShowDeleteDialog(false);
       setTemplateToDelete(null);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error deleting template:', error);
     }
   };
@@ -568,12 +626,12 @@ const Templates: React.FC = () => {
     // Create CSV with template name in A1 and dynamic parameters
     const csvRows = [];
     
-    // Row 1: Template name in A1, empty cells for other columns
-    const row1 = [template.name, ...Array(Math.max(parameters.length + 2, 10)).fill('')];
+    // Row 1: Template Name in A1, template name value in B1
+    const row1 = ['Template Name', template.name, ...Array(Math.max(parameters.length + 1, 9)).fill('')];
     csvRows.push(row1.join(','));
     
-    // Row 2: Headers - MR id, First Name, Last Name, then parameters
-    const row2 = ['', 'MR id', 'First Name', 'Last Name', ...parameters];
+    // Row 2: MR ID in A2, First Name, Last Name, then parameters
+    const row2 = ['MR ID', 'First Name', 'Last Name', ...parameters];
     csvRows.push(row2.join(','));
     
     // Row 3: Sample data
@@ -601,7 +659,7 @@ const Templates: React.FC = () => {
       'Country': 'India'
     };
     
-    const row3 = ['', 'MR001', 'John', 'Doe', ...parameters.map(param => (sampleData as any)[param] || `Sample ${param}`)];
+    const row3 = ['MR001', 'John', 'Doe', ...parameters.map(param => (sampleData as Record<string, string>)[param] || `Sample ${param}`)];
     csvRows.push(row3.join(','));
     
     const csvContent = csvRows.join('\n');
@@ -643,7 +701,7 @@ const Templates: React.FC = () => {
             showExportButtons={false}
           />
           <div className="border-b-2 border-indigo-500 my-6"></div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Template</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Templates Management</h2>
           
         <div className="animate-pulse space-y-6">
           <div className="h-8 bg-gray-200 rounded w-1/4"></div>
@@ -683,8 +741,8 @@ const Templates: React.FC = () => {
         {/* Separator Line */}
         <div className="border-b-2 border-indigo-500 my-6"></div>
 
-        {/* Template Management Header */}
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Template</h2>
+        {/* Templates Management Header */}
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Templates Management</h2>
 
         {/* Main Content Area */}
         <CommonFeatures
@@ -711,6 +769,9 @@ const Templates: React.FC = () => {
                   footerImageFileName: '',
                   parameters: []
                 });
+                setUploadedImage(null);
+                setImagePreview('');
+                setImagePlacement('header');
               }}
                   className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
             >
@@ -785,9 +846,7 @@ const Templates: React.FC = () => {
                           )}
             </div>
                       </th>
-                      <th className="text-left py-3 px-6 text-sm font-bold text-gray-700">Images</th>
                       <th className="text-left py-3 px-6 text-sm font-bold text-gray-700">Actions</th>
-                      <th className="text-left py-3 px-6 text-sm font-bold text-gray-700">Download Recipient Template</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -797,23 +856,6 @@ const Templates: React.FC = () => {
                           <td className="py-3 px-6 text-sm text-gray-900 text-left font-medium">{template.name}</td>
                           <td className="py-3 px-6 text-sm text-gray-900 text-left">
                             {new Date(template.createdAt).toLocaleDateString()}
-                          </td>
-                          <td className="py-3 px-6 text-sm text-gray-900 text-left">
-                            <div className="space-y-1">
-                              {template.imageFileName && (
-                                <div className="text-xs text-blue-600">
-                                  Header: {template.imageFileName}
-                                </div>
-                              )}
-                              {template.footerImageFileName && (
-                                <div className="text-xs text-green-600">
-                                  Footer: {template.footerImageFileName}
-                                </div>
-                              )}
-                              {!template.imageFileName && !template.footerImageFileName && (
-                                <div className="text-xs text-gray-500">No images</div>
-                              )}
-                            </div>
                           </td>
                           <td className="py-3 px-6 text-sm text-left">
                             <div className="flex items-center justify-start space-x-2">
@@ -858,20 +900,11 @@ const Templates: React.FC = () => {
                       )}
                     </div>
                           </td>
-                          <td className="py-3 px-6 text-sm text-left">
-                            <button
-                              onClick={() => downloadRecipientListFormat(template)}
-                              className="text-green-600 hover:text-green-800 p-1 rounded"
-                              title="Download Recipient List Format"
-                            >
-                              <Download className="h-4 w-4" />
-                            </button>
-                          </td>
                         </tr>
                 ))
               ) : (
                       <tr>
-                        <td colSpan={4} className="text-left py-12">
+                        <td colSpan={3} className="text-left py-12">
                           <div className="flex flex-col items-center">
                             <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4">
                     <FileText className="h-12 w-12 text-gray-400" />
@@ -905,10 +938,9 @@ const Templates: React.FC = () => {
                   onClick={() => {
                     setShowCreateForm(false);
                     setEditingTemplate(null);
-                    setHeaderImage(null);
-                    setFooterImage(null);
-                    setHeaderImagePreview('');
-                    setFooterImagePreview('');
+                    setUploadedImage(null);
+                    setImagePreview('');
+                    setImagePlacement('header');
                   }}
                   className="text-gray-400 hover:text-gray-600"
                 >
@@ -931,25 +963,57 @@ const Templates: React.FC = () => {
                 />
               </div>
               
-                {/* Header Image Upload */}
+                {/* Image Upload with Placement Selection */}
               <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Header Image (Optional)
+                    Image (Optional)
                 </label>
+                  
+                  {/* Image Placement Selection */}
+                  <div className="mb-3">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Image Placement:
+                    </label>
+                    <div className="flex space-x-4">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="imagePlacement"
+                          value="header"
+                          checked={imagePlacement === 'header'}
+                          onChange={(e) => setImagePlacement(e.target.value as 'header' | 'footer')}
+                          className="mr-2"
+                        />
+                        <span className="text-sm text-gray-700">Header</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="imagePlacement"
+                          value="footer"
+                          checked={imagePlacement === 'footer'}
+                          onChange={(e) => setImagePlacement(e.target.value as 'header' | 'footer')}
+                          className="mr-2"
+                        />
+                        <span className="text-sm text-gray-700">Footer</span>
+                      </label>
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
                   <input
                     type="file"
                     accept="image/*"
-                      onChange={handleHeaderImageUpload}
+                      onChange={handleImageUpload}
                       className="hidden"
-                      id="header-image-upload"
+                      id="image-upload"
                     />
                     <label
-                      htmlFor="header-image-upload"
+                      htmlFor="image-upload"
                       className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-indigo-400 transition-colors"
                     >
                       <Upload className="h-5 w-5 text-gray-400 mr-2" />
-                      <span className="text-sm text-gray-600">Click to upload header image</span>
+                      <span className="text-sm text-gray-600">Click to upload {imagePlacement} image</span>
                     </label>
                 </div>
                 </div>
@@ -959,8 +1023,6 @@ const Templates: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Text *
                 </label>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <div>
                 <textarea
                         required
                   value={formData.content}
@@ -969,79 +1031,7 @@ const Templates: React.FC = () => {
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         placeholder="Enter template content with parameters like #FirstName, #LastName, #Month, #Target..."
                 />
-              </div>
 
-                  {/* Live Preview */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Live Preview
-                    </label>
-                    <div className="bg-gray-100 p-4 rounded-lg h-40 overflow-y-auto">
-                        <div className="bg-white rounded-2xl rounded-tl-md shadow-sm max-w-xs mx-auto">
-                          {(headerImagePreview || formData.imageUrl) && (
-                            <div className="w-full">
-                              <img 
-                                src={headerImagePreview || formData.imageUrl} 
-                                alt="Header"
-                                className="w-full h-24 object-cover rounded-t-2xl"
-                              />
-                            </div>
-                          )}
-                          <div className="p-3">
-                            <div className="text-gray-800 text-xs leading-relaxed whitespace-pre-wrap">
-                              {(() => {
-                                if (!formData.content) return 'Start typing your template...';
-                                
-                                let processedContent = formData.content;
-                                
-                                // Sample parameter values for live preview
-                                const sampleParams = {
-                                  'FirstName': 'John',
-                                  'LastName': 'Doe',
-                                  'MRId': 'MR001',
-                                  'GroupName': 'North Zone',
-                                  'PhoneNumber': '+919876543210',
-                                  'Name': 'John Doe',
-                                  'Company': 'D-MAK',
-                                  'Product': 'New Product',
-                                  'Date': new Date().toLocaleDateString(),
-                                  'Time': new Date().toLocaleTimeString(),
-                                  'Month': new Date().toLocaleDateString('en-US', { month: 'long' }),
-                                  'Year': new Date().getFullYear().toString(),
-                                  'Target': '100',
-                                  'Achievement': '85',
-                                  'Location': 'Mumbai',
-                                  'City': 'Mumbai',
-                                  'State': 'Maharashtra',
-                                  'Country': 'India'
-                                };
-                                
-                                // Replace parameters with sample values
-                                for (const [param, value] of Object.entries(sampleParams)) {
-                                  const regex = new RegExp(`#${param}\\b`, 'g');
-                                  processedContent = processedContent.replace(regex, value);
-                                }
-                                
-                                // Replace any remaining parameters with [Sample Value]
-                                processedContent = processedContent.replace(/#[A-Za-z0-9_]+/g, '[Sample Value]');
-                                
-                                return processedContent;
-                              })()}
-                            </div>
-                          </div>
-                          {(footerImagePreview || formData.footerImageUrl) && (
-                            <div className="px-3 pb-3">
-                              <img 
-                                src={footerImagePreview || formData.footerImageUrl} 
-                                alt="Footer"
-                                className="w-full h-16 object-cover rounded-lg"
-                              />
-                            </div>
-                          )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
                   
                   {/* Available Parameters */}
                   {availableParameters && availableParameters.parameters.length > 0 && (
@@ -1075,26 +1065,75 @@ const Templates: React.FC = () => {
                   </p>
                 </div>
 
-                {/* Footer Image Upload */}
+
+                {/* Live Preview */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Footer Image (Optional)
+                    Live Preview
                   </label>
-                  <div className="space-y-2">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFooterImageUpload}
-                      className="hidden"
-                      id="footer-image-upload"
-                    />
-                    <label
-                      htmlFor="footer-image-upload"
-                      className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-indigo-400 transition-colors"
-                    >
-                      <Upload className="h-5 w-5 text-gray-400 mr-2" />
-                      <span className="text-sm text-gray-600">Click to upload footer image</span>
-                    </label>
+                  <div className="bg-gray-100 p-4 rounded-lg">
+                      <div className="bg-white rounded-2xl rounded-tl-md shadow-sm max-w-sm mx-auto">
+                        {((imagePreview && imagePlacement === 'header') || formData.imageUrl) && (
+                          <div className="w-full">
+                            <img 
+                              src={imagePreview || formData.imageUrl} 
+                              alt="Header"
+                              className="w-full h-24 object-cover rounded-t-2xl"
+                            />
+                          </div>
+                        )}
+                        <div className="p-3">
+                          <div className="text-gray-800 text-xs leading-relaxed whitespace-pre-wrap">
+                            {(() => {
+                              if (!formData.content) return 'Start typing your template...';
+                              
+                              let processedContent = formData.content;
+                              
+                              // Sample parameter values for live preview
+                              const sampleParams = {
+                                'FirstName': 'John',
+                                'LastName': 'Doe',
+                                'MRId': 'MR001',
+                                'GroupName': 'North Zone',
+                                'PhoneNumber': '+919876543210',
+                                'Name': 'John Doe',
+                                'Company': 'D-MAK',
+                                'Product': 'New Product',
+                                'Date': new Date().toLocaleDateString(),
+                                'Time': new Date().toLocaleTimeString(),
+                                'Month': new Date().toLocaleDateString('en-US', { month: 'long' }),
+                                'Year': new Date().getFullYear().toString(),
+                                'Target': '100',
+                                'Achievement': '85',
+                                'Location': 'Mumbai',
+                                'City': 'Mumbai',
+                                'State': 'Maharashtra',
+                                'Country': 'India'
+                              };
+                              
+                              // Replace parameters with sample values
+                              for (const [param, value] of Object.entries(sampleParams)) {
+                                const regex = new RegExp(`#${param}\\b`, 'g');
+                                processedContent = processedContent.replace(regex, value);
+                              }
+                              
+                              // Replace any remaining parameters with [Sample Value]
+                              processedContent = processedContent.replace(/#[A-Za-z0-9_]+/g, '[Sample Value]');
+                              
+                              return processedContent;
+                            })()}
+                          </div>
+                        </div>
+                        {((imagePreview && imagePlacement === 'footer') || formData.footerImageUrl) && (
+                          <div className="px-3 pb-3">
+                            <img 
+                              src={imagePreview || formData.footerImageUrl} 
+                              alt="Footer"
+                              className="w-full h-16 object-cover rounded-lg"
+                            />
+                          </div>
+                        )}
+                      </div>
                   </div>
                 </div>
 
@@ -1104,10 +1143,9 @@ const Templates: React.FC = () => {
                   onClick={() => {
                     setShowCreateForm(false);
                     setEditingTemplate(null);
-                      setHeaderImage(null);
-                      setFooterImage(null);
-                      setHeaderImagePreview('');
-                      setFooterImagePreview('');
+                      setUploadedImage(null);
+                      setImagePreview('');
+                      setImagePlacement('header');
                     }}
                     className="px-6 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300"
                 >
@@ -1138,6 +1176,9 @@ const Templates: React.FC = () => {
               </h2>
                   <p className="text-sm text-gray-600 mt-1">
                     {previewTemplate.name} • Created {new Date(previewTemplate.createdAt).toLocaleDateString()}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Content Length: {previewTemplate.content.length} characters • Parameters: {previewTemplate.parameters?.length || 0}
                   </p>
                 </div>
               <button
@@ -1299,12 +1340,22 @@ const Templates: React.FC = () => {
                   ))}
                 </div>
                         <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                          <p className="text-xs text-gray-600 mb-2">
-                            <strong>Recipient List Format:</strong>
-                          </p>
+                          <div className="flex justify-between items-start mb-2">
+                            <p className="text-xs text-gray-600">
+                              <strong>Recipient List Format:</strong>
+                            </p>
+                            <button
+                              onClick={() => downloadRecipientListFormat(previewTemplate)}
+                              className="ml-2 px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 flex items-center gap-1"
+                              title="Download Recipient List Template"
+                            >
+                              <Download className="h-3 w-3" />
+                              Download Template
+                            </button>
+                          </div>
                           <p className="text-xs text-gray-500">
-                            • Template name will be in cell A1<br/>
-                            • Headers: MR id, First Name, Last Name, {previewTemplate.parameters.join(', ')}<br/>
+                            • Row 1: Template Name in A1, template name in B1<br/>
+                            • Row 2: MR ID, First Name, Last Name, {previewTemplate.parameters.join(', ')}<br/>
                             • Each parameter will have its own column in the recipient list
                           </p>
               </div>
@@ -1324,28 +1375,6 @@ const Templates: React.FC = () => {
       )}
                   </div>
 
-                  {/* Template Information */}
-                  <div className="bg-white border border-gray-200 rounded-lg p-6">
-                    <h4 className="text-lg font-semibold text-gray-800 mb-4">Template Information</h4>
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-sm font-medium text-gray-600">Template Name</label>
-                        <p className="text-gray-900">{previewTemplate.name}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-600">Created</label>
-                        <p className="text-gray-900">{new Date(previewTemplate.createdAt).toLocaleString()}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-600">Content Length</label>
-                        <p className="text-gray-900">{previewTemplate.content.length} characters</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-600">Parameter Count</label>
-                        <p className="text-gray-900">{previewTemplate.parameters?.length || 0} parameters</p>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>

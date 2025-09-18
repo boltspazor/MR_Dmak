@@ -19,15 +19,23 @@ const Header: React.FC<HeaderProps> = ({
     <div className="mb-8">
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">{title}</h1>
+          {title === "D-MAK" ? (
+            <img 
+              src="/qwerty.jpg" 
+              alt="D-MAK Logo" 
+              className="h-12 object-contain mb-2"
+            />
+          ) : (
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">{title}</h1>
+          )}
           <p className="text-lg text-gray-600">{subtitle}</p>
         </div>
         
-        {/* WhatsApp Logo */}
+        {/* Glenmark Logo */}
         <div className="absolute top-4 right-4">
           <img 
-            src="/WhatsApp Image 2025-09-11 at 19.22.30.jpeg" 
-            alt="WhatsApp" 
+            src="/logo.png" 
+            alt="Glenmark Logo" 
             className="w-32 h-18 object-contain"
           />
         </div>
