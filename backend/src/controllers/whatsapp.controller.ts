@@ -215,37 +215,37 @@ export class WhatsAppController {
         });
       }
 
-      logger.info('📤 Sending WhatsApp message', { to, type, messageLength: message.length });
+      logger.info('📤 Sending WhatsApp message via Waguru', { to, type, messageLength: message.length });
       
       const whatsappMessage = {
         to,
         type,
-        text: type === 'text' ? message : undefined,
+        text: type === 'text' ? { body: message } : undefined,
         image: type === 'image' ? { link: message } : undefined
       };
 
       const result = await whatsappService.sendMessage(whatsappMessage);
       
       if (result.success) {
-        logger.info('✅ WhatsApp message sent successfully', { 
+        logger.info('✅ WhatsApp message sent successfully via Waguru', { 
           to,
           messageId: result.messageId 
         });
         return res.json({
           success: true,
-          message: 'Message sent successfully',
+          message: 'Message sent successfully via Waguru',
           messageId: result.messageId,
           to
         });
       } else {
-        logger.error('❌ Failed to send WhatsApp message', { to, error: result.error });
+        logger.error('❌ Failed to send WhatsApp message via Waguru', { to, error: result.error });
         return res.status(500).json({ 
           success: false, 
           error: result.error 
         });
       }
     } catch (error: any) {
-      logger.error('❌ Failed to send WhatsApp message', { error: error.message });
+      logger.error('❌ Failed to send WhatsApp message via Waguru', { error: error.message });
       return res.status(500).json({ 
         success: false, 
         error: error.message 
@@ -343,7 +343,7 @@ export class WhatsAppController {
       const whatsappMessages = recipients.map(recipient => ({
         to: recipient.phoneNumber,
         type,
-        text: type === 'text' ? message : undefined,
+        text: type === 'text' ? { body: message } : undefined,
         image: type === 'image' ? { link: message } : undefined
       }));
 
@@ -380,27 +380,27 @@ export class WhatsAppController {
   // Test WhatsApp connection
   async testConnection(req: any, res: Response) {
     try {
-      logger.info('🔍 Testing WhatsApp connection');
+      logger.info('🔍 Testing Waguru WhatsApp connection');
       
-      // Try to get allowed recipients to test the connection
-      const result = await whatsappService.getAllowedRecipients();
+      // Test Waguru API connection directly
+      const result = await whatsappService.testConnection();
       
       if (result.success) {
-        logger.info('✅ WhatsApp connection test successful');
+        logger.info('✅ Waguru WhatsApp connection test successful');
         return res.json({
           success: true,
-          message: 'WhatsApp connection is working',
-          recipientsCount: result.recipients?.length || 0
+          message: 'Waguru WhatsApp connection is working',
+          provider: 'Waguru'
         });
       } else {
-        logger.error('❌ WhatsApp connection test failed', { error: result.error });
+        logger.error('❌ Waguru WhatsApp connection test failed', { error: result.error });
         return res.status(500).json({ 
           success: false, 
           error: result.error 
         });
       }
     } catch (error: any) {
-      logger.error('❌ WhatsApp connection test failed', { error: error.message });
+      logger.error('❌ Waguru WhatsApp connection test failed', { error: error.message });
       return res.status(500).json({ 
         success: false, 
         error: error.message 
