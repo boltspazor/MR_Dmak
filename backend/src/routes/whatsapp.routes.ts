@@ -20,6 +20,11 @@ router.post('/send-bulk-messages', whatsappController.sendBulkMessages);
 router.post('/send-to-all', whatsappController.sendMessageToAllRecipients);
 router.get('/test-connection', whatsappController.testConnection);
 
+// WhatsApp statistics and status
+router.get('/stats', whatsappController.getStats);
+router.get('/status', whatsappController.getStatus);
+router.post('/test', whatsappController.test);
+
 // WhatsApp template message testing
 router.post('/test-template', whatsappController.testTemplateMessage);
 

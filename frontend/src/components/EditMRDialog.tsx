@@ -41,6 +41,8 @@ const EditMRDialog: React.FC<EditMRDialogProps> = ({
     comments: ''
   });
 
+  const [errorMessage, setErrorMessage] = useState('');
+
   useEffect(() => {
     if (contact) {
       setFormData({
@@ -51,16 +53,42 @@ const EditMRDialog: React.FC<EditMRDialogProps> = ({
         group: contact.group,
         comments: contact.comments || ''
       });
+      setErrorMessage(''); // Clear any previous error messages
     }
   }, [contact]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(''); // Clear previous errors
+    
     if (!formData.mrId || !formData.firstName || !formData.lastName || !formData.phone || !formData.group) {
-      alert('Please fill in all required fields');
+      setErrorMessage('❌ Please fill in all required fields');
       return;
     }
-    onUpdate(formData);
+    
+    try {
+      onUpdate(formData);
+      // Only close and reset if successful
+      setErrorMessage('');
+      onClose();
+    } catch (error: any) {
+      let errorMessage = error.message || 'Failed to update MR';
+      
+      // Clean up error messages to replace technical details with app name
+      errorMessage = errorMessage
+        .replace(/app\.railway\.app/gi, 'D-MAK')
+        .replace(/railway\.app/gi, 'D-MAK')
+        .replace(/\.railway\./gi, ' D-MAK ')
+        .replace(/mrbackend-production-[a-zA-Z0-9-]+\.up\.railway\.app/gi, 'D-MAK server')
+        .replace(/https?:\/\/[a-zA-Z0-9-]+\.up\.railway\.app/gi, 'D-MAK server')
+        .replace(/production-[a-zA-Z0-9-]+\.up/gi, 'D-MAK')
+        .replace(/\b[a-zA-Z0-9-]+\.up\.railway\.app\b/gi, 'D-MAK server')
+        .replace(/\s+/g, ' ')
+        .replace(/D-MAK\s+server/gi, 'D-MAK server')
+        .trim();
+      
+      setErrorMessage(`❌ Error: ${errorMessage}`);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -164,6 +192,13 @@ const EditMRDialog: React.FC<EditMRDialogProps> = ({
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
+
+          {/* Error Message */}
+          {errorMessage && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-700 font-medium">{errorMessage}</p>
+            </div>
+          )}
 
           <div className="flex justify-end space-x-3 pt-4">
             <button

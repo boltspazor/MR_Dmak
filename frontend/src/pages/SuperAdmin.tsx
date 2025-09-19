@@ -18,7 +18,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 interface SystemStats {
-  totalUsers: number;
+  totalUsers: number
   totalMRs: number;
   totalGroups: number;
   totalCampaigns: number;
@@ -97,7 +97,22 @@ const SuperAdmin: React.FC = () => {
       fetchData();
     } catch (error: any) {
       console.error('Error saving marketing manager:', error);
-      alert(error.response?.data?.error || 'Failed to save marketing manager');
+      let errorMessage = error.response?.data?.error || 'Failed to save marketing manager';
+      
+      // Clean up error messages to replace technical details with app name
+      errorMessage = errorMessage
+        .replace(/app\.railway\.app/gi, 'D-MAK')
+        .replace(/railway\.app/gi, 'D-MAK')
+        .replace(/\.railway\./gi, ' D-MAK ')
+        .replace(/mrbackend-production-[a-zA-Z0-9-]+\.up\.railway\.app/gi, 'D-MAK server')
+        .replace(/https?:\/\/[a-zA-Z0-9-]+\.up\.railway\.app/gi, 'D-MAK server')
+        .replace(/production-[a-zA-Z0-9-]+\.up/gi, 'D-MAK')
+        .replace(/\b[a-zA-Z0-9-]+\.up\.railway\.app\b/gi, 'D-MAK server')
+        .replace(/\s+/g, ' ')
+        .replace(/D-MAK\s+server/gi, 'D-MAK server')
+        .trim();
+      
+      alert(errorMessage);
     }
   };
 
@@ -112,7 +127,22 @@ const SuperAdmin: React.FC = () => {
       fetchData();
     } catch (error: any) {
       console.error('Error deleting marketing manager:', error);
-      alert(error.response?.data?.error || 'Failed to delete marketing manager');
+      let errorMessage = error.response?.data?.error || 'Failed to delete marketing manager';
+      
+      // Clean up error messages to replace technical details with app name
+      errorMessage = errorMessage
+        .replace(/app\.railway\.app/gi, 'D-MAK')
+        .replace(/railway\.app/gi, 'D-MAK')
+        .replace(/\.railway\./gi, ' D-MAK ')
+        .replace(/mrbackend-production-[a-zA-Z0-9-]+\.up\.railway\.app/gi, 'D-MAK server')
+        .replace(/https?:\/\/[a-zA-Z0-9-]+\.up\.railway\.app/gi, 'D-MAK server')
+        .replace(/production-[a-zA-Z0-9-]+\.up/gi, 'D-MAK')
+        .replace(/\b[a-zA-Z0-9-]+\.up\.railway\.app\b/gi, 'D-MAK server')
+        .replace(/\s+/g, ' ')
+        .replace(/D-MAK\s+server/gi, 'D-MAK server')
+        .trim();
+      
+      alert(errorMessage);
     }
   };
 

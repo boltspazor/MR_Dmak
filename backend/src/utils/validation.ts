@@ -19,7 +19,7 @@ export const schemas = {
       firstName: Joi.string().min(2).required(),
       lastName: Joi.string().min(2).required(),
       phone: Joi.string().pattern(/^\+?[1-9]\d{1,14}$/).required(),
-      groupId: Joi.string().required(),
+      groupId: Joi.string().allow('', null),
       comments: Joi.string().allow('', null),
     }),
     update: Joi.object({

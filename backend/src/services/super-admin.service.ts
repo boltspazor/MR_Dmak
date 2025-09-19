@@ -157,4 +157,159 @@ export class SuperAdminService {
       role: 'super_admin'
     };
   }
+
+  async getStats() {
+    try {
+      const totalUsers = await User.countDocuments();
+      const marketingManagers = await User.countDocuments({ isMarketingManager: true });
+      const superAdmins = await User.countDocuments({ role: 'super_admin' });
+      
+      return {
+        totalUsers,
+        marketingManagers,
+        superAdmins,
+        regularUsers: totalUsers - marketingManagers - superAdmins
+      };
+    } catch (error) {
+      logger.error('Failed to get super admin stats', { error });
+      throw error;
+    }
+  }
+
+  async getPerformance() {
+    try {
+      // Get performance data for all users
+      const users = await User.find({ isMarketingManager: true })
+        .select('name email createdAt lastLoginAt')
+        .sort({ createdAt: -1 });
+
+      return {
+        totalMarketingManagers: users.length,
+        activeUsers: users.filter(user => (user as any).lastLoginAt && 
+          new Date((user as any).lastLoginAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length,
+        users: users.map(user => ({
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          createdAt: user.createdAt,
+          lastLoginAt: (user as any).lastLoginAt,
+          isActive: (user as any).lastLoginAt && 
+            new Date((user as any).lastLoginAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+        }))
+      };
+    } catch (error) {
+      logger.error('Failed to get performance data', { error });
+      throw error;
+    }
+  }
+
+  async getMarketingManagers() {
+    try {
+      const managers = await User.find({ isMarketingManager: true })
+        .select('name email createdAt lastLoginAt')
+        .sort({ createdAt: -1 });
+
+      return managers.map(manager => ({
+        id: manager._id,
+        name: manager.name,
+        email: manager.email,
+        createdAt: manager.createdAt,
+        lastLoginAt: (manager as any).lastLoginAt
+      }));
+    } catch (error) {
+      logger.error('Failed to get marketing managers', { error });
+      throw error;
+    }
+  }
+
+  async createMarketingManager(data: { name: string; email: string }) {
+    try {
+      // Check if user already exists
+      const existingUser = await User.findOne({ email: data.email });
+      if (existingUser) {
+        throw new Error('User with this email already exists');
+      }
+
+      // Create new marketing manager
+      const hashedPassword = await bcrypt.hash('password123', 12);
+      const manager = await User.create({
+        name: data.name,
+        email: data.email,
+        password: hashedPassword,
+        isMarketingManager: true,
+        role: 'marketing_manager'
+      });
+
+      logger.info('Marketing manager created successfully', { 
+        managerId: manager._id, 
+        email: data.email 
+      });
+
+      return {
+        id: manager._id,
+        name: manager.name,
+        email: manager.email,
+        createdAt: manager.createdAt
+      };
+    } catch (error) {
+      logger.error('Failed to create marketing manager', { error, data });
+      throw error;
+    }
+  }
+
+  async updateMarketingManager(id: string, data: { name: string; email: string }) {
+    try {
+      const manager = await User.findOneAndUpdate(
+        { _id: id, isMarketingManager: true },
+        { 
+          name: data.name, 
+          email: data.email,
+          updatedAt: new Date()
+        },
+        { new: true }
+      );
+
+      if (!manager) {
+        throw new Error('Marketing manager not found');
+      }
+
+      logger.info('Marketing manager updated successfully', { 
+        managerId: id, 
+        email: data.email 
+      });
+
+      return {
+        id: manager._id,
+        name: manager.name,
+        email: manager.email,
+        updatedAt: manager.updatedAt
+      };
+    } catch (error) {
+      logger.error('Failed to update marketing manager', { error, id, data });
+      throw error;
+    }
+  }
+
+  async deleteMarketingManager(id: string) {
+    try {
+      const manager = await User.findOneAndDelete({ 
+        _id: id, 
+        isMarketingManager: true 
+      });
+
+      if (!manager) {
+        throw new Error('Marketing manager not found');
+      }
+
+      logger.info('Marketing manager deleted successfully', { 
+        managerId: id, 
+        email: manager.email 
+      });
+
+      return { success: true };
+    } catch (error) {
+      logger.error('Failed to delete marketing manager', { error, id });
+      throw error;
+    }
+  }
 }

@@ -23,4 +23,8 @@ router.delete('/:id', templateController.deleteTemplate);
 // File upload for template images
 router.post('/upload-image', upload.single('image'), templateController.uploadTemplateImage);
 
+// Search and category routes
+router.get('/search', templateController.searchTemplates);
+router.get('/category/:category', templateController.getTemplatesByCategory);
+
 export default router;

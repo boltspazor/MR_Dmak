@@ -468,4 +468,128 @@ export class WhatsAppController {
       });
     }
   }
+
+  // Get WhatsApp statistics
+  async getStats(req: any, res: Response) {
+    try {
+      logger.info('📊 Getting WhatsApp statistics');
+      
+      const AllowedRecipient = (await import('../models/AllowedRecipient')).default;
+      const Message = (await import('../models/Message')).default;
+      
+      const totalRecipients = await AllowedRecipient.countDocuments({ isActive: true });
+      const totalMessages = await Message.countDocuments();
+      const sentMessages = await Message.countDocuments({ status: 'sent' });
+      const failedMessages = await Message.countDocuments({ status: 'failed' });
+      const pendingMessages = await Message.countDocuments({ status: 'pending' });
+      
+      const stats = {
+        totalRecipients,
+        totalMessages,
+        sentMessages,
+        failedMessages,
+        pendingMessages,
+        successRate: totalMessages > 0 ? ((sentMessages / totalMessages) * 100).toFixed(2) : 0
+      };
+
+      logger.info('✅ Retrieved WhatsApp statistics', stats);
+      return res.json({
+        success: true,
+        data: stats
+      });
+    } catch (error: any) {
+      logger.error('❌ Failed to get WhatsApp stats', { error: error.message });
+      return res.status(500).json({ 
+        success: false, 
+        error: error.message 
+      });
+    }
+  }
+
+  // Get WhatsApp service status
+  async getStatus(req: any, res: Response) {
+    try {
+      logger.info('🔍 Checking WhatsApp service status');
+      
+      const hasAccessToken = !!process.env.WHATSAPP_ACCESS_TOKEN;
+      const hasPhoneNumberId = !!process.env.WHATSAPP_PHONE_NUMBER_ID;
+      const hasVerifyToken = !!process.env.WHATSAPP_VERIFY_TOKEN;
+      const apiUrl = process.env.WHATSAPP_API_URL || 'https://graph.facebook.com/v18.0';
+      
+      const status = {
+        configured: hasAccessToken && hasPhoneNumberId && hasVerifyToken,
+        accessToken: hasAccessToken,
+        phoneNumberId: hasPhoneNumberId,
+        verifyToken: hasVerifyToken,
+        apiUrl,
+        timestamp: new Date().toISOString()
+      };
+
+      logger.info('✅ WhatsApp service status checked', { configured: status.configured });
+      return res.json({
+        success: true,
+        data: status
+      });
+    } catch (error: any) {
+      logger.error('❌ Failed to get WhatsApp status', { error: error.message });
+      return res.status(500).json({ 
+        success: false, 
+        error: error.message 
+      });
+    }
+  }
+
+  // Test WhatsApp connection
+  async test(req: any, res: Response) {
+    try {
+      const { phoneNumber, message } = req.body;
+      
+      if (!phoneNumber) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Phone number is required' 
+        });
+      }
+
+      const testMessage = message || 'Test message from D-MAK system';
+      
+      logger.info('🧪 Testing WhatsApp connection', { phoneNumber });
+      
+      const whatsappMessage = {
+        to: phoneNumber,
+        type: 'text' as const,
+        text: { body: testMessage }
+      };
+      
+      const result = await whatsappService.sendMessage(whatsappMessage);
+      
+      if (result.success) {
+        logger.info('✅ WhatsApp test successful', { 
+          phoneNumber, 
+          messageId: result.messageId 
+        });
+        return res.json({
+          success: true,
+          message: 'WhatsApp test successful',
+          messageId: result.messageId,
+          phoneNumber
+        });
+      } else {
+        logger.error('❌ WhatsApp test failed', { 
+          phoneNumber, 
+          error: result.error 
+        });
+        return res.status(500).json({ 
+          success: false, 
+          error: result.error 
+        });
+      }
+    } catch (error: any) {
+      logger.error('❌ WhatsApp test failed', { error: error.message });
+      return res.status(500).json({ 
+        success: false, 
+        error: error.message 
+      });
+    }
+  }
 }

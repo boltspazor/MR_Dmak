@@ -211,4 +211,36 @@ export class MRController {
       return res.status(500).json({ error: 'Failed to generate CSV template' });
     }
   }
+
+  async getMRStats(req: any, res: Response) {
+    try {
+      const stats = await mrService.getMRStats(req.user.userId);
+      return res.json({
+        message: 'MR statistics retrieved successfully',
+        data: stats
+      });
+    } catch (error: any) {
+      logger.error('Failed to get MR stats', { error: error.message });
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  async searchMRs(req: any, res: Response) {
+    try {
+      const { q } = req.query;
+      if (!q) {
+        return res.status(400).json({ error: 'Search query is required' });
+      }
+
+      const result = await mrService.searchMRs(req.user.userId, q);
+      return res.json({
+        message: 'MR search completed successfully',
+        data: result.mrs,
+        pagination: result.pagination
+      });
+    } catch (error: any) {
+      logger.error('Failed to search MRs', { error: error.message, query: req.query });
+      return res.status(500).json({ error: error.message });
+    }
+  }
 }

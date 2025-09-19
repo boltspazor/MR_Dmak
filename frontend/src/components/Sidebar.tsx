@@ -4,8 +4,18 @@ import {
   FileText, 
   BarChart3, 
   LogOut, 
-  Shield
+  Shield,
+  Users,
+  FolderOpen
 } from 'lucide-react';
+
+interface MenuItem {
+  id: string;
+  label: string;
+  icon: React.ComponentType<any>;
+  route: string;
+  clickable?: boolean;
+}
 
 interface SidebarProps {
   activePage: string;
@@ -22,12 +32,12 @@ const Sidebar: React.FC<SidebarProps> = ({
   userName = "User Name",
   userRole = "Super Admin"
 }) => {
-  const menuItems = [
+  const menuItems: MenuItem[] = [
     { id: 'dashboard', label: 'Campaigns Dashboard', icon: BarChart3, route: '/dashboard' },
-    { id: 'dmak', label: 'MR', icon: BarChart3, route: '/dmak' },
-    { id: 'templates', label: 'Templates', icon: FileText, route: '/templates' },
+    { id: 'dmak', label: 'MR Management', icon: Users, route: '/dmak' },
+    { id: 'templates', label: 'Templates Management', icon: FolderOpen, route: '/templates' },
     { id: 'campaigns', label: 'Konnect', icon: MessageSquare, route: '/campaigns' },
-    { id: 'super-admin', label: 'Super Admin', icon: Shield, route: '/super-admin' },
+    { id: 'super-admin', label: 'Super Admin', icon: Shield, route: '/super-admin', clickable: false },
   ];
 
   return (
@@ -51,6 +61,20 @@ const Sidebar: React.FC<SidebarProps> = ({
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = activePage === item.id;
+            const isClickable = item.clickable !== false;
+            
+            if (!isClickable) {
+              // Render non-clickable Super Admin icon
+              return (
+                <div
+                  key={item.id}
+                  className="flex flex-col items-center p-2 rounded-lg w-16 h-16 opacity-75"
+                >
+                  <Icon className="h-7 w-7 text-white mb-1" />
+                  <span className="text-xs text-white text-center">{item.label}</span>
+                </div>
+              );
+            }
             
             return (
               <button
@@ -76,16 +100,16 @@ const Sidebar: React.FC<SidebarProps> = ({
             onClick={onLogout}
             className="flex flex-col items-center p-2 rounded-lg w-16 h-16 hover:bg-white hover:bg-opacity-10 transition-colors cursor-pointer"
           >
-            <LogOut className="h-7 w-7 text-black mb-1 font-bold" />
-            <span className="text-xs text-black text-center font-semibold">Logout</span>
+            <LogOut className="h-7 w-7 text-gray-800 mb-1 font-bold stroke-2" />
+            <span className="text-xs text-gray-800 text-center font-bold">Logout</span>
           </button>
           
-          {/* DVK Logo */}
+          {/* Bottom Logo */}
           <div className="mt-2">
             <img 
-              src="/dvk.svg" 
-              alt="DVK" 
-              className="w-12 h-10 drop-shadow-lg"
+              src="/qwerty.jpg" 
+              alt="Logo" 
+              className="w-12 h-10 drop-shadow-lg object-contain"
             />
           </div>
         </div>

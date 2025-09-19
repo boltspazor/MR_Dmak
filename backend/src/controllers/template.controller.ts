@@ -456,4 +456,90 @@ export class TemplateController {
       });
     }
   }
+
+  // Search templates
+  async searchTemplates(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = (req as any).user.userId;
+      const { q } = req.query;
+
+      if (!q || typeof q !== 'string') {
+        res.status(400).json({ 
+          success: false, 
+          error: 'Search query is required' 
+        });
+        return;
+      }
+
+      const query = {
+        createdBy: userId,
+        isActive: true,
+        $or: [
+          { name: { $regex: q, $options: 'i' } },
+          { content: { $regex: q, $options: 'i' } },
+          { parameters: { $in: [new RegExp(q, 'i')] } }
+        ]
+      };
+
+      const templates = await Template.find(query)
+        .populate('createdBy', 'name email')
+        .sort({ createdAt: -1 })
+        .limit(20);
+
+      res.json({
+        success: true,
+        data: templates,
+        message: 'Templates found successfully'
+      });
+    } catch (error) {
+      logger.error('Error searching templates:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to search templates' 
+      });
+    }
+  }
+
+  // Get templates by category
+  async getTemplatesByCategory(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = (req as any).user.userId;
+      const { category } = req.params;
+      const { page = 1, limit = 10 } = req.query;
+
+      const query = {
+        createdBy: userId,
+        isActive: true,
+        category: category
+      };
+
+      const skip = (Number(page) - 1) * Number(limit);
+      
+      const templates = await Template.find(query)
+        .populate('createdBy', 'name email')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit));
+
+      const total = await Template.countDocuments(query);
+
+      res.json({
+        success: true,
+        data: templates,
+        pagination: {
+          page: Number(page),
+          limit: Number(limit),
+          total,
+          pages: Math.ceil(total / Number(limit))
+        },
+        message: 'Templates by category retrieved successfully'
+      });
+    } catch (error) {
+      logger.error('Error fetching templates by category:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to fetch templates by category' 
+      });
+    }
+  }
 }

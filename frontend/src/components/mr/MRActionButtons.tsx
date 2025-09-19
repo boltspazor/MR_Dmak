@@ -33,8 +33,9 @@ const MRActionButtons: React.FC<MRActionButtonsProps> = ({
             htmlFor="csv-upload"
             className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-semibold cursor-pointer hover:bg-indigo-200"
           >
-            Import MR
+            Bulk Import MRs
           </label>
+          
           <button
             onClick={onDownloadTemplate}
             className="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-semibold hover:bg-gray-900"

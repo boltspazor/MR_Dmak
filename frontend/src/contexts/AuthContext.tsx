@@ -35,6 +35,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const login = async (email: string, password: string) => {
+    // Check if we're in frontend-only development mode
+
     try {
       console.log('Attempting login to:', `${api.defaults.baseURL}/auth/login`);
       console.log('Login data:', { email, password: '***' });
@@ -62,6 +64,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const register = async (email: string, password: string, name: string) => {
+
     try {
       const response = await api.post('/auth/register', { email, password, name });
       const userData = response.data.user;
