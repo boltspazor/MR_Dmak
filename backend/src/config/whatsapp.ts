@@ -1,6 +1,7 @@
 export const whatsappConfig = {
-    apiUrl: process.env.WHATSAPP_API_URL || 'https://graph.facebook.com/v18.0',
-    accessToken: process.env.WHATSAPP_ACCESS_TOKEN || "qt3yb4Lgty5SjeJeflqEYvdWJy9id8IzpC3Ha4C1M5jtaBomySZFJ4aXQIRN4uN4",
-    phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || "778806801982541",
+    // Twilio Configuration
+    accountSid: process.env.TWILIO_ACCOUNT_SID || '',
+    authToken: process.env.TWILIO_AUTH_TOKEN || '',
+    phoneNumber: process.env.TWILIO_PHONE_NUMBER || 'whatsapp:+14155238886', // Twilio Sandbox number
     verifyToken: process.env.WHATSAPP_VERIFY_TOKEN || "token1234",
   };
