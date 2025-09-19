@@ -31,7 +31,7 @@ export class MRService {
           logger.info('Created default group for user', { userId, groupId: defaultGroup._id });
         }
         
-        groupId = defaultGroup._id.toString();
+        groupId = (defaultGroup._id as any).toString();
       }
 
       // Check if MR ID already exists in the same group
@@ -597,6 +597,140 @@ export class MRService {
       };
     } catch (error) {
       logger.error('Failed to download template', { error });
+      throw error;
+    }
+  }
+
+  async getMRStats(userId: string) {
+    try {
+      const totalMRs = await MedicalRepresentative.countDocuments({ createdBy: userId });
+      const totalGroups = await Group.countDocuments({ createdBy: userId });
+      
+      // Get MRs by group
+      const mrsByGroup = await MedicalRepresentative.aggregate([
+        { $match: { createdBy: userId } },
+        { $group: { _id: '$groupId', count: { $sum: 1 } } },
+        { $lookup: { from: 'groups', localField: '_id', foreignField: '_id', as: 'group' } },
+        { $unwind: '$group' },
+        { $project: { groupName: '$group.groupName', count: 1 } }
+      ]);
+
+      return {
+        totalMRs,
+        totalGroups,
+        mrsByGroup,
+        averageMRsPerGroup: totalGroups > 0 ? Math.round(totalMRs / totalGroups * 100) / 100 : 0
+      };
+    } catch (error) {
+      logger.error('Failed to get MR stats', { userId, error });
+      throw error;
+    }
+  }
+
+  async searchMRs(userId: string, query: string) {
+    try {
+      const searchRegex = new RegExp(query, 'i');
+      
+      const mrs = await MedicalRepresentative.find({
+        createdBy: userId,
+        $or: [
+          { mrId: searchRegex },
+          { firstName: searchRegex },
+          { lastName: searchRegex },
+          { phone: searchRegex },
+          { email: searchRegex }
+        ]
+      })
+      .populate('groupId', 'groupName')
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+      return {
+        mrs,
+        pagination: {
+          total: mrs.length,
+          page: 1,
+          limit: 50,
+          hasMore: false
+        }
+      };
+    } catch (error) {
+      logger.error('Failed to search MRs', { userId, query, error });
+      throw error;
+    }
+  }
+
+  async getAllGroupStats(userId: string) {
+    try {
+      const groups = await Group.find({ createdBy: userId });
+      const totalMRs = await MedicalRepresentative.countDocuments({ createdBy: userId });
+      
+      const groupStats = await Promise.all(
+        groups.map(async (group) => {
+          const mrCount = await MedicalRepresentative.countDocuments({ 
+            groupId: group._id, 
+            createdBy: userId 
+          });
+          return {
+            groupId: group._id,
+            groupName: group.groupName,
+            mrCount,
+            description: group.description
+          };
+        })
+      );
+
+      return {
+        totalGroups: groups.length,
+        totalMRs,
+        groupStats,
+        averageMRsPerGroup: groups.length > 0 ? Math.round(totalMRs / groups.length * 100) / 100 : 0
+      };
+    } catch (error) {
+      logger.error('Failed to get all group stats', { userId, error });
+      throw error;
+    }
+  }
+
+  async searchGroups(userId: string, query: string) {
+    try {
+      const searchRegex = new RegExp(query, 'i');
+      
+      const groups = await Group.find({
+        createdBy: userId,
+        $or: [
+          { groupName: searchRegex },
+          { description: searchRegex }
+        ]
+      })
+      .sort({ createdAt: -1 })
+      .limit(20);
+
+      // Add MR count for each group
+      const groupsWithCounts = await Promise.all(
+        groups.map(async (group) => {
+          const mrCount = await MedicalRepresentative.countDocuments({ 
+            groupId: group._id, 
+            createdBy: userId 
+          });
+          return {
+            ...group.toObject(),
+            mrCount
+          };
+        })
+      );
+
+      return {
+        groups: groupsWithCounts,
+        pagination: {
+          total: groupsWithCounts.length,
+          page: 1,
+          limit: 20,
+          hasMore: false
+        }
+      };
+    } catch (error) {
+      logger.error('Failed to search groups', { userId, query, error });
       throw error;
     }
   }

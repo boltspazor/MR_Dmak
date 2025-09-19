@@ -10,6 +10,8 @@ const groupController = new GroupController();
 router.use(authenticateToken);
 
 router.get('/', groupController.getGroups);
+router.get('/stats', groupController.getGroupStats);
+router.get('/search', groupController.searchGroups);
 router.post('/', validateRequest(schemas.group.create), groupController.createGroup);
 router.put('/:id', validateRequest(schemas.group.create), groupController.updateGroup);
 router.delete('/:id', groupController.deleteGroup);

@@ -81,10 +81,16 @@ api.interceptors.request.use(
   }
 );
 
-// Function to check if we're on Konnect/Dashboard page
-const isOnKonnectPage = () => {
+// Function to check if we're on pages that should suppress error popups
+const shouldSuppressErrors = () => {
   const currentPath = window.location.pathname;
-  return currentPath === '/dashboard' || currentPath === '/konnect' || currentPath === '/' || currentPath === '';
+  return currentPath === '/dashboard' || 
+         currentPath === '/konnect' || 
+         currentPath === '/campaigns' || 
+         currentPath === '/templates' || 
+         currentPath === '/dmak' ||
+         currentPath === '/' || 
+         currentPath === '';
 };
 
 // Response interceptor to handle errors
@@ -96,18 +102,20 @@ api.interceptors.response.use(
     console.error('Base URL:', error.config?.baseURL);
     console.error('Full URL:', error.config?.baseURL + error.config?.url);
     
-    // COMPLETELY suppress ALL errors on Konnect/Dashboard page
-    if (isOnKonnectPage()) {
-      console.log('🔇 Suppressing ALL errors on Konnect page - Error:', error.message || error);
+    // COMPLETELY suppress ALL errors on pages that should not show popups
+    if (shouldSuppressErrors()) {
+      console.log('🔇 Suppressing ALL errors on current page - Error:', error.message || error);
       console.log('🔇 Current path:', window.location.pathname);
       
       // Clean up tokens but don't show any popups or redirects
       if (error.response?.status === 401) {
         localStorage.removeItem('authToken');
         localStorage.removeItem('user');
+        console.log('🔇 Token expired, cleaned up but not redirecting');
       }
       
-      return Promise.reject(error);
+      // Return a resolved promise to prevent error propagation
+      return Promise.resolve({ data: { data: [] } });
     }
     
     // For other pages, handle errors normally

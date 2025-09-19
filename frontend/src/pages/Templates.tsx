@@ -54,93 +54,26 @@ const Templates: React.FC = () => {
 
 
   useEffect(() => {
-    const isDevelopmentMode = (import.meta as ImportMeta & { env?: { VITE_DEVELOPMENT_MODE?: string } }).env?.VITE_DEVELOPMENT_MODE === 'frontend-only';
-    
-    if (isDevelopmentMode) {
-      console.log('🔧 Frontend-only mode: Loading instant mock templates');
-      // Instant loading for development
-      const mockTemplates: Template[] = [
-        {
-          _id: '1',
-          name: 'Welcome Template',
-          content: 'Welcome to our platform, #FirstName #LastName!\n\nWe are excited to have you with us.',
-          imageUrl: '/logo.png',
-          footerImageUrl: '',
-          type: 'html',
-          createdAt: '2025-09-15T10:00:00Z',
-          updatedAt: '2025-09-15T10:00:00Z',
-          createdBy: {
-            _id: 'dev-user-123',
-            name: 'Development User',
-            email: 'dev@example.com'
-          },
-          isActive: true,
-          parameters: ['FirstName', 'LastName']
-        },
-        {
-          _id: '2',
-          name: 'Product Launch',
-          content: 'Dear #FirstName,\n\nWe are thrilled to announce the launch of our new product!\n\nKey Features:\n- Advanced technology\n- User-friendly interface\n- 24/7 support\n\nBest regards,\nThe Team',
-          imageUrl: '',
-          footerImageUrl: '/qwerty.jpg',
-          type: 'text',
-          createdAt: '2025-09-14T15:30:00Z',
-          updatedAt: '2025-09-14T15:30:00Z',
-          createdBy: {
-            _id: 'dev-user-123',
-            name: 'Development User',
-            email: 'dev@example.com'
-          },
-          isActive: true,
-          parameters: ['FirstName']
-        }
-      ];
-      setTemplates(mockTemplates);
-      setLoading(false);
-      return;
-    }
+    const loadTemplates = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get('/templates');
+        const templatesData = response.data.data || response.data || [];
+        setTemplates(templatesData);
+      } catch (error) {
+        console.error('Failed to load templates:', error);
+        setTemplates([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    // Check if templates are cached
-    const cachedTemplates = localStorage.getItem('cached_templates');
-    const cacheTimestamp = localStorage.getItem('templates_cache_timestamp');
-    const isCacheValid = cacheTimestamp && (Date.now() - parseInt(cacheTimestamp)) < 300000; // 5 minutes
-
-    if (cachedTemplates && isCacheValid) {
-      setTemplates(JSON.parse(cachedTemplates));
-      setLoading(false);
-    } else {
-      fetchTemplates();
-    }
+    loadTemplates();
 
     // Fetch parameters in parallel (non-blocking)
     fetchAvailableParameters();
   }, []);
 
-  const fetchTemplates = async (forceRefresh = false) => {
-    try {
-      const token = localStorage.getItem('authToken');
-      if (!token) return;
-
-      // Clear cache if force refresh
-      if (forceRefresh) {
-        localStorage.removeItem('cached_templates');
-        localStorage.removeItem('templates_cache_timestamp');
-      }
-
-      const response = await api.get('/templates');
-      const templatesData = response.data.data || [];
-      
-      setTemplates(templatesData);
-      
-      // Cache templates for 5 minutes
-      localStorage.setItem('cached_templates', JSON.stringify(templatesData));
-      localStorage.setItem('templates_cache_timestamp', Date.now().toString());
-    } catch (error: unknown) {
-      console.error('Error fetching templates:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchAvailableParameters = async () => {
     try {
@@ -276,7 +209,7 @@ const Templates: React.FC = () => {
         await api.post('/templates', templateData);
       }
 
-      await fetchTemplates(true); // Force refresh to get latest data
+      await loadTemplates(); // Force refresh to get latest data
       setShowCreateForm(false);
       setEditingTemplate(null);
       setFormData({
@@ -356,7 +289,7 @@ const Templates: React.FC = () => {
       if (!token) return;
 
       await api.delete(`/templates/${templateToDelete._id}`);
-      await fetchTemplates(true); // Force refresh to get latest data
+      await loadTemplates(); // Force refresh to get latest data
       setShowDeleteDialog(false);
       setTemplateToDelete(null);
     } catch (error: unknown) {

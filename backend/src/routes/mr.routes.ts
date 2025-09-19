@@ -13,6 +13,8 @@ router.use(authenticateToken);
 router.post('/', validateRequest(schemas.mr.create), mrController.createMR);
 router.post('/bulk-upload', upload.single('file'), mrController.bulkUpload);
 router.get('/', mrController.getMRs);
+router.get('/stats', mrController.getMRStats);
+router.get('/search', mrController.searchMRs);
 router.put('/:id', validateRequest(schemas.mr.update), mrController.updateMR);
 router.delete('/:id', mrController.deleteMR);
 router.get('/template', mrController.downloadTemplate);

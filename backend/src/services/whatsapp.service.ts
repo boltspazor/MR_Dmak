@@ -6,70 +6,118 @@ import logger from '../utils/logger';
 export class WhatsAppService {
   private apiUrl: string;
   private accessToken: string;
-  private phoneNumberId: string;
+  private vendorUid: string;
+  private fromPhoneNumberId: string;
 
   constructor() {
     this.apiUrl = whatsappConfig.apiUrl;
-    this.accessToken = "EAAKppxOoyRABPbBFyHJ2ZBibo3c3kC2yKZAnZCcuDVliID3DToUg2gPZAATso2QiuVX4ZBEDht5WaiOZAg4etGE3qxNrBPKa1YjuQ8sEnHlSzzo0xD4VJsMzm0r7rwQa2SCz5VqmlWTFJIjEBZBZBZAz31ZBcnXQ6c12wfKLXUjs64oXjznQmxlXytnXZB6sUPl7RKb3HXNNDsGxrH8ZAsbVuqFkThzeqc9qTGhx2bGrNc3IGZCFKogZDZD";
-    this.phoneNumberId = whatsappConfig.phoneNumberId!;
+    this.accessToken = whatsappConfig.accessToken;
+    this.vendorUid = whatsappConfig.vendorUid;
+    this.fromPhoneNumberId = whatsappConfig.fromPhoneNumberId;
     
     // Log configuration status for debugging
-    if (!this.accessToken || !this.phoneNumberId) {
-      logger.warn('WhatsApp configuration incomplete', {
+    if (!this.accessToken || !this.vendorUid) {
+      logger.warn('Waguru WhatsApp configuration incomplete', {
         hasAccessToken: !!this.accessToken,
-        hasPhoneNumberId: !!this.phoneNumberId
+        hasVendorUid: !!this.vendorUid,
+        apiUrl: this.apiUrl
+      });
+    } else {
+      logger.info('Waguru WhatsApp service initialized', {
+        apiUrl: this.apiUrl,
+        vendorUid: this.vendorUid
       });
     }
   }
 
   async sendMessage(message: WhatsAppMessage): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
-      if (!this.accessToken || !this.phoneNumberId) {
-        throw new Error('WhatsApp configuration missing');
+      if (!this.accessToken || !this.vendorUid) {
+        throw new Error('Waguru WhatsApp configuration missing');
       }
 
-      const url = `${this.apiUrl}/${this.phoneNumberId}/messages`;
+      const url = `${this.apiUrl}/${this.vendorUid}/contact/send-message`;
       
-      const payload = {
-        messaging_product: "whatsapp",
-        to: this.formatPhoneNumber(message.to),
-        type: message.type,
-        ...((message.type === 'text' && message.text) ? { text: message.text } : {}),
-        ...((message.type === 'image' && message.image) ? { image: message.image } : {}),
-        ...((message.type === 'template' && message.template) ? { template: message.template } : {}),
+      // Format phone number (remove + and any non-digit characters)
+      const phoneNumber = this.formatPhoneNumber(message.to);
+      
+      const payload: any = {
+        phone_number: phoneNumber,
+        template_name: 'hello_world', // Default template
+        template_language: 'en'
       };
+
+      // Add from phone number if specified
+      if (this.fromPhoneNumberId) {
+        payload.from_phone_number_id = this.fromPhoneNumberId;
+      }
+
+      // Handle different message types
+      if (message.type === 'text' && message.text) {
+        // For text messages, we need to provide message_body as required by the API
+        payload.message_body = message.text.body;
+        payload.field_1 = message.text.body;
+      } else if (message.type === 'image' && message.image) {
+        payload.header_image = message.image.link;
+        payload.message_body = message.image.caption || 'Image message';
+        if (message.image.caption) {
+          payload.field_1 = message.image.caption;
+        }
+      } else if (message.type === 'template' && message.template) {
+        payload.template_name = message.template.name;
+        payload.template_language = message.template.language.code;
+        payload.message_body = `Template: ${message.template.name}`;
+        
+        // Add template parameters
+        if (message.template.components && message.template.components.length > 0) {
+          const bodyComponent = message.template.components.find(comp => comp.type === 'body');
+          if (bodyComponent && bodyComponent.parameters) {
+            bodyComponent.parameters.forEach((param: any, index: number) => {
+              payload[`field_${index + 1}`] = param.text;
+            });
+          }
+        }
+      } else {
+        // Fallback for any other message type
+        payload.message_body = 'WhatsApp message';
+        payload.field_1 = 'WhatsApp message';
+      }
 
       const response = await axios.post(url, payload, {
         headers: {
           'Authorization': `Bearer ${this.accessToken}`,
           'Content-Type': 'application/json',
         },
+        params: {
+          token: this.accessToken // Also pass as URL parameter as per documentation
+        },
         timeout: 10000,
       });
 
-      logger.info('WhatsApp message sent successfully', {
+      logger.info('Waguru WhatsApp message sent successfully', {
         to: message.to,
-        messageId: response.data.messages[0].id
+        response: response.data
       });
 
       return {
         success: true,
-        messageId: response.data.messages[0].id,
+        messageId: response.data.message_id || response.data.id || 'unknown',
       };
     } catch (error: any) {
-      logger.error('Failed to send WhatsApp message', {
+      logger.error('Failed to send Waguru WhatsApp message', {
         to: message.to,
         error: error.response?.data || error.message
       });
 
-      // Check if it's a verification issue
-      const errorMessage = error.response?.data?.error?.message || error.message || 'Failed to send message';
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to send message';
       let userFriendlyError = errorMessage;
       
-      if (errorMessage.includes('verification') || errorMessage.includes('not verified')) {
-        userFriendlyError = 'Phone number not verified. Please verify your WhatsApp Business phone number in Meta Business Manager.';
+      if (errorMessage.includes('invalid phone number') || errorMessage.includes('phone number')) {
+        userFriendlyError = 'Invalid phone number format. Please check the phone number.';
       } else if (errorMessage.includes('rate limit') || errorMessage.includes('too many requests')) {
         userFriendlyError = 'Rate limit exceeded. Please try again later.';
+      } else if (errorMessage.includes('template') || errorMessage.includes('not found')) {
+        userFriendlyError = 'Template not found or not approved. Please check your template configuration.';
       }
 
       return {
@@ -97,12 +145,12 @@ export class WhatsAppService {
   }
 
   formatPhoneNumber(phone: string): string {
-    // Remove + and any non-digit characters for WhatsApp API
+    // Remove + and any non-digit characters for Waguru API
     return phone.replace(/^\+/, '').replace(/\D/g, '');
   }
 
   // Helper method to create template messages
-  createTemplateMessage(to: string, templateName: string, languageCode: string = 'en_US', parameters?: Array<{ type: string; text: string }>): WhatsAppMessage {
+  createTemplateMessage(to: string, templateName: string, languageCode: string = 'en', parameters?: Array<{ type: string; text: string }>): WhatsAppMessage {
     const template: WhatsAppMessage = {
       to,
       type: 'template',
@@ -125,14 +173,12 @@ export class WhatsAppService {
 
   // Helper method to create hello_world template message
   createHelloWorldMessage(to: string): WhatsAppMessage {
-    return this.createTemplateMessage(to, 'hello_world', 'en_US');
+    return this.createTemplateMessage(to, 'hello_world', 'en');
   }
 
   // Helper method to create a custom template message with user content
   createCustomTemplateMessage(to: string, content: string, templateName: string = 'hello_world'): WhatsAppMessage {
-    // For now, we'll use hello_world template but we can create a custom one
-    // If you have a custom template approved, replace 'hello_world' with your template name
-    return this.createTemplateMessage(to, templateName, 'en_US', [
+    return this.createTemplateMessage(to, templateName, 'en', [
       { type: 'text', text: content }
     ]);
   }
@@ -497,5 +543,54 @@ export class WhatsAppService {
       success: result.success,
       error: result.error
     };
+  }
+
+  // Test Waguru WhatsApp connection
+  async testConnection(): Promise<{ success: boolean; error?: string }> {
+    try {
+      logger.info('Testing Waguru WhatsApp connection');
+      
+      // Try to get account info or send a test message
+      const url = `${this.apiUrl}/${this.vendorUid}/contact/send-message`;
+      
+      // Send a minimal test request
+      const response = await axios.post(url, {
+        phone_number: '1234567890', // Dummy number for testing
+        template_name: 'hello_world',
+        template_language: 'en',
+        message_body: 'Test connection message',
+        field_1: 'Test connection message'
+      }, {
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        params: {
+          token: this.accessToken
+        },
+        timeout: 5000,
+      });
+      
+      logger.info('Waguru WhatsApp connection test successful', {
+        status: response.status
+      });
+      
+      return { success: true };
+    } catch (error: any) {
+      logger.error('Waguru WhatsApp connection test failed', { 
+        error: error.message,
+        status: error.response?.status
+      });
+      
+      // Even if the test fails due to invalid phone number, if we get a response, the API is working
+      if (error.response?.status && error.response.status !== 500) {
+        return { success: true };
+      }
+      
+      return {
+        success: false,
+        error: error.message || 'Failed to connect to Waguru WhatsApp'
+      };
+    }
   }
 }

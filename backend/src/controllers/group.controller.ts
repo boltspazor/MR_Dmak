@@ -258,38 +258,6 @@ export class GroupController {
     }
   }
 
-  /**
-   * Get group statistics
-   */
-  async getGroupStats(req: any, res: Response) {
-    try {
-      const { id } = req.params;
-      const userId = req.user.userId;
-
-      const stats = await mrService.getGroupStats(id, userId);
-      
-      if (!stats) {
-        return res.status(404).json({ error: 'Group not found or access denied' });
-      }
-
-      logger.info('Group stats retrieved successfully', { 
-        userId, 
-        groupId: id 
-      });
-
-      return res.json({
-        message: 'Group statistics retrieved successfully',
-        stats
-      });
-    } catch (error: any) {
-      logger.error('Failed to get group stats', { 
-        userId: req.user?.userId,
-        groupId: req.params.id,
-        error: error.message 
-      });
-      return res.status(500).json({ error: error.message });
-    }
-  }
 
   /**
    * Bulk delete groups
@@ -515,6 +483,81 @@ export class GroupController {
       logger.error('Failed to get group activity', { 
         userId: req.user?.userId,
         groupId: req.params.id,
+        error: error.message 
+      });
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  /**
+   * Get group statistics
+   */
+  async getGroupStats(req: any, res: Response) {
+    try {
+      const { id } = req.params;
+      const userId = req.user.userId;
+      
+      let stats;
+      if (id) {
+        // Get stats for specific group
+        stats = await mrService.getGroupStats(id, userId);
+        if (!stats) {
+          return res.status(404).json({ error: 'Group not found or access denied' });
+        }
+      } else {
+        // Get overall group statistics
+        stats = await mrService.getAllGroupStats(userId);
+      }
+      
+      logger.info('Group statistics retrieved successfully', { 
+        userId, 
+        groupId: id,
+        stats 
+      });
+      
+      return res.json({
+        message: 'Group statistics retrieved successfully',
+        data: stats
+      });
+    } catch (error: any) {
+      logger.error('Failed to get group stats', { 
+        userId: req.user?.userId,
+        groupId: req.params.id,
+        error: error.message 
+      });
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  /**
+   * Search groups
+   */
+  async searchGroups(req: any, res: Response) {
+    try {
+      const { q } = req.query;
+      const userId = req.user.userId;
+      
+      if (!q) {
+        return res.status(400).json({ error: 'Search query is required' });
+      }
+
+      const result = await mrService.searchGroups(userId, q);
+      
+      logger.info('Groups search completed successfully', { 
+        userId, 
+        query: q,
+        resultCount: result.groups.length 
+      });
+      
+      return res.json({
+        message: 'Groups search completed successfully',
+        data: result.groups,
+        pagination: result.pagination
+      });
+    } catch (error: any) {
+      logger.error('Failed to search groups', { 
+        userId: req.user?.userId,
+        query: req.query.q,
         error: error.message 
       });
       return res.status(500).json({ error: error.message });

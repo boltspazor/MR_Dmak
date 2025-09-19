@@ -7,13 +7,14 @@ import {
   Search,
   CheckCircle,
   Clock,
-  X
+  X,
+  FileText
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import CommonFeatures from '../components/CommonFeatures';
-import CampaignTable from '../components/dashboard/CampaignTable';
-import RecipientsModal from '../components/dashboard/RecipientsModal';
+// import CampaignTable from '../components/dashboard/CampaignTable';
+// import RecipientsModal from '../components/dashboard/RecipientsModal';
 import { api } from '../lib/api';
 import toast from 'react-hot-toast';
 
@@ -60,9 +61,9 @@ const Dashboard: React.FC = () => {
     const originalConsoleError = console.error;
     
     // Suppress toast errors
-    toast.error = (message: string) => {
+    toast.error = (message: any) => {
       console.log('🔇 Suppressed toast error:', message);
-      return { id: 'suppressed', type: 'error' } as any;
+      return originalToastError(message);
     };
     
     // Suppress alert errors
@@ -84,58 +85,42 @@ const Dashboard: React.FC = () => {
     };
   }, []);
 
-  // Initialize mock data for frontend-only development
+  // Load real campaign data from API
   useEffect(() => {
-    const isDevelopmentMode = (import.meta as any).env?.VITE_DEVELOPMENT_MODE === 'frontend-only';
-    
-    if (isDevelopmentMode) {
-      console.log('🔧 Frontend-only mode: Loading mock campaign data');
-      
-      const mockCampaigns = [
-        {
-          id: '1',
-          campaignName: 'Welcome Campaign',
-          campaignId: 'CAMP-001',
-          template: 'Welcome Template',
-          recipientList: ['Dr. Smith', 'Dr. Johnson', 'Dr. Williams'],
-          date: '2025-09-15',
-          sendStatus: 'completed' as const,
-          totalRecipients: 150,
-          sentCount: 148,
-          failedCount: 2
-        },
-        {
-          id: '2',
-          campaignName: 'Product Launch',
-          campaignId: 'CAMP-002',
-          template: 'Product Announcement',
-          recipientList: ['Dr. Brown', 'Dr. Davis', 'Dr. Miller'],
-          date: '2025-09-14',
-          sendStatus: 'in progress' as const,
-          totalRecipients: 200,
-          sentCount: 120,
-          failedCount: 5
-        },
-        {
-          id: '3',
-          campaignName: 'Monthly Update',
-          campaignId: 'CAMP-003',
-          template: 'Newsletter Template',
-          recipientList: ['Dr. Wilson', 'Dr. Moore', 'Dr. Taylor'],
-          date: '2025-09-13',
-          sendStatus: 'completed' as const,
-          totalRecipients: 180,
-          sentCount: 175,
-          failedCount: 5
-        }
-      ];
-      
-      setCampaigns(mockCampaigns);
-      setLoading(false);
-    } else {
-      // In production mode, you would load real data here
-      setLoading(false);
-    }
+    const loadCampaigns = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get('/messages/campaigns');
+        const campaignsData = response.data.data || response.data || [];
+        
+        // Transform the data to match the expected format
+        const transformedCampaigns = campaignsData.map((campaign: any) => ({
+          id: campaign._id || campaign.id,
+          campaignName: campaign.campaignName || campaign.name || 'Unnamed Campaign',
+          campaignId: campaign.campaignId || campaign.id,
+          template: campaign.templateName || campaign.template || 'No Template',
+          recipientList: campaign.targetGroups || [],
+          date: campaign.createdAt ? new Date(campaign.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          sendStatus: campaign.status === 'completed' ? 'completed' : 
+                     campaign.status === 'pending' ? 'in progress' : 
+                     campaign.status === 'failed' ? 'failed' : 'pending',
+          totalRecipients: campaign.totalRecipients || 0,
+          sentCount: campaign.sentCount || 0,
+          failedCount: campaign.failedCount || 0
+        }));
+        
+        setCampaigns(transformedCampaigns);
+      } catch (error: any) {
+        console.error('Failed to load campaigns:', error);
+        // Don't show error toast, just log and set empty array
+        console.log('No campaigns found or authentication issue - showing empty state');
+        setCampaigns([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCampaigns();
   }, []);
 
   // Recipient list popup states
@@ -218,32 +203,6 @@ const Dashboard: React.FC = () => {
   };
 
   const handleTemplatePreview = async (templateName: string) => {
-    const isDevelopmentMode = (import.meta as any).env?.VITE_DEVELOPMENT_MODE === 'frontend-only';
-    
-    if (isDevelopmentMode) {
-      // Mock template data for frontend-only development
-      console.log('🔧 Frontend-only mode: Showing mock template preview');
-      const mockTemplate = {
-        name: templateName,
-        content: `Dear #FirstName #LastName,
-
-Mock template content for "${templateName}". This is a sample template that would contain WhatsApp message content with placeholders.
-
-Key Features:
-- Advanced technology
-- User-friendly interface
-- 24/7 support
-
-Best regards,
-The Team`,
-        imageUrl: '',
-        footerImageUrl: '',
-        parameters: ['FirstName', 'LastName', 'ProductName']
-      };
-      setPreviewTemplate(mockTemplate);
-      setShowTemplatePreview(true);
-      return;
-    }
 
     try {
       // Fetch template data from API
@@ -296,48 +255,52 @@ The Team`,
     setShowTemplatePreview(true);
   };
 
-  const handleRecipientListClick = (recipientGroups: string[]) => {
-    // Mock data for group members
-    const mockGroupMembers: GroupMember[] = [
-      { id: '1', name: 'John Smith', phone: '+1234567890', email: 'john@example.com', group: 'North Zone', status: 'sent' },
-      { id: '2', name: 'Jane Doe', phone: '+1234567891', email: 'jane@example.com', group: 'North Zone', status: 'sent' },
-      { id: '3', name: 'Bob Wilson', phone: '+1234567892', email: 'bob@example.com', group: 'South Zone', status: 'sent' },
-      { id: '4', name: 'Alice Johnson', phone: '+1234567893', email: 'alice@example.com', group: 'South Zone', status: 'failed' },
-      { id: '5', name: 'Charlie Brown', phone: '+1234567894', email: 'charlie@example.com', group: 'East Zone', status: 'sent' },
-      { id: '6', name: 'Diana Prince', phone: '+1234567895', email: 'diana@example.com', group: 'West Zone', status: 'sent' },
-      { id: '7', name: 'Eva Martinez', phone: '+1234567896', email: 'eva@example.com', group: 'Central Zone', status: 'sent' },
-      { id: '8', name: 'Frank Miller', phone: '+1234567897', email: 'frank@example.com', group: 'North Zone', status: 'sent' },
-      { id: '9', name: 'Grace Lee', phone: '+1234567898', email: 'grace@example.com', group: 'South Zone', status: 'failed' },
-      { id: '10', name: 'Henry Davis', phone: '+1234567899', email: 'henry@example.com', group: 'East Zone', status: 'failed' },
-      { id: '11', name: 'Ivy Chen', phone: '+1234567800', email: 'ivy@example.com', group: 'West Zone', status: 'sent' },
-      { id: '12', name: 'Jack Wilson', phone: '+1234567801', email: 'jack@example.com', group: 'Central Zone', status: 'sent' },
-      { id: '13', name: 'Karen Taylor', phone: '+1234567802', email: 'karen@example.com', group: 'North Zone', status: 'sent' },
-      { id: '14', name: 'Liam Anderson', phone: '+1234567803', email: 'liam@example.com', group: 'South Zone', status: 'failed' },
-      { id: '15', name: 'Maya Patel', phone: '+1234567804', email: 'maya@example.com', group: 'East Zone', status: 'sent' },
-      { id: '16', name: 'Noah Garcia', phone: '+1234567805', email: 'noah@example.com', group: 'West Zone', status: 'sent' },
-      { id: '17', name: 'Olivia Kim', phone: '+1234567806', email: 'olivia@example.com', group: 'Central Zone', status: 'sent' },
-      { id: '18', name: 'Paul Rodriguez', phone: '+1234567807', email: 'paul@example.com', group: 'North Zone', status: 'failed' },
-      { id: '19', name: 'Quinn Thompson', phone: '+1234567808', email: 'quinn@example.com', group: 'South Zone', status: 'sent' },
-      { id: '20', name: 'Rachel White', phone: '+1234567809', email: 'rachel@example.com', group: 'East Zone', status: 'sent' },
-    ];
+  const handleRecipientListClick = async (recipientGroups: string[]) => {
+    try {
+      // Load real group members from API
+      const response = await api.get('/mrs');
+      const mrsData = response.data.data || response.data || [];
+      
+      const groupMembers: GroupMember[] = mrsData.map((mr: any) => ({
+        id: mr._id || mr.id,
+        name: `${mr.firstName} ${mr.lastName}`,
+        phone: mr.phone,
+        email: mr.email || '',
+        group: mr.groupName || mr.group || 'Default Group',
+        status: 'sent' // Default status, could be enhanced with actual message status
+      }));
 
-    // Filter members based on selected groups
-    const filteredMembers = mockGroupMembers.filter(member => 
-      recipientGroups.includes(member.group)
-    );
+      // Filter members based on selected groups
+      const filteredMembers = groupMembers.filter(member => 
+        recipientGroups.includes(member.group)
+      );
     
-    setSelectedRecipients(filteredMembers);
-    setShowRecipientPopup(true);
+      setSelectedRecipients(filteredMembers);
+      setShowRecipientPopup(true);
+    } catch (error) {
+      console.error('Failed to load group members:', error);
+      toast.error('Failed to load group members');
+      setSelectedRecipients([]);
+    }
   };
 
 
   const exportToCSV = () => {
-    const csvContent = [
-      'Campaign Name,Campaign ID,Template,Recipient List,Date,Send Status,Total Recipients,Sent Count,Failed Count',
-      ...filteredCampaigns.map(campaign => 
-        `${campaign.campaignName},${campaign.campaignId},${campaign.template},${campaign.recipientList.join(';')},${campaign.date},${campaign.sendStatus},${campaign.totalRecipients},${campaign.sentCount},${campaign.failedCount}`
-      )
-    ].join('\n');
+    // Create CSV with specific column structure as requested
+    const csvRows = [];
+    
+    // Add header row with Template Name in A1 and MR ID in A2
+    csvRows.push('Template Name');
+    csvRows.push('MR ID');
+    
+    // Add data rows for each campaign
+    filteredCampaigns.forEach(campaign => {
+      // A1: Template Name, A2: MR ID (using campaign ID as MR ID)
+      csvRows.push(campaign.template);
+      csvRows.push(campaign.campaignId);
+    });
+    
+    const csvContent = csvRows.join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);

@@ -73,9 +73,18 @@ const Campaigns: React.FC = () => {
   const fetchData = async () => {
     try {
       const [campaignsRes, templatesRes, mrsRes] = await Promise.all([
-        api.get('/messages/campaigns'),
-        api.get('/templates'),
-        api.get('/mrs')
+        api.get('/messages/campaigns').catch(err => {
+          console.log('Campaigns not available (likely auth issue):', err.message);
+          return { data: { data: [] } };
+        }),
+        api.get('/templates').catch(err => {
+          console.log('Templates not available (likely auth issue):', err.message);
+          return { data: { data: [] } };
+        }),
+        api.get('/mrs').catch(err => {
+          console.log('MRs not available (likely auth issue):', err.message);
+          return { data: { data: [] } };
+        })
       ]);
 
       // Handle different response structures safely

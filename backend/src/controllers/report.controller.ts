@@ -112,4 +112,112 @@ export class ReportController {
       return res.status(500).json({ error: error.message });
     }
   }
+
+  async getPerformanceReport(req: any, res: Response) {
+    try {
+      const { startDate, endDate, groupId } = req.query;
+      const userId = req.user.userId;
+      
+      const performance = await messageService.getPerformanceReport(userId, {
+        startDate: startDate ? new Date(startDate as string) : undefined,
+        endDate: endDate ? new Date(endDate as string) : undefined,
+        groupId: groupId as string
+      });
+
+      return res.json({
+        success: true,
+        data: performance
+      });
+    } catch (error: any) {
+      logger.error('Failed to get performance report', { error: error.message });
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  async getCampaignsReport(req: any, res: Response) {
+    try {
+      const { startDate, endDate, status } = req.query;
+      const userId = req.user.userId;
+      
+      const campaigns = await messageService.getCampaignsReport(userId, {
+        startDate: startDate ? new Date(startDate as string) : undefined,
+        endDate: endDate ? new Date(endDate as string) : undefined,
+        status: status as string
+      });
+
+      return res.json({
+        success: true,
+        data: campaigns
+      });
+    } catch (error: any) {
+      logger.error('Failed to get campaigns report', { error: error.message });
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  async getDeliveryReport(req: any, res: Response) {
+    try {
+      const { startDate, endDate, groupId } = req.query;
+      const userId = req.user.userId;
+      
+      const delivery = await messageService.getDeliveryReport(userId, {
+        startDate: startDate ? new Date(startDate as string) : undefined,
+        endDate: endDate ? new Date(endDate as string) : undefined,
+        groupId: groupId as string
+      });
+
+      return res.json({
+        success: true,
+        data: delivery
+      });
+    } catch (error: any) {
+      logger.error('Failed to get delivery report', { error: error.message });
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  async getGroupsReport(req: any, res: Response) {
+    try {
+      const userId = req.user.userId;
+      const groups = await mrService.getGroups(userId);
+      
+      const groupsWithStats = await Promise.all(
+        groups.map(async (group: any) => {
+          const stats = await messageService.getGroupStats(group._id, userId);
+          return {
+            ...group,
+            stats
+          };
+        })
+      );
+
+      return res.json({
+        success: true,
+        data: groupsWithStats
+      });
+    } catch (error: any) {
+      logger.error('Failed to get groups report', { error: error.message });
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  async getMonthlyReport(req: any, res: Response) {
+    try {
+      const { year, month } = req.params;
+      const userId = req.user.userId;
+      
+      const monthlyData = await messageService.getMonthlyReport(userId, {
+        year: parseInt(year),
+        month: parseInt(month)
+      });
+
+      return res.json({
+        success: true,
+        data: monthlyData
+      });
+    } catch (error: any) {
+      logger.error('Failed to get monthly report', { error: error.message });
+      return res.status(500).json({ error: error.message });
+    }
+  }
 }

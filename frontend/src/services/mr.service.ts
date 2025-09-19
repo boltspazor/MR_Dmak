@@ -12,14 +12,25 @@ export interface MRData {
 class MRService {
   private storageKey = 'mr_contacts';
 
-  // Get all MRs
-  getAllMRs(): MRData[] {
+  // Get all MRs from API
+  async getAllMRs(): Promise<MRData[]> {
     try {
-      const stored = localStorage.getItem(this.storageKey);
-      return stored ? JSON.parse(stored) : this.getDefaultMRs();
+      const response = await api.get('/mrs');
+      const mrsData = response.data.data || response.data || [];
+      
+      // Transform the data to match the expected format
+      return mrsData.map((mr: any) => ({
+        id: mr._id || mr.id,
+        mrId: mr.mrId || mr.id,
+        firstName: mr.firstName || '',
+        lastName: mr.lastName || '',
+        phone: mr.phone || '',
+        group: mr.groupName || mr.group || 'Default Group',
+        comments: mr.comments || ''
+      }));
     } catch (error) {
-      console.error('Error loading MRs:', error);
-      return this.getDefaultMRs();
+      console.error('Error loading MRs from API:', error);
+      return [];
     }
   }
 
@@ -120,101 +131,6 @@ class MRService {
     return groups.sort();
   }
 
-  // Get default MRs for development
-  private getDefaultMRs(): MRData[] {
-    return [
-      {
-        id: '1',
-        mrId: 'MR001',
-        firstName: 'Dr. Rajesh',
-        lastName: 'Sharma',
-        phone: '+919876543210',
-        group: 'North Zone',
-        comments: 'Cardiologist - Active'
-      },
-      {
-        id: '2',
-        mrId: 'MR002',
-        firstName: 'Dr. Priya',
-        lastName: 'Patel',
-        phone: '+919876543211',
-        group: 'West Zone',
-        comments: 'Neurologist - Premium'
-      },
-      {
-        id: '3',
-        mrId: 'MR003',
-        firstName: 'Dr. Amit',
-        lastName: 'Singh',
-        phone: '+919876543212',
-        group: 'East Zone',
-        comments: 'Pediatrician - Regular'
-      },
-      {
-        id: '4',
-        mrId: 'MR004',
-        firstName: 'Dr. Sunita',
-        lastName: 'Reddy',
-        phone: '+919876543213',
-        group: 'South Zone',
-        comments: 'Gynecologist - VIP'
-      },
-      {
-        id: '5',
-        mrId: 'MR005',
-        firstName: 'Dr. Vikram',
-        lastName: 'Joshi',
-        phone: '+919876543214',
-        group: 'Central Zone',
-        comments: 'Orthopedic - Active'
-      },
-      {
-        id: '6',
-        mrId: 'MR006',
-        firstName: 'Dr. Anita',
-        lastName: 'Kumar',
-        phone: '+919876543215',
-        group: 'North Zone',
-        comments: 'Dermatologist - Premium'
-      },
-      {
-        id: '7',
-        mrId: 'MR007',
-        firstName: 'Dr. Rahul',
-        lastName: 'Gupta',
-        phone: '+919876543216',
-        group: 'West Zone',
-        comments: 'ENT Specialist - Regular'
-      },
-      {
-        id: '8',
-        mrId: 'MR008',
-        firstName: 'Dr. Meera',
-        lastName: 'Nair',
-        phone: '+919876543217',
-        group: 'East Zone',
-        comments: 'Psychiatrist - Active'
-      },
-      {
-        id: '9',
-        mrId: 'MR009',
-        firstName: 'Dr. Kiran',
-        lastName: 'Rao',
-        phone: '+919876543218',
-        group: 'South Zone',
-        comments: 'Oncologist - VIP'
-      },
-      {
-        id: '10',
-        mrId: 'MR010',
-        firstName: 'Dr. Suresh',
-        lastName: 'Verma',
-        phone: '+919876543219',
-        group: 'Central Zone',
-        comments: 'General Physician - Regular'
-      }
-    ];
-  }
 }
 
 // Export singleton instance

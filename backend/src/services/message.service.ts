@@ -450,4 +450,209 @@ export class MessageService {
       throw error;
     }
   }
+
+  async getPerformanceReport(userId: string, filters: any) {
+    try {
+      const query: any = { createdBy: userId };
+      
+      if (filters.startDate && filters.endDate) {
+        query.createdAt = {
+          $gte: filters.startDate,
+          $lte: filters.endDate
+        };
+      }
+
+      if (filters.groupId) {
+        const Group = (await import('../models/Group')).default;
+        const group = await Group.findOne({ _id: filters.groupId, createdBy: userId });
+        if (group) {
+          query.targetGroups = group.groupName;
+        }
+      }
+
+      const campaigns = await MessageCampaign.find(query)
+        .populate('messageId')
+        .sort({ createdAt: -1 });
+
+      const totalCampaigns = campaigns.length;
+      const totalSent = campaigns.reduce((sum, campaign) => sum + campaign.sentCount, 0);
+      const totalFailed = campaigns.reduce((sum, campaign) => sum + campaign.failedCount, 0);
+      const totalRecipients = campaigns.reduce((sum, campaign) => sum + campaign.totalRecipients, 0);
+
+      return {
+        totalCampaigns,
+        totalSent,
+        totalFailed,
+        totalRecipients,
+        successRate: totalRecipients > 0 ? Math.round((totalSent / totalRecipients) * 100 * 100) / 100 : 0,
+        campaigns: campaigns.map(campaign => ({
+          campaignId: campaign.campaignId,
+          status: campaign.status,
+          sentCount: campaign.sentCount,
+          failedCount: campaign.failedCount,
+          totalRecipients: campaign.totalRecipients,
+          createdAt: campaign.createdAt
+        }))
+      };
+    } catch (error) {
+      logger.error('Failed to get performance report', { userId, filters, error });
+      throw error;
+    }
+  }
+
+  async getCampaignsReport(userId: string, filters: any) {
+    try {
+      const query: any = { createdBy: userId };
+      
+      if (filters.startDate && filters.endDate) {
+        query.createdAt = {
+          $gte: filters.startDate,
+          $lte: filters.endDate
+        };
+      }
+
+      if (filters.status) {
+        query.status = filters.status;
+      }
+
+      const campaigns = await MessageCampaign.find(query)
+        .populate('messageId')
+        .sort({ createdAt: -1 });
+
+      return campaigns.map(campaign => ({
+        campaignId: campaign.campaignId,
+        status: campaign.status,
+        sentCount: campaign.sentCount,
+        failedCount: campaign.failedCount,
+        totalRecipients: campaign.totalRecipients,
+        createdAt: campaign.createdAt,
+        targetGroups: campaign.targetGroups
+      }));
+    } catch (error) {
+      logger.error('Failed to get campaigns report', { userId, filters, error });
+      throw error;
+    }
+  }
+
+  async getDeliveryReport(userId: string, filters: any) {
+    try {
+      const query: any = { createdBy: userId };
+      
+      if (filters.startDate && filters.endDate) {
+        query.createdAt = {
+          $gte: filters.startDate,
+          $lte: filters.endDate
+        };
+      }
+
+      if (filters.groupId) {
+        const Group = (await import('../models/Group')).default;
+        const group = await Group.findOne({ _id: filters.groupId, createdBy: userId });
+        if (group) {
+          query.targetGroups = group.groupName;
+        }
+      }
+
+      const campaigns = await MessageCampaign.find(query);
+      
+      const deliveryStats = {
+        totalMessages: campaigns.reduce((sum, campaign) => sum + campaign.totalRecipients, 0),
+        deliveredMessages: campaigns.reduce((sum, campaign) => sum + campaign.sentCount, 0),
+        failedMessages: campaigns.reduce((sum, campaign) => sum + campaign.failedCount, 0),
+        deliveryRate: 0
+      };
+
+      if (deliveryStats.totalMessages > 0) {
+        deliveryStats.deliveryRate = Math.round((deliveryStats.deliveredMessages / deliveryStats.totalMessages) * 100 * 100) / 100;
+      }
+
+      return deliveryStats;
+    } catch (error) {
+      logger.error('Failed to get delivery report', { userId, filters, error });
+      throw error;
+    }
+  }
+
+  async getGroupStats(groupId: string, userId: string) {
+    try {
+      const Group = (await import('../models/Group')).default;
+      const group = await Group.findOne({ _id: groupId, createdBy: userId });
+      
+      if (!group) {
+        return null;
+      }
+
+      const campaigns = await MessageCampaign.find({
+        createdBy: userId,
+        targetGroups: group.groupName
+      });
+
+      const totalMessages = campaigns.reduce((sum, campaign) => sum + campaign.totalRecipients, 0);
+      const sentMessages = campaigns.reduce((sum, campaign) => sum + campaign.sentCount, 0);
+      const failedMessages = campaigns.reduce((sum, campaign) => sum + campaign.failedCount, 0);
+
+      return {
+        groupId: group._id,
+        groupName: group.groupName,
+        totalCampaigns: campaigns.length,
+        totalMessages,
+        sentMessages,
+        failedMessages,
+        successRate: totalMessages > 0 ? Math.round((sentMessages / totalMessages) * 100 * 100) / 100 : 0
+      };
+    } catch (error) {
+      logger.error('Failed to get group stats', { groupId, userId, error });
+      throw error;
+    }
+  }
+
+  async getMonthlyReport(userId: string, filters: any) {
+    try {
+      const startDate = new Date(filters.year, filters.month - 1, 1);
+      const endDate = new Date(filters.year, filters.month, 0, 23, 59, 59);
+
+      const campaigns = await MessageCampaign.find({
+        createdBy: userId,
+        createdAt: {
+          $gte: startDate,
+          $lte: endDate
+        }
+      });
+
+      const dailyStats: { [key: number]: any } = {};
+      for (let day = 1; day <= endDate.getDate(); day++) {
+        const dayDate = new Date(filters.year, filters.month - 1, day);
+        dailyStats[day] = {
+          date: dayDate.toISOString().split('T')[0],
+          campaigns: 0,
+          messages: 0,
+          sent: 0,
+          failed: 0
+        };
+      }
+
+      campaigns.forEach(campaign => {
+        const day = campaign.createdAt.getDate();
+        if (dailyStats[day]) {
+          dailyStats[day].campaigns++;
+          dailyStats[day].messages += campaign.totalRecipients;
+          dailyStats[day].sent += campaign.sentCount;
+          dailyStats[day].failed += campaign.failedCount;
+        }
+      });
+
+      return {
+        year: filters.year,
+        month: filters.month,
+        totalCampaigns: campaigns.length,
+        totalMessages: campaigns.reduce((sum, campaign) => sum + campaign.totalRecipients, 0),
+        totalSent: campaigns.reduce((sum, campaign) => sum + campaign.sentCount, 0),
+        totalFailed: campaigns.reduce((sum, campaign) => sum + campaign.failedCount, 0),
+        dailyStats: Object.values(dailyStats)
+      };
+    } catch (error) {
+      logger.error('Failed to get monthly report', { userId, filters, error });
+      throw error;
+    }
+  }
 }

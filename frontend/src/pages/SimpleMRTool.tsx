@@ -33,65 +33,7 @@ interface Group {
 }
 
 
-// Mock API for demonstration
-const mockApi = {
-  get: async (endpoint: string) => {
-    console.log(`Mock API GET: ${endpoint}`);
-    
-    if (endpoint === '/mrs') {
-      // Return mock MR data
-      return {
-        data: {
-          data: [
-            {
-              id: '1',
-              mrId: 'MR001',
-              firstName: 'John',
-              lastName: 'Doe',
-              phone: '+919876543210',
-              group: { groupName: 'North Zone' },
-              comments: 'Senior MR'
-            },
-            {
-              id: '2',
-              mrId: 'MR002',
-              firstName: 'Jane',
-              lastName: 'Smith',
-              phone: '+919876543211',
-              group: { groupName: 'South Zone' },
-              comments: 'New MR'
-            }
-          ]
-        }
-      };
-    }
-    
-    if (endpoint === '/groups') {
-      return {
-        data: {
-          data: [
-            { id: '1', groupName: 'North Zone', mrCount: 1 },
-            { id: '2', groupName: 'South Zone', mrCount: 1 },
-            { id: '3', groupName: 'East Zone', mrCount: 0 },
-            { id: '4', groupName: 'West Zone', mrCount: 0 }
-          ]
-        }
-      };
-    }
-    
-    return { data: { data: [] } };
-  },
-  
-  post: async (endpoint: string, data: any) => {
-    console.log(`Mock API POST: ${endpoint}`, data);
-    return { data: { success: true, id: Date.now().toString() } };
-  },
-  
-  delete: async (endpoint: string) => {
-    console.log(`Mock API DELETE: ${endpoint}`);
-    return { data: { success: true } };
-  }
-};
+// Real API calls using the configured API instance
 
 const SimpleMRTool: React.FC = () => {
   const navigate = useNavigate();
@@ -178,7 +120,7 @@ const SimpleMRTool: React.FC = () => {
   const fetchContactsFromBackend = async () => {
     try {
       console.log('Fetching contacts from backend...');
-      const response = await mockApi.get('/mrs');
+      const response = await api.get('/mrs');
       const mrs = response.data.data || [];
       
       console.log('Backend contacts response:', mrs);
@@ -243,7 +185,7 @@ const SimpleMRTool: React.FC = () => {
         groupId = selectedGroup.id;
       }
 
-      await mockApi.post('/mrs', {
+      await api.post('/mrs', {
         mrId: contactData.mrId,
         firstName: contactData.firstName,
         lastName: contactData.lastName,
@@ -294,7 +236,7 @@ const SimpleMRTool: React.FC = () => {
     if (!contactToDelete) return;
 
     try {
-      await mockApi.delete(`/mrs/${contactToDelete.id}`);
+      await api.delete(`/mrs/${contactToDelete.id}`);
       // Remove from local state
       const updatedContacts = contacts.filter(c => c.id !== contactToDelete.id);
       setContacts(updatedContacts);
@@ -335,7 +277,7 @@ const SimpleMRTool: React.FC = () => {
         throw new Error('MR ID already exists. Please use a unique MR ID.');
       }
 
-      await mockApi.post(`/mrs/${editingContact.id}`, updatedContact);
+      await api.put(`/mrs/${editingContact.id}`, updatedContact);
       
       // Update local state
       const updatedContacts = contacts.map(c => 
