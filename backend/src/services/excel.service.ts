@@ -164,13 +164,13 @@ export class ExcelService {
     const templateData = [
       {
         'ID': 'MR001',
-        'Name': 'Prabhjeet Singh',
+        'Name': 'Sample Name 1',
         'Phone': '+919876543210',
         'Designation': 'Senior'
       },
       {
         'ID': 'MR002',
-        'Name': 'Vidyanshu Giri',
+        'Name': 'Sample Name 2',
         'Phone': '+919876543211',
         'Designation': 'Senior'
       }
@@ -186,8 +186,8 @@ export class ExcelService {
   generateCSVTemplate(): string {
     const headers = ['ID', 'Name', 'Phone', 'Designation'];
     const sampleData = [
-      ['MR001', 'Prabhjeet Singh', '+919876543210', 'Senior'],
-      ['MR002', 'Vidyanshu Giri', '+919876543211', 'Senior']
+      ['MR001', 'Sample Name 1', '+919876543210', 'Senior'],
+      ['MR002', 'Sample Name 2', '+919876543211', 'Senior']
     ];
     
     const csvContent = [

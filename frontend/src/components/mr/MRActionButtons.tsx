@@ -12,7 +12,7 @@ const MRActionButtons: React.FC<MRActionButtonsProps> = ({
   onDownloadTemplate
 }) => {
   return (
-    <div className="flex justify-between items-center">
+    <div className="flex justify-between items-center mb-4">
       <div className="flex space-x-4">
         <button
           onClick={onAddIndividual}

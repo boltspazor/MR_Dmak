@@ -107,7 +107,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           {/* Bottom Logo */}
           <div className="mt-2">
             <img 
-              src="/qwerty.jpg" 
+              src="/dvk.svg" 
               alt="Logo" 
               className="w-12 h-10 drop-shadow-lg object-contain"
             />

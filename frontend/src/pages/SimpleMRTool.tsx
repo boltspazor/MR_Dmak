@@ -15,6 +15,7 @@ import MRActionButtons from '../components/mr/MRActionButtons';
 import MRSearchAndFilter from '../components/mr/MRSearchAndFilter';
 import MRTable from '../components/mr/MRTable';
 import { mrService, MRData } from '../services/mr.service';
+import {api} from '../lib/api';  
 
 interface Contact {
   id: string;
@@ -71,43 +72,9 @@ const SimpleMRTool: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Load contacts from localStorage first
-        const savedContacts = localStorage.getItem('mr_contacts');
-        if (savedContacts) {
-          const parsedContacts = JSON.parse(savedContacts);
-          setContacts(parsedContacts);
-        } else {
-          // If no saved data, load from backend
-          await fetchContactsFromBackend();
-        }
-
-        // Load groups from localStorage first
-        const savedGroups = localStorage.getItem('mr_groups');
-        if (savedGroups) {
-          const parsedGroups = JSON.parse(savedGroups);
-          if (parsedGroups.length > 0) {
-            setGroups(parsedGroups);
-          } else {
-            // If empty array, keep default groups and save them
-            const defaultGroups: Group[] = [
-              { id: '1', name: 'North', contactCount: 0 },
-              { id: '2', name: 'South', contactCount: 0 },
-              { id: '3', name: 'East', contactCount: 0 },
-              { id: '4', name: 'West', contactCount: 0 }
-            ];
-            setGroups(defaultGroups);
-            localStorage.setItem('mr_groups', JSON.stringify(defaultGroups));
-          }
-        } else {
-          // If no saved data, save the default groups that are already in state
-          const defaultGroups: Group[] = [
-            { id: '1', name: 'North', contactCount: 0 },
-            { id: '2', name: 'South', contactCount: 0 },
-            { id: '3', name: 'East', contactCount: 0 },
-            { id: '4', name: 'West', contactCount: 0 }
-          ];
-          localStorage.setItem('mr_groups', JSON.stringify(defaultGroups));
-        }
+        // Always load from backend API
+        await fetchContactsFromBackend();
+        await fetchGroupsFromBackend();
         
       } catch (error) {
         console.error('Error loading data:', error);
@@ -127,7 +94,7 @@ const SimpleMRTool: React.FC = () => {
       
       // Transform backend MR data to Contact format
       const transformedContacts: Contact[] = mrs.map((mr: any) => ({
-        id: mr.id,
+        id: mr._id || mr.id,
         mrId: mr.mrId,
         firstName: mr.firstName,
         lastName: mr.lastName,
@@ -138,13 +105,40 @@ const SimpleMRTool: React.FC = () => {
       
       console.log('Transformed contacts:', transformedContacts);
       setContacts(transformedContacts);
-      // Save to localStorage
-      localStorage.setItem('mr_contacts', JSON.stringify(transformedContacts));
     } catch (error: any) {
       console.error('Error fetching contacts from backend:', error);
     }
   };
 
+  const fetchGroupsFromBackend = async () => {
+    try {
+      console.log('Fetching groups from backend...');
+      const response = await api.get('/groups');
+      const backendGroups = response.data.data || [];
+      
+      console.log('Backend groups response:', backendGroups);
+      
+      // Transform backend Group data to Contact format
+      const transformedGroups: Group[] = backendGroups.map((group: any) => ({
+        id: group._id || group.id,
+        name: group.groupName,
+        contactCount: 0 // Will be updated by useEffect
+      }));
+      
+      console.log('Transformed groups:', transformedGroups);
+      setGroups(transformedGroups);
+    } catch (error: any) {
+      console.error('Error fetching groups from backend:', error);
+      // Fallback to default groups if API fails
+      const defaultGroups: Group[] = [
+        { id: '1', name: 'North', contactCount: 0 },
+        { id: '2', name: 'South', contactCount: 0 },
+        { id: '3', name: 'East', contactCount: 0 },
+        { id: '4', name: 'West', contactCount: 0 }
+      ];
+      setGroups(defaultGroups);
+    }
+  };
 
   // Update group contact counts
   useEffect(() => {
@@ -153,8 +147,6 @@ const SimpleMRTool: React.FC = () => {
       contactCount: contacts.filter(contact => contact.group === group.name).length
     }));
     setGroups(updatedGroups);
-    // Save to localStorage
-    localStorage.setItem('mr_groups', JSON.stringify(updatedGroups));
   }, [contacts]);
 
 
@@ -194,16 +186,8 @@ const SimpleMRTool: React.FC = () => {
         comments: contactData.comments
       });
 
-      // Add to local state (since we're using mock API)
-      const newContactData: Contact = {
-        id: Date.now().toString(),
-        ...contactData
-      };
-      
-      const updatedContacts = [...contacts, newContactData];
-      setContacts(updatedContacts);
-      // Save to localStorage
-      localStorage.setItem('mr_contacts', JSON.stringify(updatedContacts));
+      // Refresh data from backend to get the correct ID
+      await fetchContactsFromBackend();
       alert('MR added successfully!');
     } catch (error: any) {
       console.error('Error adding MR:', error);
@@ -240,8 +224,6 @@ const SimpleMRTool: React.FC = () => {
       // Remove from local state
       const updatedContacts = contacts.filter(c => c.id !== contactToDelete.id);
       setContacts(updatedContacts);
-      // Save to localStorage
-      localStorage.setItem('mr_contacts', JSON.stringify(updatedContacts));
       setShowDeleteDialog(false);
       setContactToDelete(null);
       alert('MR deleted successfully!');
@@ -286,8 +268,6 @@ const SimpleMRTool: React.FC = () => {
           : c
       );
       setContacts(updatedContacts);
-      // Save to localStorage
-      localStorage.setItem('mr_contacts', JSON.stringify(updatedContacts));
       
       setEditingContact(null);
       setIsEditDialogOpen(false);
@@ -408,7 +388,6 @@ const SimpleMRTool: React.FC = () => {
       
       let created = 0;
       const errors: string[] = [];
-      const newContacts: Contact[] = [];
       
       for (let i = 1; i < lines.length; i++) {
         const line = lines[i].trim();
@@ -464,35 +443,41 @@ const SimpleMRTool: React.FC = () => {
           continue;
         }
 
-        // Check for duplicate MR IDs within current upload
-        if (newContacts.some(contact => contact.mrId === values[0].trim())) {
-          errors.push(`❌ Row ${i + 1}: Duplicate MR ID "${values[0]}" found in this upload`);
-          continue;
-        }
+        // Note: We can't easily check for duplicates within the same upload file
+        // since we're processing them one by one via API. The backend will handle
+        // duplicate MR ID validation.
 
         // Group is optional now, so no validation needed
 
-        // If all validations pass, create contact
-        const newContact: Contact = {
-          id: Date.now().toString() + i,
-          mrId: values[0].trim(),
-          firstName: values[1].trim(),
-          lastName: values[2].trim(),
-          phone: values[3].trim(),
-          group: values[4] ? values[4].trim() : '',
-          comments: values[5] ? values[5].trim() : ''
-        };
-        
-        newContacts.push(newContact);
-        created++;
+        // If all validations pass, create contact via API
+        try {
+          // Find the group ID by name, if group is provided
+          let groupId = '';
+          if (values[4] && values[4].trim() !== '') {
+            const selectedGroup = groups.find(g => g.name === values[4].trim());
+            if (selectedGroup) {
+              groupId = selectedGroup.id;
+            }
+          }
+
+          await api.post('/mrs', {
+            mrId: values[0].trim(),
+            firstName: values[1].trim(),
+            lastName: values[2].trim(),
+            phone: values[3].trim(),
+            groupId: groupId,
+            comments: values[5] ? values[5].trim() : ''
+          });
+          
+          created++;
+        } catch (apiError: any) {
+          errors.push(`❌ Row ${i + 1}: Failed to create MR "${values[0]}": ${apiError.message || 'Unknown error'}`);
+        }
       }
       
-      // Add all valid contacts at once
-      if (newContacts.length > 0) {
-        const updatedContacts = [...contacts, ...newContacts];
-        setContacts(updatedContacts);
-        // Save to localStorage
-        localStorage.setItem('mr_contacts', JSON.stringify(updatedContacts));
+      // Refresh data from backend to get the correct IDs for newly created contacts
+      if (created > 0) {
+        await fetchContactsFromBackend();
       }
       
       // Display results with proper error formatting

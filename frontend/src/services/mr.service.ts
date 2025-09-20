@@ -1,3 +1,5 @@
+import { api } from '../lib/api';
+
 // Shared MR data service to ensure consistency across screens
 export interface MRData {
   id: string;
@@ -10,7 +12,6 @@ export interface MRData {
 }
 
 class MRService {
-  private storageKey = 'mr_contacts';
 
   // Get all MRs from API
   async getAllMRs(): Promise<MRData[]> {
@@ -34,26 +35,18 @@ class MRService {
     }
   }
 
-  // Save MRs
-  saveMRs(mrs: MRData[]): void {
-    try {
-      localStorage.setItem(this.storageKey, JSON.stringify(mrs));
-    } catch (error) {
-      console.error('Error saving MRs:', error);
-    }
-  }
 
   // Get MRs for a specific campaign/group
-  getMRsForCampaign(groups?: string[]): MRData[] {
-    const allMRs = this.getAllMRs();
+  async getMRsForCampaign(groups?: string[]): Promise<MRData[]> {
+    const allMRs = await this.getAllMRs();
     if (!groups || groups.length === 0) return allMRs;
     
     return allMRs.filter(mr => groups.includes(mr.group));
   }
 
   // Search MRs
-  searchMRs(searchTerm: string): MRData[] {
-    const allMRs = this.getAllMRs();
+  async searchMRs(searchTerm: string): Promise<MRData[]> {
+    const allMRs = await this.getAllMRs();
     if (!searchTerm) return allMRs;
 
     const term = searchTerm.toLowerCase();
@@ -67,66 +60,15 @@ class MRService {
   }
 
   // Get MR by ID
-  getMRById(mrId: string): MRData | undefined {
-    const allMRs = this.getAllMRs();
+  async getMRById(mrId: string): Promise<MRData | undefined> {
+    const allMRs = await this.getAllMRs();
     return allMRs.find(mr => mr.mrId === mrId);
   }
 
-  // Add new MR
-  addMR(mr: MRData): boolean {
-    try {
-      const allMRs = this.getAllMRs();
-      
-      // Check for duplicate MR ID
-      if (allMRs.some(existing => existing.mrId === mr.mrId)) {
-        return false; // Duplicate MR ID
-      }
-
-      allMRs.push(mr);
-      this.saveMRs(allMRs);
-      return true;
-    } catch (error) {
-      console.error('Error adding MR:', error);
-      return false;
-    }
-  }
-
-  // Update MR
-  updateMR(mrId: string, updates: Partial<MRData>): boolean {
-    try {
-      const allMRs = this.getAllMRs();
-      const index = allMRs.findIndex(mr => mr.mrId === mrId);
-      
-      if (index === -1) return false;
-
-      allMRs[index] = { ...allMRs[index], ...updates };
-      this.saveMRs(allMRs);
-      return true;
-    } catch (error) {
-      console.error('Error updating MR:', error);
-      return false;
-    }
-  }
-
-  // Delete MR
-  deleteMR(mrId: string): boolean {
-    try {
-      const allMRs = this.getAllMRs();
-      const filtered = allMRs.filter(mr => mr.mrId !== mrId);
-      
-      if (filtered.length === allMRs.length) return false; // MR not found
-
-      this.saveMRs(filtered);
-      return true;
-    } catch (error) {
-      console.error('Error deleting MR:', error);
-      return false;
-    }
-  }
 
   // Get available groups
-  getGroups(): string[] {
-    const allMRs = this.getAllMRs();
+  async getGroups(): Promise<string[]> {
+    const allMRs = await this.getAllMRs();
     const groups = [...new Set(allMRs.map(mr => mr.group))];
     return groups.sort();
   }
@@ -135,4 +77,5 @@ class MRService {
 
 // Export singleton instance
 export const mrService = new MRService();
+
 
