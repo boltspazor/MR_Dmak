@@ -26,6 +26,19 @@ export class MRController {
       });
     } catch (error: any) {
       logger.error('Failed to create MR', { error: error.message, body: req.body });
+      
+      // Handle specific business logic errors with appropriate status codes
+      if (error.message.includes('already exists') || 
+          error.message.includes('duplicate') ||
+          error.message.includes('not found') ||
+          error.message.includes('validation')) {
+        return res.status(400).json({ 
+          error: error.message,
+          message: error.message
+        });
+      }
+      
+      // For other errors, return 500
       return res.status(500).json({ error: error.message });
     }
   }
@@ -107,6 +120,19 @@ export class MRController {
       return res.json({ message: 'MR updated successfully' });
     } catch (error: any) {
       logger.error('Failed to update MR', { error: error.message, mrId: req.params.id });
+      
+      // Handle specific business logic errors with appropriate status codes
+      if (error.message.includes('already exists') || 
+          error.message.includes('duplicate') ||
+          error.message.includes('not found') ||
+          error.message.includes('validation')) {
+        return res.status(400).json({ 
+          error: error.message,
+          message: error.message
+        });
+      }
+      
+      // For other errors, return 500
       return res.status(500).json({ error: error.message });
     }
   }
@@ -118,6 +144,17 @@ export class MRController {
       return res.json({ message: 'MR deleted successfully' });
     } catch (error: any) {
       logger.error('Failed to delete MR', { error: error.message, mrId: req.params.id });
+      
+      // Handle specific business logic errors with appropriate status codes
+      if (error.message.includes('not found') ||
+          error.message.includes('validation')) {
+        return res.status(400).json({ 
+          error: error.message,
+          message: error.message
+        });
+      }
+      
+      // For other errors, return 500
       return res.status(500).json({ error: error.message });
     }
   }
@@ -188,10 +225,12 @@ export class MRController {
 
   async downloadTemplate(req: Request, res: Response) {
     try {
-      const templateBuffer = excelService.generateExcelTemplate();
+      const templateName = req.query.templateName as string || 'MR Template';
+      const templateBuffer = excelService.generateExcelTemplate(templateName);
       
+      const filename = `${templateName.replace(/[^a-zA-Z0-9]/g, '_')}.xlsx`;
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', 'attachment; filename=mr-template.xlsx');
+      res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
       return res.send(templateBuffer);
     } catch (error: any) {
       logger.error('Failed to generate template', { error: error.message });
@@ -201,10 +240,12 @@ export class MRController {
 
   async downloadCSVTemplate(req: Request, res: Response) {
     try {
-      const template = excelService.generateCSVTemplate();
+      const templateName = req.query.templateName as string || 'MR Template';
+      const template = excelService.generateCSVTemplate(templateName);
       
+      const filename = `${templateName.replace(/[^a-zA-Z0-9]/g, '_')}.csv`;
       res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', 'attachment; filename=mr-template.csv');
+      res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
       return res.send(template);
     } catch (error: any) {
       logger.error('CSV template download failed', { error: error.message });

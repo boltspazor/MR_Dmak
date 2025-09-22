@@ -14,11 +14,13 @@ import reportRoutes from './routes/report.routes';
 import superAdminRoutes from './routes/super-admin.routes';
 import templateRoutes from './routes/template.routes';
 import recipientListRoutes from './routes/recipientList.routes';
-import whatsappRoutes from './routes/whatsapp.routes';
+import templateRecipientsRoutes from './routes/templateRecipients.routes';
+import whatsappCloudRoutes from './routes/whatsapp-cloud.routes';
+import metaTemplateRoutes from './routes/meta-template.routes';
+import templateCampaignRoutes from './routes/template-campaign.routes';
 import cacheRoutes from './routes/cache.routes';
 
 import logger from './utils/logger';
-import { WhatsAppService } from './services/whatsapp.service';
 import connectDB from './config/database';
 
 // Load environment variables
@@ -90,19 +92,21 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/super-admin', superAdminRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api/recipient-lists', recipientListRoutes);
-app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/template-recipients', templateRecipientsRoutes);
+app.use('/api/whatsapp-cloud', whatsappCloudRoutes);
+app.use('/api/meta-templates', metaTemplateRoutes);
+app.use('/api/template-campaigns', templateCampaignRoutes);
 app.use('/api/cache', cacheRoutes);
 
-// WhatsApp Webhook
-const whatsappService = new WhatsAppService();
+// WhatsApp Cloud API Webhook
 
-// Webhook verification endpoint (GET)
+// Webhook verification endpoint (GET) for WhatsApp Cloud API
 app.get('/api/webhook', async (req, res) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
 
-  logger.info('Webhook verification request', { 
+  logger.info('WhatsApp Cloud API webhook verification request', { 
     mode, 
     token: token ? `${(token as string).substring(0, 4)}...` : 'undefined',
     challenge: challenge ? `${(challenge as string).substring(0, 4)}...` : 'undefined',
@@ -111,28 +115,25 @@ app.get('/api/webhook', async (req, res) => {
   });
 
   try {
-    const result = await whatsappService.verifyWebhook(
-      mode as string, 
-      token as string, 
-      challenge as string
-    );
-
-    if (result) {
-      logger.info('Webhook verification successful', { 
+    const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN;
+    
+    if (mode === 'subscribe' && token === verifyToken) {
+      logger.info('WhatsApp Cloud API webhook verification successful', { 
         challenge: challenge ? `${(challenge as string).substring(0, 4)}...` : 'undefined',
         ip: req.ip
       });
-      return res.status(200).send(result);
+      return res.status(200).send(challenge);
     } else {
-      logger.warn('Webhook verification failed', { 
+      logger.warn('WhatsApp Cloud API webhook verification failed', { 
         mode, 
         token: token ? `${(token as string).substring(0, 4)}...` : 'undefined',
+        hasVerifyToken: !!verifyToken,
         ip: req.ip
       });
       return res.status(403).send('Forbidden');
     }
   } catch (error) {
-    logger.error('Webhook verification error', { 
+    logger.error('WhatsApp Cloud API webhook verification error', { 
       error: error instanceof Error ? error.message : 'Unknown error',
       mode, 
       token: token ? `${(token as string).substring(0, 4)}...` : 'undefined',
@@ -142,11 +143,11 @@ app.get('/api/webhook', async (req, res) => {
   }
 });
 
-// Webhook event processing endpoint (POST)
+// Webhook event processing endpoint (POST) for WhatsApp Cloud API
 app.post('/api/webhook', async (req, res) => {
   const startTime = Date.now();
   
-  logger.info('Webhook event received', { 
+  logger.info('WhatsApp Cloud API webhook event received', { 
     ip: req.ip,
     userAgent: req.get('User-Agent'),
     contentType: req.get('Content-Type'),
@@ -164,13 +165,23 @@ app.post('/api/webhook', async (req, res) => {
       return res.status(400).send('Bad Request');
     }
 
-    // Process webhook event asynchronously
-    setImmediate(() => {
-      whatsappService.processWebhookEvent(req.body);
-    });
+    // Process WhatsApp Cloud API webhook event
+    if (req.body.object === 'whatsapp_business_account') {
+      req.body.entry?.forEach((entry: any) => {
+        entry.changes?.forEach((change: any) => {
+          if (change.field === 'messages') {
+            logger.info('WhatsApp Cloud API message event received', {
+              messageCount: change.value.messages?.length || 0,
+              statusCount: change.value.statuses?.length || 0
+            });
+            // Here you can process message events, status updates, etc.
+          }
+        });
+      });
+    }
 
     const processingTime = Date.now() - startTime;
-    logger.info('Webhook event processed', { 
+    logger.info('WhatsApp Cloud API webhook event processed', { 
       processingTime: `${processingTime}ms`,
       ip: req.ip
     });

@@ -2,13 +2,11 @@ import MedicalRepresentative from '../models/MedicalRepresentative';
 import Group from '../models/Group';
 import { CreateMRForm, UpdateMRForm } from '../types/mongodb';
 import logger from '../utils/logger';
-import { WhatsAppService } from './whatsapp.service';
+import whatsappCloudAPIService from './whatsapp-cloud-api.service';
 
 export class MRService {
-  private whatsappService: WhatsAppService;
-
   constructor() {
-    this.whatsappService = new WhatsAppService();
+    // WhatsApp Cloud API service is imported as singleton
   }
 
   async createMR(data: CreateMRForm, userId: string) {
@@ -60,17 +58,10 @@ export class MRService {
 
       // Automatically add phone number to WhatsApp allowed recipients list
       try {
+        // Note: WhatsApp Cloud API doesn't require pre-approved recipient lists
+        // Messages can be sent to any valid WhatsApp number
         if (data.phone) {
-          logger.info('📱 Adding MR phone number to WhatsApp allowed list', { phone: data.phone });
-          const whatsappResult = await this.whatsappService.addAllowedRecipients([data.phone], userId?.toString());
-          if (whatsappResult.success) {
-            logger.info('✅ MR phone number added to WhatsApp allowed list', { phone: data.phone });
-          } else {
-            logger.warn('⚠️ Failed to add MR phone number to WhatsApp allowed list', { 
-              phone: data.phone, 
-              error: whatsappResult.error 
-            });
-          }
+          logger.info('📱 MR phone number will be available for WhatsApp messaging', { phone: data.phone });
         }
       } catch (whatsappError) {
         // Don't fail MR creation if WhatsApp addition fails
@@ -556,19 +547,11 @@ export class MRService {
       // Automatically add all phone numbers to WhatsApp allowed recipients list
       if (results.phoneNumbers.length > 0) {
         try {
-          logger.info('📱 Adding bulk MR phone numbers to WhatsApp allowed list', { 
+          // Note: WhatsApp Cloud API doesn't require pre-approved recipient lists
+          // Messages can be sent to any valid WhatsApp number
+          logger.info('📱 Bulk MR phone numbers will be available for WhatsApp messaging', { 
             count: results.phoneNumbers.length 
           });
-          const whatsappResult = await this.whatsappService.addAllowedRecipients(results.phoneNumbers, userId?.toString());
-          if (whatsappResult.success) {
-            logger.info('✅ Bulk MR phone numbers added to WhatsApp allowed list', { 
-              count: whatsappResult.added?.length || 0 
-            });
-          } else {
-            logger.warn('⚠️ Failed to add bulk MR phone numbers to WhatsApp allowed list', { 
-              error: whatsappResult.error 
-            });
-          }
         } catch (whatsappError) {
           // Don't fail bulk creation if WhatsApp addition fails
           logger.warn('⚠️ WhatsApp allowed list update failed for bulk MR creation', { 

@@ -1,9 +1,7 @@
 import Bull from 'bull';
-import { WhatsAppService } from './whatsapp.service';
+import whatsappCloudAPIService from './whatsapp-cloud-api.service';
 import logger from '../utils/logger';
 import MessageLog from '../models/MessageLog';
-
-const whatsappService = new WhatsAppService();
 
 // Create queue with error handling
 let messageQueue: Bull.Queue | any;
@@ -42,7 +40,7 @@ const initializeQueue = async () => {
         defaultJobOptions: {
           removeOnComplete: 100,
           removeOnFail: 50,
-          attempts: 3,
+          attempts: 1, // Reduce to 1 attempt since WhatsApp API already confirms success
           backoff: {
             type: 'exponential',
             delay: 2000,
@@ -67,40 +65,41 @@ const initializeQueue = async () => {
         const { campaignId, mrId, phoneNumber, content, imageUrl, messageType, templateName, templateLanguage, templateParameters }: MessageJobData = job.data;
         
         try {
-          logger.info('Processing message job', { campaignId, mrId, phoneNumber, messageType });
-          
-          let whatsappMessage;
+          let result;
           
           if (messageType === 'template' && templateName) {
-            // Create template message
-            whatsappMessage = whatsappService.createTemplateMessage(
-              phoneNumber, 
-              templateName, 
-              templateLanguage || 'en_US', 
-              templateParameters
+            logger.info('Processing template message job with WhatsApp Cloud API', { campaignId, mrId, phoneNumber, templateName });
+            
+            // Send template message using WhatsApp Cloud API
+            const processedParameters = (templateParameters || []).map((param: any) => typeof param === 'string' ? param : param.text);
+            
+            result = await whatsappCloudAPIService.sendTemplateMessage(
+              phoneNumber,
+              templateName,
+              processedParameters,
+              templateLanguage || 'en_US'
             );
           } else if (imageUrl) {
-            // Create image message
-            whatsappMessage = {
-              to: phoneNumber,
-              type: 'image' as 'text' | 'image' | 'template',
-              image: { link: imageUrl, caption: content }
-            };
+            logger.info('Processing image message job with WhatsApp Cloud API', { campaignId, mrId, phoneNumber, imageUrl });
+            // Send image message using WhatsApp Cloud API
+            result = await whatsappCloudAPIService.sendImageMessage(
+              phoneNumber,
+              imageUrl,
+              content
+            );
           } else {
-            // For unverified numbers, we need to use templates
-            // But since hello_world doesn't accept custom content, we'll use text messages
-            // and handle the verification error gracefully
-            whatsappMessage = whatsappService.createTextMessage(phoneNumber, content);
+            logger.info('Processing text message job with WhatsApp Cloud API', { campaignId, mrId, phoneNumber });
+            // Send text message using WhatsApp Cloud API
+            result = await whatsappCloudAPIService.sendTextMessage(phoneNumber, content);
           }
-
-          const result = await whatsappService.sendMessage(whatsappMessage);
           
           await MessageLog.updateMany(
             { campaignId, mrId },
             {
-              status: result.success ? 'sent' : 'failed',
+              status: result.messages && result.messages[0]?.message_status === 'accepted' ? 'sent' : 'failed',
+              messageId: result.messages?.[0]?.id,
               sentAt: new Date(),
-              errorMessage: result.error,
+              errorMessage: result.messages && result.messages[0]?.message_status === 'accepted' ? null : 'Message not accepted by WhatsApp',
             }
           );
 
@@ -131,13 +130,21 @@ const initializeQueue = async () => {
             });
           }
 
-          logger.info('Message processed successfully', {
+          const isSuccess = result.messages && result.messages[0]?.message_status === 'accepted';
+          logger.info(`${messageType === 'template' ? 'Template' : messageType === 'image' ? 'Image' : 'Text'} message processed successfully`, {
             campaignId,
             mrId,
-            success: result.success
+            success: isSuccess,
+            messageType,
+            messageId: result.messages?.[0]?.id
           });
 
-          return result;
+          // If WhatsApp API returned success, don't retry even if there are other errors
+          if (isSuccess) {
+            return result;
+          } else {
+            throw new Error(`WhatsApp message not accepted: ${result.messages?.[0]?.message_status || 'unknown status'}`);
+          }
         } catch (error: any) {
           await MessageLog.updateMany(
             { campaignId, mrId },
@@ -147,10 +154,11 @@ const initializeQueue = async () => {
             }
           );
           
-          logger.error('Message processing failed', {
+          logger.error(`${messageType === 'template' ? 'Template' : messageType === 'image' ? 'Image' : 'Text'} message processing failed`, {
             campaignId,
             mrId,
-            error: error.message
+            error: error.message,
+            messageType
           });
           
           throw error;
@@ -213,40 +221,38 @@ async function processMessageDirectly(data: MessageJobData) {
   const { campaignId, mrId, phoneNumber, content, imageUrl, messageType, templateName, templateLanguage, templateParameters } = data;
   
   try {
-    logger.info('Processing message directly', { campaignId, mrId, phoneNumber, messageType });
-    
-    let whatsappMessage;
+    let result;
     
     if (messageType === 'template' && templateName) {
-      // Create template message
-      whatsappMessage = whatsappService.createTemplateMessage(
-        phoneNumber, 
-        templateName, 
-        templateLanguage || 'en_US', 
-        templateParameters
+      logger.info('Processing template message directly with WhatsApp Cloud API', { campaignId, mrId, phoneNumber, templateName });
+      // Send template message using WhatsApp Cloud API
+      result = await whatsappCloudAPIService.sendTemplateMessage(
+        phoneNumber,
+        templateName,
+        (templateParameters || []).map(param => param.text),
+        templateLanguage || 'en_US'
       );
     } else if (imageUrl) {
-      // Create image message
-      whatsappMessage = {
-        to: phoneNumber,
-        type: 'image' as 'text' | 'image' | 'template',
-        image: { link: imageUrl, caption: content }
-      };
+      logger.info('Processing image message directly with WhatsApp Cloud API', { campaignId, mrId, phoneNumber, imageUrl });
+      // Send image message using WhatsApp Cloud API
+      result = await whatsappCloudAPIService.sendImageMessage(
+        phoneNumber,
+        imageUrl,
+        content
+      );
     } else {
-      // For unverified numbers, we need to use templates
-      // But since hello_world doesn't accept custom content, we'll use text messages
-      // and handle the verification error gracefully
-      whatsappMessage = whatsappService.createTextMessage(phoneNumber, content);
+      logger.info('Processing text message directly with WhatsApp Cloud API', { campaignId, mrId, phoneNumber });
+      // Send text message using WhatsApp Cloud API
+      result = await whatsappCloudAPIService.sendTextMessage(phoneNumber, content);
     }
-
-    const result = await whatsappService.sendMessage(whatsappMessage);
     
     await MessageLog.updateMany(
       { campaignId, mrId },
       {
-        status: result.success ? 'sent' : 'failed',
+        status: result.messages && result.messages[0]?.message_status === 'accepted' ? 'sent' : 'failed',
+        messageId: result.messages?.[0]?.id,
         sentAt: new Date(),
-        errorMessage: result.error,
+        errorMessage: result.messages && result.messages[0]?.message_status === 'accepted' ? null : 'Message not accepted by WhatsApp',
       }
     );
 
@@ -277,10 +283,13 @@ async function processMessageDirectly(data: MessageJobData) {
       });
     }
 
-    logger.info('Message processed successfully', {
+    const isSuccess = result.messages && result.messages[0]?.message_status === 'accepted';
+    logger.info(`${messageType === 'template' ? 'Template' : messageType === 'image' ? 'Image' : 'Text'} message processed successfully`, {
       campaignId,
       mrId,
-      success: result.success
+      success: isSuccess,
+      messageType,
+      messageId: result.messages?.[0]?.id
     });
 
     return result;
@@ -294,10 +303,11 @@ async function processMessageDirectly(data: MessageJobData) {
       }
     );
 
-    logger.error('Failed to process message directly', {
+    logger.error(`Failed to process ${messageType === 'template' ? 'template' : messageType === 'image' ? 'image' : 'text'} message directly`, {
       campaignId,
       mrId,
-      error: error.message
+      error: error.message,
+      messageType
     });
 
     throw error;

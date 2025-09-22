@@ -57,6 +57,12 @@ export const campaignApi = {
     return response.data;
   },
 
+  // Get all template campaigns
+  getTemplateCampaigns: async (): Promise<{ success: boolean; data: CampaignResponse[] }> => {
+    const response = await api.get('/template-campaigns');
+    return response.data;
+  },
+
   // Get campaign by ID
   getById: async (id: string): Promise<{ success: boolean; data: CampaignResponse }> => {
     const response = await api.get(`/messages/campaigns/${id}`);

@@ -293,6 +293,29 @@ export class TemplateController {
       });
 
       if (!template) {
+        logger.warn('Template not found for deletion', { 
+          templateId: id, 
+          userId: userId 
+        });
+        
+        // Check if template exists but belongs to another user or is already deleted
+        const existingTemplate = await Template.findById(id);
+        if (existingTemplate) {
+          if (existingTemplate.createdBy.toString() !== userId) {
+            res.status(403).json({ 
+              success: false, 
+              error: 'You do not have permission to delete this template' 
+            });
+            return;
+          } else if (!existingTemplate.isActive) {
+            res.status(410).json({ 
+              success: false, 
+              error: 'Template has already been deleted' 
+            });
+            return;
+          }
+        }
+        
         res.status(404).json({ 
           success: false, 
           error: 'Template not found' 
@@ -301,7 +324,10 @@ export class TemplateController {
       }
 
       // Soft delete by setting isActive to false
-      await Template.findByIdAndUpdate(id, { isActive: false });
+      await Template.findByIdAndUpdate(id, { 
+        isActive: false,
+        updatedAt: new Date()
+      });
 
       logger.info('Template deleted successfully', { 
         templateId: id, 

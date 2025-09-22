@@ -1,87 +1,135 @@
-import React, { useState } from 'react';
-import { X, ChevronDown } from 'lucide-react';
-
-interface Contact {
-  id: string;
-  mrId: string;
-  firstName: string;
-  lastName: string;
-  phone: string;
-  group: string;
-  comments?: string;
-}
+import React, { useState, useEffect } from 'react';
+import { X, ChevronDown, Loader2 } from 'lucide-react';
+import { api } from '../lib/api';
+import { useConfirm } from '../contexts/ConfirmContext';
 
 interface Group {
   id: string;
-  name: string;
-  contactCount: number;
+  groupName: string;
+  description?: string;
+  memberCount: number;
 }
 
 interface AddMRDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onAdd: (contact: Omit<Contact, 'id'>) => void;
-  groups: Group[];
+  onSuccess: () => void; // Callback when MR is successfully added
 }
 
-const AddMRDialog: React.FC<AddMRDialogProps> = ({ isOpen, onClose, onAdd, groups }) => {
+const AddMRDialog: React.FC<AddMRDialogProps> = ({ isOpen, onClose, onSuccess }) => {
+  const { alert } = useConfirm();
   const [formData, setFormData] = useState({
     mrId: '',
     firstName: '',
     lastName: '',
     phone: '',
-    group: '',
+    groupId: '',
     comments: ''
   });
 
-  // Debug: Log groups when component renders
-  console.log('AddMRDialog groups:', groups);
-
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [showGroupDropdown, setShowGroupDropdown] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Fetch groups when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchGroups();
+    }
+  }, [isOpen]);
+
+  const fetchGroups = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get('/groups');
+      const backendGroups = response.data.data || [];
+      
+      const transformedGroups: Group[] = backendGroups.map((group: any) => ({
+        id: group._id || group.id,
+        groupName: group.groupName,
+        description: group.description,
+        memberCount: group.memberCount || 0
+      }));
+      
+      setGroups(transformedGroups);
+    } catch (error: any) {
+      console.error('Error fetching groups:', error);
+      // Don't show error for groups fetch failure, just continue
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMessage(''); // Clear previous errors
+    setErrorMessage('');
+    setSubmitting(true);
     
     // Validate required fields
     if (!formData.mrId.trim()) {
       setErrorMessage('❌ MR ID is required');
+      setSubmitting(false);
       return;
     }
     if (!formData.firstName.trim()) {
       setErrorMessage('❌ First Name is required');
+      setSubmitting(false);
       return;
     }
     if (!formData.lastName.trim()) {
       setErrorMessage('❌ Last Name is required');
+      setSubmitting(false);
       return;
     }
     if (!formData.phone.trim()) {
       setErrorMessage('❌ Phone number is required');
+      setSubmitting(false);
       return;
     }
     if (!formData.phone.startsWith('+91') || formData.phone.length !== 13) {
       setErrorMessage('❌ Phone number must be 13 digits starting with +91');
+      setSubmitting(false);
       return;
     }
 
     try {
-      onAdd(formData);
-      // Only close and reset if successful
+      // Prepare data for API
+      const mrData = {
+        mrId: formData.mrId.trim(),
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        phone: formData.phone.trim(),
+        groupId: formData.groupId || undefined,
+        comments: formData.comments.trim() || undefined
+      };
+
+      // Call the API
+      await api.post('/mrs', mrData);
+
+      // Success - show alert and reset form
+      await alert('MR added successfully!', 'success');
+      
+      // Reset form
       setFormData({
         mrId: '',
         firstName: '',
         lastName: '',
         phone: '',
-        group: '',
+        groupId: '',
         comments: ''
       });
-      setErrorMessage('');
-      onClose();
-    } catch (error: any) {
-      let errorMessage = error.message || 'Failed to add MR';
       
-      // Clean up error messages to replace technical details with app name
+      // Close dialog and notify parent
+      onClose();
+      onSuccess();
+      
+    } catch (error: any) {
+      console.error('Error adding MR:', error);
+      let errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Failed to add MR';
+      
+      // Clean up error messages
       errorMessage = errorMessage
         .replace(/app\.railway\.app/gi, 'D-MAK')
         .replace(/railway\.app/gi, 'D-MAK')
@@ -95,6 +143,8 @@ const AddMRDialog: React.FC<AddMRDialogProps> = ({ isOpen, onClose, onAdd, group
         .trim();
       
       setErrorMessage(`❌ Error: ${errorMessage}`);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -105,6 +155,27 @@ const AddMRDialog: React.FC<AddMRDialogProps> = ({ isOpen, onClose, onAdd, group
     }));
   };
 
+  const handleClose = () => {
+    // Reset form when closing
+    setFormData({
+      mrId: '',
+      firstName: '',
+      lastName: '',
+      phone: '',
+      groupId: '',
+      comments: ''
+    });
+    setErrorMessage('');
+    setShowGroupDropdown(false);
+    onClose();
+  };
+
+  const getSelectedGroupName = () => {
+    if (!formData.groupId) return 'Select Group (Optional)';
+    const selectedGroup = groups.find(g => g.id === formData.groupId);
+    return selectedGroup ? selectedGroup.groupName : 'Select Group (Optional)';
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -113,7 +184,7 @@ const AddMRDialog: React.FC<AddMRDialogProps> = ({ isOpen, onClose, onAdd, group
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-900">Add New MR</h2>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="text-gray-400 hover:text-gray-600"
           >
             <X className="h-6 w-6" />
@@ -161,19 +232,56 @@ const AddMRDialog: React.FC<AddMRDialogProps> = ({ isOpen, onClose, onAdd, group
               value={formData.phone}
               onChange={(e) => handleChange('phone', e.target.value)}
               className="w-full px-3 py-3 rounded-lg border-0 bg-gray-100"
-              placeholder="Enter phone number"
+              placeholder="+919876543210"
             />
           </div>
 
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-1">Group (Optional)</label>
-            <input
-              type="text"
-              value={formData.group}
-              onChange={(e) => handleChange('group', e.target.value)}
-              placeholder="Enter group name (e.g., North Zone, West Zone, etc.) - Optional"
-              className="w-full px-3 py-3 rounded-lg border-0 bg-gray-100 focus:ring-2 focus:ring-indigo-500"
-            />
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowGroupDropdown(!showGroupDropdown)}
+                className="w-full px-3 py-3 rounded-lg border-0 bg-gray-100 text-left flex justify-between items-center focus:ring-2 focus:ring-indigo-500"
+                disabled={loading}
+              >
+                <span className={formData.groupId ? 'text-gray-900' : 'text-gray-500'}>
+                  {loading ? 'Loading groups...' : getSelectedGroupName()}
+                </span>
+                <ChevronDown className="h-4 w-4" />
+              </button>
+              
+              {showGroupDropdown && !loading && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleChange('groupId', '');
+                      setShowGroupDropdown(false);
+                    }}
+                    className="w-full px-3 py-2 text-left hover:bg-gray-100 text-gray-500"
+                  >
+                    No Group
+                  </button>
+                  {groups.map((group) => (
+                    <button
+                      key={group.id}
+                      type="button"
+                      onClick={() => {
+                        handleChange('groupId', group.id);
+                        setShowGroupDropdown(false);
+                      }}
+                      className="w-full px-3 py-2 text-left hover:bg-gray-100 text-gray-900"
+                    >
+                      {group.groupName}
+                      {group.description && (
+                        <span className="text-sm text-gray-500 ml-2">- {group.description}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div>
@@ -197,16 +305,19 @@ const AddMRDialog: React.FC<AddMRDialogProps> = ({ isOpen, onClose, onAdd, group
           <div className="flex justify-end space-x-3 pt-4">
             <button
               type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              onClick={handleClose}
+              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50"
+              disabled={submitting}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center space-x-2"
+              disabled={submitting}
             >
-              Add MR
+              {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              <span>{submitting ? 'Adding...' : 'Add MR'}</span>
             </button>
           </div>
         </form>

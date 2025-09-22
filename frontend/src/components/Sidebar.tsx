@@ -6,7 +6,8 @@ import {
   LogOut, 
   Shield,
   Users,
-  FolderOpen
+  FolderOpen,
+  Wand2
 } from 'lucide-react';
 
 interface MenuItem {
@@ -33,6 +34,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   userRole = "Super Admin"
 }) => {
   const menuItems: MenuItem[] = [
+    { id: 'campaign-wizard', label: 'Campaign Wizard', icon: Wand2, route: '/campaign-wizard' },
     { id: 'dashboard', label: 'Campaigns Dashboard', icon: BarChart3, route: '/dashboard' },
     { id: 'dmak', label: 'MR Management', icon: Users, route: '/dmak' },
     { id: 'templates', label: 'Templates Management', icon: FolderOpen, route: '/templates' },

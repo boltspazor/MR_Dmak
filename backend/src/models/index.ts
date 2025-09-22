@@ -6,3 +6,5 @@ export { default as MessageCampaign, IMessageCampaign } from './MessageCampaign'
 export { default as MessageLog, IMessageLog } from './MessageLog';
 export { default as GroupActivity, IGroupActivity } from './GroupActivity';
 export { default as Template, ITemplate } from './Template';
+export { default as TemplateRecipients, ITemplateRecipients } from './TemplateRecipients';
+export { default as RecipientList, IRecipientList } from './RecipientList';

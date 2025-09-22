@@ -1,27 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  MessageSquare,
-  Send,
-  Upload,
-  X,
-  ChevronDown,
-  CheckCircle,
-  FileText
-} from 'lucide-react';
-import { api } from '../lib/api';
-import { Campaign, Template, RecipientList } from '../types';
+import { MessageSquare } from 'lucide-react';
+import { Template } from '../types';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import CommonFeatures from '../components/CommonFeatures';
 import { useAuth } from '../contexts/AuthContext';
+import TemplatePreviewDialog from '../components/ui/TemplatePreviewDialog';
+import TemplateRecipientUploadV2 from '../components/ui/TemplateRecipientUploadV2';
+import { useTemplateRecipients } from '../hooks/useTemplateRecipients';
+import { useCampaigns } from '../hooks/useCampaigns';
+import { useCampaignActions } from '../hooks/useCampaignActions';
+import { downloadTemplateCSV, cleanErrorMessage } from '../utils/campaignUtils';
+import TemplateMessagesTab from '../components/campaigns/TemplateMessagesTab';
+import CustomMessagesTab from '../components/campaigns/CustomMessagesTab';
+import CreateRecipientListModal from '../components/campaigns/CreateRecipientListModal';
+import SendConfirmationModal from '../components/campaigns/SendConfirmationModal';
+import ErrorPopup from '../components/campaigns/ErrorPopup';
 
 const Campaigns: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { campaigns, templates, mrs, loading } = useCampaigns();
+  const { createWithTemplateCampaign, createCustomMessageCampaign, createRecipientList } = useCampaignActions();
+  
   const [activeTab, setActiveTab] = useState<'with-template' | 'custom-messages'>('with-template');
 
   // Template Messages Tab States
@@ -29,12 +31,10 @@ const Campaigns: React.FC = () => {
   const [showTemplatePreview, setShowTemplatePreview] = useState(false);
   const [selectedTemplateDropdown, setSelectedTemplateDropdown] = useState<string>('');
   const [campaignName, setCampaignName] = useState('');
-  const [selectedRecipientList, setSelectedRecipientList] = useState<RecipientList | null>(null);
+  const [selectedRecipientList, setSelectedRecipientList] = useState<any>(null);
 
   // Preview states
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
-  const [previewGroup] = useState<any>(null);
-  const [showGroupPreview, setShowGroupPreview] = useState(false);
 
   // Without Template Tab States
   const [messageContent, setMessageContent] = useState('');
@@ -44,156 +44,22 @@ const Campaigns: React.FC = () => {
   const [footerImagePreview, setFooterImagePreview] = useState<string | null>(null);
 
   // MR Search and Selection States
-  const [mrs, setMrs] = useState<any[]>([]);
   const [mrSearchTerm, setMrSearchTerm] = useState('');
   const [selectedMrs, setSelectedMrs] = useState<string[]>([]);
   const [mrSortField, setMrSortField] = useState<'mrId' | 'firstName' | 'phone' | 'group'>('mrId');
   const [mrSortDirection, setMrSortDirection] = useState<'asc' | 'desc'>('asc');
 
-  // Recipient List Modal States
+  // Modal States
   const [showCreateRecipientList, setShowCreateRecipientList] = useState(false);
-  const [recipientListName, setRecipientListName] = useState('');
-  const [recipientListDescription, setRecipientListDescription] = useState('');
-  const [csvFile, setCsvFile] = useState<File | null>(null);
-  const [csvData, setCsvData] = useState<string[][]>([]);
-  const [showCsvPreview, setShowCsvPreview] = useState(false);
-
-  // Error Popup States
   const [showErrorPopup, setShowErrorPopup] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [errorTitle, setErrorTitle] = useState('');
-
-  // Send Confirmation Popup States
   const [showSendConfirmation, setShowSendConfirmation] = useState(false);
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      const [campaignsRes, templatesRes, mrsRes] = await Promise.all([
-        api.get('/messages/campaigns').catch(err => {
-          console.log('Campaigns not available (likely auth issue):', err.message);
-          return { data: { data: [] } };
-        }),
-        api.get('/templates').catch(err => {
-          console.log('Templates not available (likely auth issue):', err.message);
-          return { data: { data: [] } };
-        }),
-        api.get('/mrs').catch(err => {
-          console.log('MRs not available (likely auth issue):', err.message);
-          return { data: { data: [] } };
-        })
-      ]);
-
-      // Handle different response structures safely
-      setCampaigns(campaignsRes.data?.data || campaignsRes.data || []);
-      setTemplates(templatesRes.data?.data || templatesRes.data || []);
-      setMrs(mrsRes.data?.data || mrsRes.data || []);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      // Set empty arrays on error to prevent undefined access
-      setCampaigns([]);
-      setTemplates([]);
-      setMrs([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [showRecipientUpload, setShowRecipientUpload] = useState(false);
+  const [uploadTemplate, setUploadTemplate] = useState<Template | null>(null);
 
 
-  const handleMrSelection = (mrId: string) => {
-    setSelectedMrs(prev => 
-      prev.includes(mrId) 
-        ? prev.filter(id => id !== mrId)
-        : [...prev, mrId]
-    );
-  };
-
-  const handleMrSort = (field: 'mrId' | 'firstName' | 'phone' | 'group') => {
-    if (mrSortField === field) {
-      setMrSortDirection(mrSortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setMrSortField(field);
-      setMrSortDirection('asc');
-    }
-  };
-
-  const filteredMrs = mrs
-    .filter(mr =>
-      mr.firstName?.toLowerCase().includes(mrSearchTerm.toLowerCase()) ||
-      mr.lastName?.toLowerCase().includes(mrSearchTerm.toLowerCase()) ||
-      mr.mrId?.toLowerCase().includes(mrSearchTerm.toLowerCase()) ||
-      mr.phone?.includes(mrSearchTerm)
-    )
-    .sort((a, b) => {
-      const aValue = a[mrSortField] || '';
-      const bValue = b[mrSortField] || '';
-      
-      if (aValue < bValue) return mrSortDirection === 'asc' ? -1 : 1;
-      if (aValue > bValue) return mrSortDirection === 'asc' ? 1 : -1;
-      return 0;
-    });
-
-
-  const handleTemplateDropdownChange = (templateId: string) => {
-    if (!templateId) return;
-    const template = (templates || []).find(t => t?._id === templateId);
-    if (template) {
-      setSelectedTemplate(template);
-    }
-    setSelectedTemplateDropdown('');
-  };
-
-
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setSelectedImage(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setImagePreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-
-  const handleCreateRecipientList = async () => {
-    if (!recipientListName.trim() || !csvFile) {
-      showError('Missing Information', 'Please provide a name and upload a CSV file');
-      return;
-    }
-
-    try {
-      const formData = new FormData();
-      formData.append('name', recipientListName);
-      formData.append('description', recipientListDescription);
-      formData.append('csvFile', csvFile);
-
-      await api.post('/recipient-lists/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-
-      showError('Success', 'Recipient list created successfully!', true);
-      setShowCreateRecipientList(false);
-      setRecipientListName('');
-      setRecipientListDescription('');
-      setCsvFile(null);
-      setCsvData([]);
-      setShowCsvPreview(false);
-    } catch (error) {
-      console.error('Error creating recipient list:', error);
-      showError('Error', 'Failed to create recipient list');
-    }
-  };
-
-  const removeImage = () => {
-    setSelectedImage(null);
-    setImagePreview(null);
-  };
-
+  // Handler functions
   const handleWithTemplateSubmit = async () => {
     if (!selectedTemplate || !selectedRecipientList || !campaignName.trim()) {
       showError('Missing Information', 'Please select a template, recipient list, and enter a campaign name');
@@ -201,75 +67,72 @@ const Campaigns: React.FC = () => {
     }
 
     try {
-      const campaignData = {
+      await createWithTemplateCampaign({
         name: campaignName,
         templateId: selectedTemplate._id,
         recipientListId: selectedRecipientList._id,
         type: 'with-template'
-      };
-
-      await api.post('/messages/campaigns', campaignData);
+      });
       setShowSendConfirmation(true);
-
-      // Reset form
-      setSelectedTemplate(null);
-      setSelectedRecipientList(null);
-      setCampaignName('');
-      setSelectedTemplateDropdown('');
+      resetTemplateForm();
     } catch (error) {
-      console.error('Error creating campaign:', error);
       showError('Error', 'Failed to create campaign');
     }
   };
 
-  const handleWithoutTemplateSubmit = async () => {
+  const handleCustomMessageSubmit = async () => {
     if (!messageContent.trim() || selectedMrs.length === 0 || !campaignName.trim()) {
       showError('Missing Information', 'Please enter message content, select MRs, and enter a campaign name');
       return;
     }
 
     try {
-      const campaignData = {
+      await createCustomMessageCampaign({
         name: campaignName,
         content: messageContent,
         targetMrs: selectedMrs,
-        image: selectedImage,
-        footerImage: footerImage,
+        image: selectedImage ?? undefined,
+        footerImage: footerImage ?? undefined,
         type: 'custom-messages'
-      };
-
-      const formData = new FormData();
-      formData.append('name', campaignData.name);
-      formData.append('content', campaignData.content);
-      formData.append('targetMrs', JSON.stringify(campaignData.targetMrs));
-      formData.append('type', campaignData.type);
-      if (campaignData.image) {
-        formData.append('image', campaignData.image);
-      }
-      if (campaignData.footerImage) {
-        formData.append('footerImage', campaignData.footerImage);
-      }
-
-      await api.post('/messages/campaigns', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
       });
-
       setShowSendConfirmation(true);
-
-      // Reset form
-      setMessageContent('');
-      setSelectedMrs([]);
-      setCampaignName('');
-      setSelectedImage(null);
-      setImagePreview(null);
-      setFooterImage(null);
-      setFooterImagePreview(null);
+      resetCustomMessageForm();
     } catch (error) {
-      console.error('Error creating campaign:', error);
       showError('Error', 'Failed to create campaign');
     }
   };
 
+  const handleCreateRecipientList = async (data: {
+    name: string;
+    description: string;
+    csvFile: File;
+  }) => {
+    try {
+      await createRecipientList(data);
+      showError('Success', 'Recipient list created successfully!', true);
+    } catch (error) {
+      showError('Error', 'Failed to create recipient list');
+    }
+  };
+
+  const resetTemplateForm = () => {
+    setSelectedTemplate(null);
+    setSelectedRecipientList(null);
+    setCampaignName('');
+    setSelectedTemplateDropdown('');
+  };
+
+  const resetCustomMessageForm = () => {
+    setMessageContent('');
+    setSelectedMrs([]);
+    setCampaignName('');
+    setSelectedImage(null);
+    setImagePreview(null);
+    setFooterImage(null);
+    setFooterImagePreview(null);
+  };
+
+  // Utility functions
   const summaryItems = [
     {
       title: 'Total Campaigns',
@@ -283,143 +146,34 @@ const Campaigns: React.FC = () => {
     navigate(route);
   };
 
-  // Function to extract parameters from template content
-  const extractParameters = (content: string): string[] => {
-    const paramMatches = content.match(/#[A-Za-z0-9_]+/g);
-    if (paramMatches) {
-      return [...new Set(paramMatches.map((param: string) => param.substring(1)))];
-    }
-    return [];
-  };
-
-  // Function to open template preview
   const handleTemplatePreview = (template: Template) => {
     setPreviewTemplate(template);
     setShowTemplatePreview(true);
   };
 
-  // CSV Validation Functions
-  const validateCSVFile = (csvData: string[][], templateName: string, templateParameters: string[] = []): { isValid: boolean; errors: string[] } => {
-    const errors: string[] = [];
-
-    // Check if CSV has at least 3 rows (A1, A2, A3)
-    if (csvData.length < 3) {
-      errors.push('CSV file must have at least 3 rows (template name, parameters, and sample data)');
-      return { isValid: false, errors };
-    }
-
-    // Check A1 cell for template name match
-    const a1Value = csvData[0]?.[0]?.trim();
-    if (!a1Value || a1Value !== templateName) {
-      errors.push(`Template name mismatch: Ensure that the template name is same in the cell A1. Expected: "${templateName}", Found: "${a1Value || 'empty'}"`);
-    }
-
-    // Check row 2 (parameters row) for empty cells
-    const parameterRow = csvData[1];
-    if (parameterRow) {
-      for (let i = 0; i < parameterRow.length; i++) {
-        if (parameterRow[i]?.trim() === '') {
-          errors.push(`Parameter row (row 2) has empty cell in column ${String.fromCharCode(65 + i)}2`);
-        }
-      }
-    }
-
-    // Check data rows (starting from row 3) for empty cells
-    for (let rowIndex = 2; rowIndex < csvData.length; rowIndex++) {
-      const row = csvData[rowIndex];
-      if (row) {
-        for (let colIndex = 0; colIndex < row.length; colIndex++) {
-          if (row[colIndex]?.trim() === '') {
-            errors.push(`Data row ${rowIndex + 1} has empty cell in column ${String.fromCharCode(65 + colIndex)}${rowIndex + 1}`);
-          }
-        }
-      }
-    }
-
-    // Validate template parameters match CSV parameters
-    if (templateParameters.length > 0 && parameterRow) {
-      // Extract parameters from CSV (skip first 3 columns: empty, MR id, First Name, Last Name)
-      const csvParameters = parameterRow.slice(3).filter(param => param.trim() !== '');
-
-      // Check if all template parameters are present in CSV
-      const missingParameters = templateParameters.filter(templateParam =>
-        !csvParameters.some(csvParam => csvParam === templateParam)
-      );
-
-      if (missingParameters.length > 0) {
-        errors.push(`Missing parameters in recipient list: ${missingParameters.join(', ')}. These parameters are required based on the template content.`);
-      }
-
-      // Check if CSV has extra parameters not in template
-      const extraParameters = csvParameters.filter(csvParam =>
-        !templateParameters.includes(csvParam)
-      );
-
-      if (extraParameters.length > 0) {
-        errors.push(`Extra parameters in recipient list: ${extraParameters.join(', ')}. These parameters are not used in the template content.`);
-      }
-    }
-
-    return { isValid: errors.length === 0, errors };
+  const handleBulkUploadRecipients = (template: Template) => {
+    setUploadTemplate(template);
+    setShowRecipientUpload(true);
   };
 
   const showError = (title: string, message: string, isSuccess: boolean = false) => {
-    // Clean up error messages to replace technical details with app name
-    const cleanedMessage = message
-      .replace(/app\.railway\.app/gi, 'D-MAK')
-      .replace(/railway\.app/gi, 'D-MAK')
-      .replace(/\.railway\./gi, ' D-MAK ')
-      .replace(/mrbackend-production-[a-zA-Z0-9-]+\.up\.railway\.app/gi, 'D-MAK server')
-      .replace(/https?:\/\/[a-zA-Z0-9-]+\.up\.railway\.app/gi, 'D-MAK server')
-      .replace(/production-[a-zA-Z0-9-]+\.up/gi, 'D-MAK')
-      .replace(/\b[a-zA-Z0-9-]+\.up\.railway\.app\b/gi, 'D-MAK server')
-      .replace(/\s+/g, ' ')
-      .replace(/D-MAK\s+server/gi, 'D-MAK server')
-      .trim();
-    
+    const cleanedMessage = cleanErrorMessage(message);
     setErrorTitle(title);
     setErrorMessage(cleanedMessage);
     setShowErrorPopup(true);
-    // Store success state for styling
     (window as any).lastPopupIsSuccess = isSuccess;
-  };
-
-  const handleCSVUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!selectedTemplate) {
-      showError('No Template Selected', 'Please select a template before uploading a recipient list.');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
-      const lines = text.split('\n');
-      const csvData = lines.map(line => line.split(',').map(cell => cell.trim()));
-
-      // Validate CSV
-      const validation = validateCSVFile(csvData, selectedTemplate.name, selectedTemplate.parameters || []);
-      if (!validation.isValid) {
-        // Format errors with numbers, one after another
-        const numberedErrors = validation.errors.map((error, index) => `${index + 1}. ${error}`).join('\n\n');
-        showError('CSV Validation Failed', numberedErrors);
-        return;
-      }
-
-      // If validation passes, process the CSV
-      setCsvData(csvData);
-      setCsvFile(file);
-      setShowCsvPreview(true);
-    };
-    reader.readAsText(file);
   };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     navigate('/login');
   };
+
+  // Get recipients for the preview template
+  const { recipients: previewRecipients, fetchRecipients: fetchPreviewRecipients } = useTemplateRecipients(previewTemplate?._id);
+  
+  // Get recipients for the selected template (for campaigns)
+  const { recipients: selectedTemplateRecipients, fetchRecipients: fetchSelectedTemplateRecipients } = useTemplateRecipients(selectedTemplate?._id);
 
   if (loading) {
     return (
@@ -463,955 +217,142 @@ const Campaigns: React.FC = () => {
           summaryItems={summaryItems}
           showExportBlock={false}
         >
-          <div className="space-y-8">
-
+          <div className="space-y-6">
             {/* Tabs */}
-            <div className="flex space-x-8 mt-6">
-              {[
-                { key: 'with-template', label: 'Template Messages' },
-                { key: 'custom-messages', label: 'Custom Messages' }
-              ].map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key as any)}
-                  className={`pb-2 border-b-2 text-lg font-medium capitalize ${activeTab === tab.key
-                      ? 'border-indigo-600 text-gray-900'
-                      : 'border-transparent text-gray-600 hover:text-gray-900'
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-1">
+              <div className="flex space-x-1">
+                {[
+                  { key: 'with-template', label: 'Template Messages' },
+                  { key: 'custom-messages', label: 'Custom Messages' }
+                ].map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key as any)}
+                    className={`flex-1 px-6 py-3 text-sm font-medium rounded-lg transition-colors ${
+                      activeTab === tab.key
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                     }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Template Messages Tab */}
             {activeTab === 'with-template' && (
-              <div className="space-y-6">
-                {/* Campaign Name */}
-                <div className="bg-white bg-opacity-40 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Campaign Name</h3>
-                  <input
-                    type="text"
-                    value={campaignName}
-                    onChange={(e) => setCampaignName(e.target.value)}
-                    placeholder="Enter campaign name"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-
-                {/* Template Selection Dropdown */}
-                <div className="bg-white bg-opacity-40 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Template</h3>
-                  <div className="space-y-4">
-                    <div className="relative">
-                      <select
-                        value={selectedTemplateDropdown}
-                        onChange={(e) => handleTemplateDropdownChange(e.target.value)}
-                        className="w-full px-3 py-2 pr-10 rounded-lg border-0 bg-gray-100 appearance-none cursor-pointer"
-                      >
-                        <option value="">Select a template</option>
-                        {(templates || []).map(template => (
-                          <option key={template?._id} value={template?._id}>
-                            {template?.name}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="h-5 w-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
-                    </div>
-
-                    {/* Template Preview */}
-                    {selectedTemplate && (
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium text-gray-700">Template Preview:</p>
-                        <div className="bg-white border border-gray-200 rounded-lg p-4">
-                          <div className="flex justify-between items-start mb-2">
-                            <h4 className="font-medium text-gray-900">{selectedTemplate.name}</h4>
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={() => handleTemplatePreview(selectedTemplate)}
-                                className="text-blue-600 hover:text-blue-800 text-sm"
-                                title="Preview Template"
-                              >
-                                Preview
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setSelectedTemplate(null);
-                                  setSelectedTemplateDropdown('');
-                                }}
-                                className="text-gray-400 hover:text-gray-600"
-                              >
-                                <X className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </div>
-                          <div className="text-sm text-gray-600 mb-3">
-                            {selectedTemplate.content.substring(0, 100)}
-                            {selectedTemplate.content.length > 100 && '...'}
-                          </div>
-                          {selectedTemplate.parameters.length > 0 && (
-                            <div>
-                              <p className="text-xs font-medium text-gray-500 mb-1">Parameters Used:</p>
-                              <div className="flex flex-wrap gap-1">
-                                {selectedTemplate.parameters.map((param, index) => (
-                                  <span
-                                    key={index}
-                                    className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
-                                  >
-                                    #{param}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Add Recipient List Button */}
-                <div className="bg-white bg-opacity-40 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Recipient List</h3>
-                  <button
-                    onClick={() => setShowCreateRecipientList(true)}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
-                  >
-                    Upload Recipient List
-                  </button>
-
-                  {/* Selected Recipient List Display */}
-                  {selectedRecipientList && (
-                    <div className="mt-4 space-y-2">
-                      <p className="text-sm font-medium text-gray-700">Selected Recipient List:</p>
-                      <div className="flex items-center space-x-2 bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm">
-                        <span>{selectedRecipientList.name} ({selectedRecipientList.data.length} records)</span>
-                        <button
-                          onClick={() => setSelectedRecipientList(null)}
-                          className="text-indigo-600 hover:text-indigo-800"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Konnect Button */}
-                <div className="flex justify-end">
-                  <button
-                    onClick={handleWithTemplateSubmit}
-                    disabled={!selectedTemplate || !selectedRecipientList || !campaignName.trim()}
-                    className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                  >
-                    <Send className="h-5 w-5 mr-2" />
-                    Send
-                  </button>
-                </div>
-              </div>
+              <TemplateMessagesTab
+                templates={templates}
+                campaignName={campaignName}
+                setCampaignName={setCampaignName}
+                selectedTemplate={selectedTemplate}
+                setSelectedTemplate={setSelectedTemplate}
+                selectedTemplateDropdown={selectedTemplateDropdown}
+                setSelectedTemplateDropdown={setSelectedTemplateDropdown}
+                selectedRecipientList={selectedRecipientList}
+                setSelectedRecipientList={setSelectedRecipientList}
+                onTemplatePreview={handleTemplatePreview}
+                onBulkUploadRecipients={handleBulkUploadRecipients}
+                onDownloadTemplateCSV={downloadTemplateCSV}
+                onSubmit={handleWithTemplateSubmit}
+                showError={showError}
+                onShowCreateRecipientList={() => setShowCreateRecipientList(true)}
+              />
             )}
 
             {/* Custom Messages Tab */}
             {activeTab === 'custom-messages' && (
-              <div className="space-y-6">
-                {/* Campaign Name */}
-                <div className="bg-white bg-opacity-40 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Campaign Name</h3>
-                  <input
-                    type="text"
-                    value={campaignName}
-                    onChange={(e) => setCampaignName(e.target.value)}
-                    placeholder="Enter campaign name"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-
-                {/* MR Selection */}
-                <div className="bg-white bg-opacity-40 rounded-lg">
-                  {/* Table Header */}
-                  <div className="p-6 border-b bg-indigo-50">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900">Select MRs</h3>
-                      <span className="text-sm text-gray-700 font-bold">
-                        {selectedMrs.length} of {filteredMrs.length}
-                      </span>
-                    </div>
-
-                    {/* Search Controls */}
-                    <div className="grid grid-cols-1 gap-4">
-                      <div className="relative">
-                        <input
-                          type="text"
-                          placeholder="Search MRs by name, ID, phone, or group..."
-                          value={mrSearchTerm}
-                          onChange={(e) => setMrSearchTerm(e.target.value)}
-                          className="w-full pl-4 pr-4 py-2 rounded-lg border-0 bg-gray-100"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Table */}
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="bg-indigo-50 border-b">
-                          <th className="text-left py-3 px-6 text-sm font-bold text-gray-700">
-                            <input
-                              type="checkbox"
-                              checked={selectedMrs.length === filteredMrs.length && filteredMrs.length > 0}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedMrs(filteredMrs.map(mr => mr._id || mr.id));
-                                } else {
-                                  setSelectedMrs([]);
-                                }
-                              }}
-                              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                            />
-                          </th>
-                          <th 
-                            className="text-left py-3 px-6 text-sm font-bold text-gray-700 cursor-pointer hover:bg-indigo-100"
-                            onClick={() => handleMrSort('mrId')}
-                          >
-                            <div className="flex items-center justify-start">
-                              MR ID
-                              {mrSortField === 'mrId' && (
-                                <span className="ml-1">
-                                  {mrSortDirection === 'asc' ? '↑' : '↓'}
-                                </span>
-                              )}
-                            </div>
-                          </th>
-                          <th 
-                            className="text-left py-3 px-6 text-sm font-bold text-gray-700 cursor-pointer hover:bg-indigo-100"
-                            onClick={() => handleMrSort('firstName')}
-                          >
-                            <div className="flex items-center justify-start">
-                              Name
-                              {mrSortField === 'firstName' && (
-                                <span className="ml-1">
-                                  {mrSortDirection === 'asc' ? '↑' : '↓'}
-                                </span>
-                              )}
-                            </div>
-                          </th>
-                          <th 
-                            className="text-left py-3 px-6 text-sm font-bold text-gray-700 cursor-pointer hover:bg-indigo-100"
-                            onClick={() => handleMrSort('phone')}
-                          >
-                            <div className="flex items-center justify-start">
-                              Phone
-                              {mrSortField === 'phone' && (
-                                <span className="ml-1">
-                                  {mrSortDirection === 'asc' ? '↑' : '↓'}
-                                </span>
-                              )}
-                            </div>
-                          </th>
-                          <th 
-                            className="text-left py-3 px-6 text-sm font-bold text-gray-700 cursor-pointer hover:bg-indigo-100"
-                            onClick={() => handleMrSort('group')}
-                          >
-                            <div className="flex items-center justify-start">
-                              Group
-                              {mrSortField === 'group' && (
-                                <span className="ml-1">
-                                  {mrSortDirection === 'asc' ? '↑' : '↓'}
-                                </span>
-                              )}
-                            </div>
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredMrs.length > 0 ? (
-                          filteredMrs.map((mr, index) => (
-                            <tr key={mr._id || mr.id} className="border-b hover:bg-gray-50">
-                              <td className="py-3 px-6 text-sm text-left">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedMrs.includes(mr._id || mr.id)}
-                                  onChange={() => handleMrSelection(mr._id || mr.id)}
-                                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                                />
-                              </td>
-                              <td className="py-3 px-6 text-sm text-gray-900 text-left font-medium">{mr.mrId}</td>
-                              <td className="py-3 px-6 text-sm text-gray-900 text-left">
-                                {mr.firstName} {mr.lastName}
-                              </td>
-                              <td className="py-3 px-6 text-sm text-gray-900 text-left">{mr.phone}</td>
-                              <td className="py-3 px-6 text-sm text-gray-900 text-left">{mr.group || '-'}</td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan={5} className="text-center py-12">
-                              <div className="flex flex-col items-center">
-                                <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4">
-                                  <FileText className="h-12 w-12 text-gray-400" />
-                                </div>
-                                <h3 className="text-lg font-bold mb-2 text-indigo-600">
-                                  No MRs Found
-                                </h3>
-                                <p className="text-sm text-indigo-600">
-                                  Try adjusting your search criteria
-                                </p>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Selected MRs Display */}
-                  {selectedMrs.length > 0 && (
-                    <div className="p-4 bg-gray-50 border-t space-y-2">
-                      <p className="text-sm font-medium text-gray-700">Selected MRs ({selectedMrs.length}):</p>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedMrs.map(mrId => {
-                          const mr = mrs.find(m => (m._id || m.id) === mrId);
-                          return (
-                            <div key={mrId} className="flex items-center space-x-2 bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm">
-                              <span>{mr?.firstName} {mr?.lastName}</span>
-                              <button
-                                onClick={() => handleMrSelection(mrId)}
-                                className="text-indigo-600 hover:text-indigo-800"
-                              >
-                                <X className="h-4 w-4" />
-                              </button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Message Composition */}
-                <div className="bg-white bg-opacity-40 rounded-lg p-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Left Column - Input Fields */}
-                    <div className="space-y-6">
-                      {/* Header Image Upload */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Header Image (Optional)
-                        </label>
-                        <div className="space-y-2">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleImageUpload}
-                            className="hidden"
-                            id="header-image-upload"
-                          />
-                          <label
-                            htmlFor="header-image-upload"
-                            className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-indigo-400 transition-colors"
-                          >
-                            <Upload className="h-5 w-5 text-gray-400 mr-2" />
-                            <span className="text-sm text-gray-600">Click to upload header image</span>
-                          </label>
-
-                          {imagePreview && (
-                            <div className="relative">
-                              <img
-                                src={imagePreview}
-                                alt="Header preview"
-                                className="w-full h-32 object-cover rounded-lg"
-                              />
-                              <button
-                                type="button"
-                                onClick={removeImage}
-                                className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                              >
-                                <X className="h-4 w-4" />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Message Input */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Text *</label>
-                        <textarea
-                          value={messageContent}
-                          onChange={(e) => setMessageContent(e.target.value)}
-                          placeholder="Enter message content with parameters like #FN, #LN, #Month, #Target..."
-                          rows={6}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Use #ParameterName for dynamic parameters (e.g., #FN, #LN, #Month, #Target)
-                        </p>
-                      </div>
-
-                      {/* Footer Image Upload */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Footer Image (Optional)
-                        </label>
-                        <div className="space-y-2">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                setFooterImage(file);
-                                const reader = new FileReader();
-                                reader.onload = (e) => {
-                                  setFooterImagePreview(e.target?.result as string);
-                                };
-                                reader.readAsDataURL(file);
-                              }
-                            }}
-                            className="hidden"
-                            id="footer-image-upload"
-                          />
-                          <label
-                            htmlFor="footer-image-upload"
-                            className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-indigo-400 transition-colors"
-                          >
-                            <Upload className="h-5 w-5 text-gray-400 mr-2" />
-                            <span className="text-sm text-gray-600">Click to upload footer image</span>
-                          </label>
-
-                          {footerImagePreview && (
-                            <div className="relative">
-                              <img
-                                src={footerImagePreview}
-                                alt="Footer preview"
-                                className="w-full h-32 object-cover rounded-lg"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setFooterImage(null);
-                                  setFooterImagePreview('');
-                                }}
-                                className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                              >
-                                <X className="h-4 w-4" />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Right Column - Live Preview */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Live Preview
-                      </label>
-                      <div className="bg-gray-100 p-4 rounded-lg h-96 overflow-y-auto">
-                        <div className="bg-white rounded-2xl rounded-tl-md shadow-sm max-w-xs mx-auto">
-                          {imagePreview && (
-                            <div className="w-full">
-                              <img
-                                src={imagePreview}
-                                alt="Header"
-                                className="w-full h-24 object-cover rounded-t-2xl"
-                              />
-                            </div>
-                          )}
-                          <div className="p-3">
-                            <div className="text-gray-800 text-xs leading-relaxed whitespace-pre-wrap">
-                              {(() => {
-                                if (!messageContent) return 'Start typing your message...';
-
-                                let processedContent = messageContent;
-
-                                // Sample parameter values for live preview
-                                const sampleParams = {
-                                  'FN': 'John',
-                                  'LN': 'Doe',
-                                  'FirstName': 'John',
-                                  'LastName': 'Doe',
-                                  'MRId': 'MR001',
-                                  'GroupName': 'North Zone',
-                                  'PhoneNumber': '+919876543210',
-                                  'Name': 'John Doe',
-                                  'Company': 'D-MAK',
-                                  'Product': 'New Product',
-                                  'Date': new Date().toLocaleDateString(),
-                                  'Time': new Date().toLocaleTimeString(),
-                                  'Month': new Date().toLocaleDateString('en-US', { month: 'long' }),
-                                  'Year': new Date().getFullYear().toString(),
-                                  'Target': '100',
-                                  'Achievement': '85',
-                                  'Location': 'Mumbai',
-                                  'City': 'Mumbai',
-                                  'State': 'Maharashtra',
-                                  'Country': 'India'
-                                };
-
-                                // Replace parameters with sample values
-                                for (const [param, value] of Object.entries(sampleParams)) {
-                                  const regex = new RegExp(`#${param}\\b`, 'g');
-                                  processedContent = processedContent.replace(regex, value);
-                                }
-
-                                // Replace any remaining parameters with [Sample Value]
-                                processedContent = processedContent.replace(/#[A-Za-z0-9_]+/g, '[Sample Value]');
-
-                                return processedContent;
-                              })()}
-                            </div>
-                          </div>
-                          {footerImagePreview && (
-                            <div className="px-3 pb-3">
-                              <img
-                                src={footerImagePreview}
-                                alt="Footer"
-                                className="w-full h-16 object-cover rounded-lg"
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Konnect Button */}
-                <div className="flex justify-end">
-                  <button
-                    onClick={handleWithoutTemplateSubmit}
-                    disabled={!messageContent.trim() || selectedMrs.length === 0 || !campaignName.trim()}
-                    className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                  >
-                    <Send className="h-5 w-5 mr-2" />
-                    Send
-                  </button>
-                </div>
-              </div>
+              <CustomMessagesTab
+                campaignName={campaignName}
+                setCampaignName={setCampaignName}
+                messageContent={messageContent}
+                setMessageContent={setMessageContent}
+                selectedImage={selectedImage}
+                setSelectedImage={setSelectedImage}
+                imagePreview={imagePreview}
+                setImagePreview={setImagePreview}
+                footerImage={footerImage}
+                setFooterImage={setFooterImage}
+                footerImagePreview={footerImagePreview}
+                setFooterImagePreview={setFooterImagePreview}
+                mrs={mrs}
+                selectedMrs={selectedMrs}
+                setSelectedMrs={setSelectedMrs}
+                mrSearchTerm={mrSearchTerm}
+                setMrSearchTerm={setMrSearchTerm}
+                mrSortField={mrSortField}
+                setMrSortField={setMrSortField}
+                mrSortDirection={mrSortDirection}
+                setMrSortDirection={setMrSortDirection}
+                onSubmit={handleCustomMessageSubmit}
+              />
             )}
+
           </div>
         </CommonFeatures>
 
         {/* Create Recipient List Modal */}
-        {showCreateRecipientList && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">Create Recipient List</h2>
-                <button
-                  onClick={() => {
-                    setShowCreateRecipientList(false);
-                    setRecipientListName('');
-                    setRecipientListDescription('');
-                    setCsvFile(null);
-                    setCsvData([]);
-                    setShowCsvPreview(false);
-                  }}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-
-              <div className="space-y-6">
-                {/* Recipient List Name */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    List Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={recipientListName}
-                    onChange={(e) => setRecipientListName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Enter recipient list name"
-                  />
-                </div>
-
-                {/* Description */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    value={recipientListDescription}
-                    onChange={(e) => setRecipientListDescription(e.target.value)}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Enter description (optional)"
-                  />
-                </div>
-
-                {/* CSV Upload */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Upload CSV File *
-                  </label>
-                  <div className="space-y-2">
-                    <input
-                      type="file"
-                      accept=".csv"
-                      onChange={handleCSVUpload}
-                      className="hidden"
-                      id="csv-upload"
-                    />
-                    <label
-                      htmlFor="csv-upload"
-                      className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-indigo-400 transition-colors"
-                    >
-                      <Upload className="h-5 w-5 text-gray-400 mr-2" />
-                      <span className="text-sm text-gray-600">Click to upload CSV file</span>
-                    </label>
-
-                    {csvFile && (
-                      <p className="text-sm text-green-600">
-                        File selected: {csvFile.name}
-                      </p>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    If you have not done so, Download the corresponding Recipient List Template from Template Management Screen. Fill the template with list of MRs this campaign should be directed to. Come back to this screen and upload.
-                  </p>
-                </div>
-
-                {/* CSV Preview */}
-                {showCsvPreview && csvData.length > 0 && (
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-2">CSV Preview (first 5 rows):</h4>
-                    <div className="overflow-x-auto border border-gray-200 rounded-lg">
-                      <table className="w-full text-sm">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            {csvData[0]?.map((header: string, index: number) => (
-                              <th key={index} className="px-3 py-2 text-left font-medium text-gray-700">
-                                {header}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {csvData.slice(1, 6).map((row: string[], rowIndex: number) => (
-                            <tr key={rowIndex} className="border-t">
-                              {row.map((cell: string, cellIndex: number) => (
-                                <td key={cellIndex} className="px-3 py-2 text-gray-600">
-                                  {cell}
-                                </td>
-                              ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowCreateRecipientList(false);
-                      setRecipientListName('');
-                      setRecipientListDescription('');
-                      setCsvFile(null);
-                      setCsvData([]);
-                      setShowCsvPreview(false);
-                    }}
-                    className="px-6 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleCreateRecipientList}
-                    className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-                  >
-                    Create Recipient List
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <CreateRecipientListModal
+          isOpen={showCreateRecipientList}
+          onClose={() => setShowCreateRecipientList(false)}
+          onCreateRecipientList={handleCreateRecipientList}
+          showError={showError}
+          mrs={mrs}
+          selectedTemplate={selectedTemplate}
+        />
 
         {/* Template Preview Modal */}
-        {showTemplatePreview && previewTemplate && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Template Preview: {previewTemplate.name}
-                </h2>
-                <button
-                  onClick={() => setShowTemplatePreview(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
+        <TemplatePreviewDialog
+          isOpen={showTemplatePreview}
+          onClose={() => setShowTemplatePreview(false)}
+          template={{
+            ...previewTemplate,
+            recipientLists: previewTemplate?._id === selectedTemplate?._id ? selectedTemplateRecipients : previewRecipients
+          } as Template}
+          onDownloadRecipientList={downloadTemplateCSV}
+          onBulkUploadRecipients={handleBulkUploadRecipients}
+          showDownloadButton={true}
+          showBulkUploadButton={true}
+          variant="full"
+        />
 
-              <div className="space-y-6">
-                {/* Template Preview */}
-                <div className="border-2 border-gray-200 rounded-lg p-6 bg-white">
-                  <div className="space-y-4">
-                    {/* Header Image */}
-                    {previewTemplate.imageUrl && (
-                      <div className="text-left">
-                        <img
-                          src={previewTemplate.imageUrl}
-                          alt="Header"
-                          className="max-w-full h-48 object-contain mx-auto rounded"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                            // Show fallback message
-                            const fallback = document.createElement('div');
-                            fallback.className = 'bg-gray-100 h-48 flex items-center justify-center rounded text-gray-500';
-                            fallback.innerHTML = '🖼️ Header Image Preview<br><small>Image will be rendered in actual message</small>';
-                            target.parentNode?.insertBefore(fallback, target);
-                          }}
-                        />
-                      </div>
-                    )}
-
-                    {/* Content */}
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <pre className="whitespace-pre-wrap text-sm text-gray-800">
-                        {previewTemplate.content}
-                      </pre>
-                    </div>
-
-                    {/* Footer Image */}
-                    {previewTemplate.footerImageUrl && (
-                      <div className="text-left">
-                        <img
-                          src={previewTemplate.footerImageUrl}
-                          alt="Footer"
-                          className="max-w-full h-32 object-contain mx-auto rounded"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                            // Show fallback message
-                            const fallback = document.createElement('div');
-                            fallback.className = 'bg-gray-100 h-32 flex items-center justify-center rounded text-gray-500';
-                            fallback.innerHTML = '🖼️ Footer Image Preview<br><small>Image will be rendered in actual message</small>';
-                            target.parentNode?.insertBefore(fallback, target);
-                          }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Template Details */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-2">
-                      Template Type:
-                    </h4>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                      {previewTemplate.type}
-                    </span>
-                  </div>
-
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-2">
-                      Created:
-                    </h4>
-                    <span className="text-sm text-gray-600">
-                      {new Date(previewTemplate.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Parameters */}
-                {(() => {
-                  const extractedParams = extractParameters(previewTemplate.content);
-                  return extractedParams.length > 0 ? (
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-2">
-                        Parameters:
-                      </h4>
-                      <div className="flex flex-wrap gap-2">
-                        {extractedParams.map((param: string, index: number) => (
-                          <span
-                            key={index}
-                            className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
-                          >
-                            #{param}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-2">
-                        Parameters:
-                      </h4>
-                      <div className="text-center py-4">
-                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <FileText className="h-8 w-8 text-gray-400" />
-                        </div>
-                        <p className="text-gray-500 text-sm">
-                          No parameters found in this template
-                        </p>
-                        <p className="text-xs text-gray-400 mt-1">
-                          Use #ParameterName in your template content to create dynamic parameters
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
-          </div>
+        {/* Recipient Upload Modal */}
+        {showRecipientUpload && uploadTemplate && (
+          <TemplateRecipientUploadV2
+            template={uploadTemplate}
+            showError={showError}
+            onUploadSuccess={() => {
+              // Refresh recipients for the uploaded template
+              if (uploadTemplate._id === selectedTemplate?._id) {
+                fetchSelectedTemplateRecipients(uploadTemplate._id);
+              }
+              if (previewTemplate?._id === uploadTemplate._id) {
+                fetchPreviewRecipients(previewTemplate._id);
+              }
+            }}
+            onClose={() => {
+              setShowRecipientUpload(false);
+              setUploadTemplate(null);
+            }}
+          />
         )}
 
-        {/* Group Preview Modal */}
-        {showGroupPreview && previewGroup && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Group Preview: {previewGroup.groupName}
-                </h2>
-                <button
-                  onClick={() => setShowGroupPreview(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
+        {/* Send Confirmation Modal */}
+        <SendConfirmationModal
+          isOpen={showSendConfirmation}
+          onClose={() => setShowSendConfirmation(false)}
+        />
 
-              <div className="space-y-6">
-                {/* Group Details */}
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-gray-900 mb-2">
-                    Group Information:
-                  </h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-600">Group Name:</span>
-                      <span className="ml-2 font-medium">{previewGroup.groupName}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Total Contacts:</span>
-                      <span className="ml-2 font-medium">{previewGroup.mrCount || 0}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Group Description */}
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">
-                    Description:
-                  </h4>
-                  <p className="text-sm text-gray-600">
-                    This group contains {previewGroup.mrCount || 0} medical representatives who will receive the campaign messages.
-                  </p>
-                </div>
-
-                {/* Group Statistics */}
-                <div className="bg-indigo-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-gray-900 mb-2">
-                    Group Statistics:
-                  </h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-600">Total Contacts:</span>
-                      <span className="ml-2 font-medium">{previewGroup.mrCount || 0}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Group Status:</span>
-                      <span className="ml-2 font-medium text-green-600">Active</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Error/Success Popup */}
+        <ErrorPopup
+          isOpen={showErrorPopup}
+          onClose={() => setShowErrorPopup(false)}
+          title={errorTitle}
+          message={errorMessage}
+          isSuccess={(window as any).lastPopupIsSuccess}
+        />
       </div>
-
-      {/* Send Confirmation Popup */}
-      {showSendConfirmation && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <div className="flex items-center mb-4">
-              <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100">
-                <MessageSquare className="h-6 w-6 text-blue-600" />
-              </div>
-            </div>
-            <div className="text-left">
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Messages Queued Successfully!
-              </h3>
-              <div className="text-sm text-gray-500 mb-6">
-                Your messages have been queued for sending. Please check the Dashboard in 5 minutes to see the status.
-              </div>
-              <button
-                onClick={() => setShowSendConfirmation(false)}
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                OK
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Error/Success Popup */}
-      {showErrorPopup && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <div className="flex items-center mb-4">
-              <div className={`mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full ${(window as any).lastPopupIsSuccess ? 'bg-green-100' : 'bg-red-100'
-                }`}>
-                {(window as any).lastPopupIsSuccess ? (
-                  <CheckCircle className="h-6 w-6 text-green-600" />
-                ) : (
-                  <X className="h-6 w-6 text-red-600" />
-                )}
-              </div>
-            </div>
-            <div className="text-left">
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                {errorTitle}
-              </h3>
-              <div className="text-sm text-gray-500 mb-6 whitespace-pre-line text-left">
-                {errorMessage}
-              </div>
-              
-              {/* Enhanced error details for campaign failures */}
-              {errorMessage.includes('Campaign failed') && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-                  <h4 className="text-sm font-semibold text-red-800 mb-2">Possible Reasons:</h4>
-                  <ul className="text-xs text-red-700 space-y-1">
-                    <li>• Invalid phone number format (must start with +91 and be 13 digits)</li>
-                    <li>• WhatsApp service temporarily unavailable</li>
-                    <li>• Recipient has blocked business messages</li>
-                    <li>• Network connectivity issues</li>
-                    <li>• Daily message limit exceeded</li>
-                  </ul>
-                  <div className="mt-3 text-xs text-red-600">
-                    💡 <strong>Next Steps:</strong> Check phone numbers, wait a few minutes, and try again.
-                  </div>
-                </div>
-              )}
-              <button
-                onClick={() => setShowErrorPopup(false)}
-                className={`w-full px-4 py-2 text-white rounded-lg ${(window as any).lastPopupIsSuccess
-                    ? 'bg-green-600 hover:bg-green-700'
-                    : 'bg-red-600 hover:bg-red-700'
-                  }`}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

@@ -279,13 +279,15 @@ export class MessageService {
       let messageContent = '';
       let imageUrl = '';
       let campaignName = '';
+      let templateInfo: any = null;
+      let templateRecipientList: any = null;
 
       // Handle different campaign types
       if (campaignData.type === 'with-template') {
         logger.info('📄 Processing template-based campaign in service');
         // Template-based campaign
         const Template = (await import('../models/Template')).default;
-        const RecipientList = (await import('../models/RecipientList')).default;
+        const TemplateRecipients = (await import('../models/TemplateRecipients')).default;
 
         logger.info('🔍 Looking up template', { templateId: campaignData.templateId });
         const template = await Template.findById(campaignData.templateId);
@@ -293,31 +295,75 @@ export class MessageService {
           logger.error('❌ Template not found', { templateId: campaignData.templateId });
           throw new Error('Template not found');
         }
-        logger.info('✅ Template found', { templateId: template._id });
+        logger.info('✅ Template found', { 
+          templateId: template._id,
+          templateName: template.name,
+          metaTemplateName: template.metaTemplateName,
+          isMetaTemplate: template.isMetaTemplate,
+          metaStatus: template.metaStatus
+        });
 
-        logger.info('🔍 Looking up recipient list', { recipientListId: campaignData.recipientListId });
-        const recipientList = await RecipientList.findById(campaignData.recipientListId);
-        if (!recipientList) {
-          logger.error('❌ Recipient list not found', { recipientListId: campaignData.recipientListId });
-          throw new Error('Recipient list not found');
+        // Validate template for WhatsApp API
+        if (template.isMetaTemplate && !template.metaTemplateName) {
+          logger.error('❌ Meta template missing metaTemplateName', { templateId: template._id, templateName: template.name });
+          throw new Error('Template is marked as Meta template but missing metaTemplateName. Please sync templates with Meta.');
         }
-        logger.info('✅ Recipient list found', { recipientListId: recipientList._id });
 
-        // Get MRs from recipient list data
-        const mrIds = recipientList.data
-          .map((row: any) => row['MR id'])
+        if (template.isMetaTemplate && template.metaStatus !== 'APPROVED') {
+          logger.error('❌ Meta template not approved', { 
+            templateId: template._id, 
+            templateName: template.name,
+            metaStatus: template.metaStatus 
+          });
+          throw new Error(`Template "${template.name}" is not approved in Meta WhatsApp Business Platform. Status: ${template.metaStatus}`);
+        }
+
+        logger.info('🔍 Looking up template recipient list', { recipientListId: campaignData.recipientListId });
+        templateRecipientList = await TemplateRecipients.findById(campaignData.recipientListId);
+        if (!templateRecipientList) {
+          logger.error('❌ Template recipient list not found', { recipientListId: campaignData.recipientListId });
+          throw new Error('Template recipient list not found');
+        }
+        logger.info('✅ Template recipient list found', { recipientListId: templateRecipientList._id });
+
+        // Get MRs from template recipient list data (new clean structure)
+        const mrIds = templateRecipientList.recipients
+          .map((recipient: any) => recipient.mrId)
           .filter((id: string) => id && id.trim() !== '');
         
-        logger.info('🔍 Looking up MRs from recipient list', { mrIdsCount: mrIds.length, mrIds: mrIds.slice(0, 5) });
+        logger.info('🔍 Looking up MRs from template recipient list', { mrIdsCount: mrIds.length, mrIds: mrIds.slice(0, 5) });
         mrs = await MedicalRepresentative.find({
           mrId: { $in: mrIds }
         }).populate('groupId', 'groupName');
-        logger.info('✅ MRs found from recipient list', { mrsCount: mrs.length });
+        logger.info('✅ MRs found from template recipient list', { mrsCount: mrs.length });
 
-        messageContent = template.content;
+        // Log template parameters for debugging
+        logger.info('🔍 Template parameters debug', {
+          templateParameters: template.parameters,
+          templateName: template.name,
+          sampleRecipientData: templateRecipientList.recipients[0],
+          recipientDataKeys: templateRecipientList.recipients[0] ? Object.keys(templateRecipientList.recipients[0]) : []
+        });
+
+        // For template-based campaigns, we need to process parameters for each MR
+        // Store template info for later processing
+        templateInfo = {
+          name: template.metaTemplateName || template.name, // Use Meta template name if available, fallback to our name
+          content: template.content,
+          imageUrl: template.imageUrl || '',
+          parameters: template.parameters || [],
+          language: template.metaLanguage || 'en_US' // Use template's actual language code
+        };
+        
+        messageContent = template.content; // This will be replaced with processed content per MR
         imageUrl = template.imageUrl || '';
         campaignName = campaignData.name;
-        logger.info('✅ Template-based campaign data prepared');
+        logger.info('✅ Template-based campaign data prepared', { 
+          templateName: templateInfo.name,
+          originalTemplateName: template.name,
+          metaTemplateName: template.metaTemplateName,
+          parametersCount: templateInfo.parameters.length 
+        });
 
       } else if (campaignData.type === 'custom-messages') {
         logger.info('💬 Processing custom message campaign in service');
@@ -375,7 +421,7 @@ export class MessageService {
         campaignId,
         messageId: message._id,
         targetGroups: campaignData.type === 'with-template' ? 
-          (await (await import('../models/RecipientList')).default.findById(campaignData.recipientListId))?.name : 
+          (await (await import('../models/TemplateRecipients')).default.findById(campaignData.recipientListId))?.name : 
           'Custom Messages',
         scheduledAt: new Date(),
         createdBy: userId,
@@ -402,18 +448,64 @@ export class MessageService {
 
       // Queue messages for processing
       logger.info('🚀 Starting message queueing process');
-      const { addMessageToQueue } = await import('./queue.service');
+      const { addMessageToQueue, addTemplateMessageToQueue } = await import('./queue.service');
       
-      for (const mr of mrs) {
-        logger.info('📤 Adding message to queue', { mrId: mr._id, phone: mr.phone });
-        await addMessageToQueue({
-          campaignId: (campaign as any)._id.toString(),
-          mrId: (mr as any)._id.toString(),
-          phoneNumber: mr.phone,
-          content: messageContent,
-          imageUrl: imageUrl,
-          messageType: 'text' // Use text messages to send user content
-        });
+      if (campaignData.type === 'with-template') {
+        // For template-based campaigns, use template message queue
+        logger.info('📤 Queueing template messages', { templateName: templateInfo.name });
+        
+        for (const mr of mrs) {
+          // Find the recipient data for this MR (new clean structure)
+          const recipientData = templateRecipientList.recipients.find((recipient: any) => 
+            recipient.mrId === mr.mrId
+          );
+          
+          if (recipientData) {
+            // Extract parameters for this recipient (now directly from parameters object)
+            const templateParameters = templateInfo.parameters.map((param: string) => {
+              const paramValue = recipientData.parameters[param] || '';
+              
+              // Ensure we have a valid text value
+              const finalValue = paramValue && paramValue.toString().trim() !== '' ? paramValue.toString() : 'N/A';
+              
+              return { text: finalValue };
+            });
+            
+            logger.info('📤 Adding template message to queue', { 
+              mrId: mr._id, 
+              phone: mr.phone,
+              templateName: templateInfo.name,
+              parametersCount: templateParameters.length,
+              templateParameters
+            });
+            
+            await addTemplateMessageToQueue(
+              (campaign as any)._id.toString(),
+              (mr as any)._id.toString(),
+              mr.phone,
+              templateInfo.name,
+              templateInfo.language, // Use template's actual language code
+              templateParameters
+            );
+          } else {
+            logger.warn('⚠️ No recipient data found for MR', { mrId: mr.mrId, mrName: `${mr.firstName} ${mr.lastName}` });
+          }
+        }
+      } else {
+        // For custom messages, use regular text queue
+        logger.info('📤 Queueing text messages');
+        
+        for (const mr of mrs) {
+          logger.info('📤 Adding message to queue', { mrId: mr._id, phone: mr.phone });
+          await addMessageToQueue({
+            campaignId: (campaign as any)._id.toString(),
+            mrId: (mr as any)._id.toString(),
+            phoneNumber: mr.phone,
+            content: messageContent,
+            imageUrl: imageUrl,
+            messageType: 'text'
+          });
+        }
       }
       logger.info('✅ All messages queued successfully');
 

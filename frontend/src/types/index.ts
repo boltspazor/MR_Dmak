@@ -107,6 +107,35 @@ export interface Template {
     email: string;
   };
   isActive: boolean;
+  recipientLists?: TemplateRecipients[];
+  createdAt: string;
+  updatedAt: string;
+  // Meta template properties
+  isMetaTemplate?: boolean;
+  metaStatus?: 'APPROVED' | 'PENDING' | 'REJECTED';
+}
+
+export interface TemplateRecipients {
+  _id: string;
+  templateId: string;
+  name: string;
+  description?: string;
+  recipients: Array<{
+    _id: string;
+    mrId: string;
+    firstName: string;
+    lastName: string;
+    phone: string;
+    email?: string;
+    groupId: string;
+    parameters: Record<string, string>;
+  }>;
+  createdBy: {
+    _id: string;
+    name: string;
+    email: string;
+  };
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }

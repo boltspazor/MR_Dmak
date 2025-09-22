@@ -16,10 +16,14 @@ import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import CommonFeatures from '../components/CommonFeatures';
 import { useAuth } from '../contexts/AuthContext';
+import { useConfirm } from '../contexts/ConfirmContext';
+import TemplateNameDialog from '../components/ui/TemplateNameDialog';
+import UploadProgressDialog from '../components/ui/UploadProgressDialog';
 
 const MedicalReps: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { confirm, alert } = useConfirm();
   const [mrs, setMrs] = useState<MedicalRepresentative[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,6 +34,19 @@ const MedicalReps: React.FC = () => {
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+  const [selectedFormat, setSelectedFormat] = useState<'excel' | 'csv'>('excel');
+  const [showUploadProgress, setShowUploadProgress] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({
+    total: 0,
+    processed: 0,
+    successful: 0,
+    failed: 0,
+    currentBatch: 0,
+    totalBatches: 0
+  });
+  const [uploadStatus, setUploadStatus] = useState<'uploading' | 'completed' | 'error'>('uploading');
+  const [uploadMessage, setUploadMessage] = useState('');
 
   // Form states
   const [formData, setFormData] = useState({
@@ -185,7 +202,14 @@ const MedicalReps: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this MR?')) return;
+    const confirmed = await confirm({
+      title: 'Confirm Delete',
+      message: 'Are you sure you want to delete this MR?',
+      type: 'warning',
+      confirmText: 'Delete',
+      cancelText: 'Cancel'
+    });
+    if (!confirmed) return;
 
     try {
       const token = localStorage.getItem('authToken');
@@ -198,12 +222,13 @@ const MedicalReps: React.FC = () => {
     }
   };
 
-  const downloadTemplate = async (format: 'excel' | 'csv') => {
+  const downloadTemplate = async (format: 'excel' | 'csv', templateName: string) => {
     try {
       const token = localStorage.getItem('authToken');
       if (!token) return;
 
-      const response = await api.get(`/mrs/template?format=${format}`, {
+      const endpoint = format === 'excel' ? '/mrs/template' : '/mrs/template/csv';
+      const response = await api.get(`${endpoint}?templateName=${encodeURIComponent(templateName)}`, {
         responseType: 'blob'
       });
 
@@ -211,12 +236,216 @@ const MedicalReps: React.FC = () => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `mr_template.${format === 'excel' ? 'xlsx' : 'csv'}`;
+      const filename = `${templateName.replace(/[^a-zA-Z0-9]/g, '_')}.${format === 'excel' ? 'xlsx' : 'csv'}`;
+      a.download = filename;
       a.click();
       window.URL.revokeObjectURL(url);
     } catch (error: any) {
       console.error('Error downloading template:', error);
-      alert('Failed to download template');
+      await alert('Failed to download template', 'error');
+    }
+  };
+
+  const handleTemplateDownload = (format: 'excel' | 'csv') => {
+    setSelectedFormat(format);
+    setShowTemplateDialog(true);
+  };
+
+  const handleTemplateConfirm = async (templateName: string) => {
+    setShowTemplateDialog(false);
+    await downloadTemplate(selectedFormat, templateName);
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const lines = text.split('\n').filter(line => line.trim()); // Remove empty lines
+      
+      // Skip header row
+      const dataRows = lines.slice(1);
+      
+      if (dataRows.length === 0) {
+        await alert('No data rows found in the uploaded file', 'error');
+        event.target.value = '';
+        return;
+      }
+
+      // Initialize progress tracking
+      const totalRows = dataRows.length;
+      const batchSize = 10; // Process 10 records at a time
+      const totalBatches = Math.ceil(totalRows / batchSize);
+      
+      setUploadProgress({
+        total: totalRows,
+        processed: 0,
+        successful: 0,
+        failed: 0,
+        currentBatch: 0,
+        totalBatches: totalBatches
+      });
+      
+      setUploadStatus('uploading');
+      setUploadMessage(`Starting upload of ${totalRows} MRs in ${totalBatches} batches...`);
+      setShowUploadProgress(true);
+      setShowUploadForm(false); // Close the upload form modal
+
+      let totalSuccessful = 0;
+      let totalFailed = 0;
+      const allErrors: string[] = [];
+
+      // Process data in batches
+      for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+        const startIndex = batchIndex * batchSize;
+        const endIndex = Math.min(startIndex + batchSize, totalRows);
+        const batch = dataRows.slice(startIndex, endIndex);
+        
+        setUploadProgress(prev => ({
+          ...prev,
+          currentBatch: batchIndex + 1
+        }));
+        
+        setUploadMessage(`Processing batch ${batchIndex + 1} of ${totalBatches} (${batch.length} records)...`);
+
+        // Process each record in the current batch
+        for (let rowIndex = 0; rowIndex < batch.length; rowIndex++) {
+          const actualRowIndex = startIndex + rowIndex + 2; // +2 because we skipped header and 0-indexed
+          const line = batch[rowIndex].trim();
+          
+          if (!line) {
+            allErrors.push(`❌ Row ${actualRowIndex}: Empty row found`);
+            totalFailed++;
+            continue;
+          }
+          
+          const values = line.split(',');
+          
+          // Validate required columns
+          if (values.length < 5) {
+            allErrors.push(`❌ Row ${actualRowIndex}: Missing required columns (expected 5+ columns, found ${values.length})`);
+            totalFailed++;
+            continue;
+          }
+
+          // Validate MR ID
+          if (!values[0] || !values[0].trim()) {
+            allErrors.push(`❌ Row ${actualRowIndex}: MR ID is required`);
+            totalFailed++;
+            continue;
+          }
+
+          // Validate names
+          if (!values[1] || !values[1].trim()) {
+            allErrors.push(`❌ Row ${actualRowIndex}: First Name is required`);
+            totalFailed++;
+            continue;
+          }
+          if (!values[2] || !values[2].trim()) {
+            allErrors.push(`❌ Row ${actualRowIndex}: Last Name is required`);
+            totalFailed++;
+            continue;
+          }
+
+          // Validate phone number
+          if (!values[3] || !values[3].trim()) {
+            allErrors.push(`❌ Row ${actualRowIndex}: Phone number is required`);
+            totalFailed++;
+            continue;
+          }
+          if (!values[3].startsWith('+91')) {
+            allErrors.push(`❌ Row ${actualRowIndex}: Phone number must start with +91 (found: ${values[3]})`);
+            totalFailed++;
+            continue;
+          }
+          if (values[3].length !== 13) {
+            allErrors.push(`❌ Row ${actualRowIndex}: Phone number must be 13 digits including +91 (found: ${values[3]})`);
+            totalFailed++;
+            continue;
+          }
+
+          // Check for duplicate MR IDs in existing data
+          if (mrs.some(mr => mr.mrId === values[0].trim())) {
+            allErrors.push(`❌ Row ${actualRowIndex}: MR ID "${values[0]}" already exists in system`);
+            totalFailed++;
+            continue;
+          }
+
+          // If all validations pass, create MR via API
+          try {
+            // Find the group ID by name, if group is provided
+            let groupId = '';
+            if (values[4] && values[4].trim() !== '') {
+              const selectedGroup = groups.find(g => g.groupName === values[4].trim());
+              if (selectedGroup) {
+                groupId = selectedGroup.id;
+              }
+            }
+
+            await api.post('/mrs', {
+              mrId: values[0].trim(),
+              firstName: values[1].trim(),
+              lastName: values[2].trim(),
+              phone: values[3].trim(),
+              email: values[5] ? values[5].trim() : '',
+              groupId: groupId,
+              comments: values[6] ? values[6].trim() : ''
+            });
+            
+            totalSuccessful++;
+          } catch (apiError: any) {
+            allErrors.push(`❌ Row ${actualRowIndex}: Failed to create MR "${values[0]}": ${apiError.message || 'Unknown error'}`);
+            totalFailed++;
+          }
+
+          // Update progress after each record
+          setUploadProgress(prev => ({
+            ...prev,
+            processed: prev.processed + 1,
+            successful: totalSuccessful,
+            failed: totalFailed
+          }));
+        }
+
+        // Auto-refresh data after each batch of 10 uploads
+        if (totalSuccessful > 0 && (batchIndex + 1) % 1 === 0) {
+          setUploadMessage(`Refreshing data after batch ${batchIndex + 1}...`);
+          await fetchMRs();
+        }
+      }
+
+      // Final refresh
+      if (totalSuccessful > 0) {
+        setUploadMessage('Final data refresh...');
+        await fetchMRs();
+      }
+
+      // Update final status
+      setUploadProgress(prev => ({
+        ...prev,
+        processed: totalRows,
+        successful: totalSuccessful,
+        failed: totalFailed
+      }));
+
+      if (allErrors.length > 0) {
+        setUploadStatus('error');
+        setUploadMessage(`Upload completed with ${allErrors.length} errors. ${totalSuccessful} MRs were successfully created.`);
+      } else if (totalSuccessful === 0) {
+        setUploadStatus('error');
+        setUploadMessage('No MRs were successfully created. Please check your file format.');
+      } else {
+        setUploadStatus('completed');
+        setUploadMessage(`Successfully uploaded ${totalSuccessful} MRs!`);
+      }
+
+      // Reset file input
+      event.target.value = '';
+    } catch (error: any) {
+      console.error('Error uploading file:', error);
+      setUploadStatus('error');
+      setUploadMessage('Failed to upload file: ' + (error.message || 'Unknown error'));
     }
   };
 
@@ -681,14 +910,14 @@ const MedicalReps: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex space-x-3">
                   <button
-                    onClick={() => downloadTemplate('excel')}
+                    onClick={() => handleTemplateDownload('excel')}
                     className="px-4 py-2 rounded-lg text-gray-700 text-sm font-semibold border border-gray-300"
                   >
                     <Download className="h-4 w-4 mr-2" />
                     Download Excel Template
                   </button>
                   <button
-                    onClick={() => downloadTemplate('csv')}
+                    onClick={() => handleTemplateDownload('csv')}
                     className="px-4 py-2 rounded-lg text-gray-700 text-sm font-semibold border border-gray-300"
                   >
                     <Download className="h-4 w-4 mr-2" />
@@ -698,6 +927,20 @@ const MedicalReps: React.FC = () => {
                 <p className="text-sm text-gray-600">
                   Upload an Excel file (.xlsx, .xls) or CSV file. Make sure to follow the template format.
                 </p>
+                
+                {/* File Upload Input */}
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                  <input
+                    type="file"
+                    accept=".csv,.xlsx,.xls"
+                    onChange={handleFileUpload}
+                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  />
+                  <p className="text-xs text-gray-500 mt-2">
+                    Supported formats: CSV, Excel (.xlsx, .xls)
+                  </p>
+                </div>
+
                 <div className="flex space-x-3">
                   <button
                     onClick={() => setShowUploadForm(false)}
@@ -710,6 +953,24 @@ const MedicalReps: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Template Name Dialog */}
+        <TemplateNameDialog
+          isOpen={showTemplateDialog}
+          onClose={() => setShowTemplateDialog(false)}
+          onConfirm={handleTemplateConfirm}
+          title={`Download ${selectedFormat.toUpperCase()} Template`}
+          message={`Please enter a name for your ${selectedFormat.toUpperCase()} template:`}
+        />
+
+        {/* Upload Progress Dialog */}
+        <UploadProgressDialog
+          isOpen={showUploadProgress}
+          onClose={() => setShowUploadProgress(false)}
+          progress={uploadProgress}
+          status={uploadStatus}
+          message={uploadMessage}
+        />
       </div>
     </div>
   );

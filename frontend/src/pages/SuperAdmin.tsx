@@ -15,6 +15,7 @@ import CommonFeatures from '../components/CommonFeatures';
 import { api } from '../lib/api';
 import { User } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { useConfirm } from '../contexts/ConfirmContext';
 import { useNavigate } from 'react-router-dom';
 
 interface SystemStats {
@@ -39,6 +40,7 @@ interface PerformanceMetrics {
 const SuperAdmin: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { confirm, alert } = useConfirm();
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [metrics, setMetrics] = useState<PerformanceMetrics | null>(null);
   const [marketingManagers, setMarketingManagers] = useState<User[]>([]);
@@ -112,12 +114,19 @@ const SuperAdmin: React.FC = () => {
         .replace(/D-MAK\s+server/gi, 'D-MAK server')
         .trim();
       
-      alert(errorMessage);
+      await alert(errorMessage, 'error');
     }
   };
 
   const handleDelete = async (managerId: string) => {
-    if (!window.confirm('Are you sure you want to delete this marketing manager?')) return;
+    const confirmed = await confirm({
+      title: 'Confirm Delete',
+      message: 'Are you sure you want to delete this marketing manager?',
+      type: 'warning',
+      confirmText: 'Delete',
+      cancelText: 'Cancel'
+    });
+    if (!confirmed) return;
     
     try {
       const token = localStorage.getItem('authToken');
@@ -142,7 +151,7 @@ const SuperAdmin: React.FC = () => {
         .replace(/D-MAK\s+server/gi, 'D-MAK server')
         .trim();
       
-      alert(errorMessage);
+      await alert(errorMessage, 'error');
     }
   };
 

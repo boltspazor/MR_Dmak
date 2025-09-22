@@ -21,9 +21,9 @@ const Header: React.FC<HeaderProps> = ({
         <div>
           {title === "D-MAK" ? (
             <img 
-              src="/qwerty.jpg" 
+              src="/finalDmacLogo.png" 
               alt="D-MAK Logo" 
-              className="h-12 object-contain mb-2"
+              className="h-10 object-contain mb-2"
             />
           ) : (
             <h1 className="text-3xl font-bold text-gray-900 mb-2">{title}</h1>
@@ -32,11 +32,11 @@ const Header: React.FC<HeaderProps> = ({
         </div>
         
         {/* Glenmark Logo */}
-        <div className="absolute top-4 right-4">
+        <div className="">
           <img 
             src="/logo.png" 
             alt="Glenmark Logo" 
-            className="w-32 h-18 object-contain"
+            className="w-32 h-16 object-contain"
           />
         </div>
       </div>

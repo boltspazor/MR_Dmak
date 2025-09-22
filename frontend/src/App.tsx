@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
+import { ConfirmProvider } from './contexts/ConfirmContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -11,15 +12,34 @@ import MedicalReps from './pages/MedicalReps';
 import Campaigns from './pages/Campaigns';
 import Templates from './pages/Templates';
 import SuperAdmin from './pages/SuperAdmin';
+import CampaignWizard from './pages/CampaignWizard';
+import WhatsAppCloudTest from './components/WhatsAppCloudTest';
 
 function App() {
   return (
     <AuthProvider>
-      <Router>
+      <ConfirmProvider>
+        <Router>
         <div className="App">
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route
+              path="/campaign-wizard"
+              element={
+                <ProtectedRoute>
+                  <CampaignWizard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/whatsapp-cloud-test"
+              element={
+                <ProtectedRoute>
+                  <WhatsAppCloudTest />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/dashboard"
               element={
@@ -96,7 +116,8 @@ function App() {
             }}
           />
         </div>
-      </Router>
+        </Router>
+      </ConfirmProvider>
     </AuthProvider>
   );
 }

@@ -40,7 +40,7 @@ const MRActionButtons: React.FC<MRActionButtonsProps> = ({
             onClick={onDownloadTemplate}
             className="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-semibold hover:bg-gray-900"
           >
-            Download Template
+            Download MRs Format
           </button>
         </div>
       </div>

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { 
-  Users, 
-  Trash2, 
+import { useConfirm } from '../contexts/ConfirmContext';
+import UploadProgressDialog from '../components/ui/UploadProgressDialog';
+import {
+  Users,
+  Trash2,
   FileText,
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
@@ -12,26 +14,10 @@ import CommonFeatures from '../components/CommonFeatures';
 import AddMRDialog from '../components/AddMRDialog';
 import EditMRDialog from '../components/EditMRDialog';
 import MRActionButtons from '../components/mr/MRActionButtons';
-import MRSearchAndFilter from '../components/mr/MRSearchAndFilter';
-import MRTable from '../components/mr/MRTable';
-import { mrService, MRData } from '../services/mr.service';
-import {api} from '../lib/api';  
-
-interface Contact {
-  id: string;
-  mrId: string;
-  firstName: string;
-  lastName: string;
-  phone: string;
-  group: string;
-  comments?: string;
-}
-
-interface Group {
-  id: string;
-  name: string;
-  contactCount: number;
-}
+import MRList from '../components/mr/MRList';
+import { Contact, Group } from '../types/mr.types';
+import { useMRData } from '../hooks/useMRData';
+import { useCSVImport } from '../hooks/useCSVImport';
 
 
 // Real API calls using the configured API instance
@@ -39,32 +25,43 @@ interface Group {
 const SimpleMRTool: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [activeTab] = useState<'contacts'>('contacts');
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [groups, setGroups] = useState<Group[]>([
-    { id: '1', name: 'North', contactCount: 0 },
-    { id: '2', name: 'South', contactCount: 0 },
-    { id: '3', name: 'East', contactCount: 0 },
-    { id: '4', name: 'West', contactCount: 0 }
-  ]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortField, setSortField] = useState<keyof Contact>('mrId');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const { confirm, alert } = useConfirm();
+
+  // Data management
+  const {
+    contacts,
+    groups,
+    loading,
+    error,
+    fetchContacts,
+    fetchGroups,
+    addContact,
+    updateContact,
+    deleteContact
+  } = useMRData();
+
+  // CSV import functionality
+  const {
+    showUploadProgress,
+    setShowUploadProgress,
+    uploadProgress,
+    uploadStatus,
+    uploadMessage,
+    handleCSVImport
+  } = useCSVImport({
+    contacts,
+    groups,
+    onSuccess: fetchContacts
+  });
+
+  // UI state
   const [isAddMRDialogOpen, setIsAddMRDialogOpen] = useState(false);
-
-  // Filter states - group filter removed, now handled in search
-
-  // Edit states
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-
-  // Delete states
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
-
-  // Pagination states
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 50;
+  const [sortField, setSortField] = useState<keyof Contact>('mrId');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
 
 
@@ -72,143 +69,19 @@ const SimpleMRTool: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Always load from backend API
-        await fetchContactsFromBackend();
-        await fetchGroupsFromBackend();
-        
+        await fetchContacts();
+        await fetchGroups();
       } catch (error) {
         console.error('Error loading data:', error);
       }
     };
     
     loadData();
-  }, []);
-
-  const fetchContactsFromBackend = async () => {
-    try {
-      console.log('Fetching contacts from backend...');
-      const response = await api.get('/mrs');
-      const mrs = response.data.data || [];
-      
-      console.log('Backend contacts response:', mrs);
-      
-      // Transform backend MR data to Contact format
-      const transformedContacts: Contact[] = mrs.map((mr: any) => ({
-        id: mr._id || mr.id,
-        mrId: mr.mrId,
-        firstName: mr.firstName,
-        lastName: mr.lastName,
-        phone: mr.phone,
-        group: mr.group?.groupName || 'Default Group',
-        comments: mr.comments || ''
-      }));
-      
-      console.log('Transformed contacts:', transformedContacts);
-      setContacts(transformedContacts);
-    } catch (error: any) {
-      console.error('Error fetching contacts from backend:', error);
-    }
-  };
-
-  const fetchGroupsFromBackend = async () => {
-    try {
-      console.log('Fetching groups from backend...');
-      const response = await api.get('/groups');
-      const backendGroups = response.data.data || [];
-      
-      console.log('Backend groups response:', backendGroups);
-      
-      // Transform backend Group data to Contact format
-      const transformedGroups: Group[] = backendGroups.map((group: any) => ({
-        id: group._id || group.id,
-        name: group.groupName,
-        contactCount: 0 // Will be updated by useEffect
-      }));
-      
-      console.log('Transformed groups:', transformedGroups);
-      setGroups(transformedGroups);
-    } catch (error: any) {
-      console.error('Error fetching groups from backend:', error);
-      // Fallback to default groups if API fails
-      const defaultGroups: Group[] = [
-        { id: '1', name: 'North', contactCount: 0 },
-        { id: '2', name: 'South', contactCount: 0 },
-        { id: '3', name: 'East', contactCount: 0 },
-        { id: '4', name: 'West', contactCount: 0 }
-      ];
-      setGroups(defaultGroups);
-    }
-  };
-
-  // Update group contact counts
-  useEffect(() => {
-    const updatedGroups = groups.map(group => ({
-      ...group,
-      contactCount: contacts.filter(contact => contact.group === group.name).length
-    }));
-    setGroups(updatedGroups);
-  }, [contacts]);
-
-
-  // Debug: Log groups state
-  console.log('SimpleMRTool groups state:', groups);
+  }, []); // Remove fetchContacts and fetchGroups from dependencies
 
   // Contact management functions
-
-  const handleAddMR = async (contactData: Omit<Contact, 'id'>) => {
-    try {
-      // Validate phone number
-      if (!contactData.phone.startsWith('+91')) {
-        throw new Error('Phone number must start with +91');
-      }
-
-      // Check for unique MR ID
-      if (contacts.some(contact => contact.mrId === contactData.mrId)) {
-        throw new Error('MR ID already exists. Please use a unique MR ID.');
-      }
-
-      // Find the group ID by name, if group is provided
-      let groupId = '';
-      if (contactData.group && contactData.group.trim() !== '') {
-        const selectedGroup = groups.find(g => g.name === contactData.group);
-        if (!selectedGroup) {
-          throw new Error('Selected group not found');
-        }
-        groupId = selectedGroup.id;
-      }
-
-      await api.post('/mrs', {
-        mrId: contactData.mrId,
-        firstName: contactData.firstName,
-        lastName: contactData.lastName,
-        phone: contactData.phone,
-        groupId: groupId,
-        comments: contactData.comments
-      });
-
-      // Refresh data from backend to get the correct ID
-      await fetchContactsFromBackend();
-      alert('MR added successfully!');
-    } catch (error: any) {
-      console.error('Error adding MR:', error);
-      let errorMessage = error.message || 'Failed to add MR';
-      
-      // Clean up error messages to replace technical details with app name
-      errorMessage = errorMessage
-        .replace(/app\.railway\.app/gi, 'D-MAK')
-        .replace(/railway\.app/gi, 'D-MAK')
-        .replace(/\.railway\./gi, ' D-MAK ')
-        .replace(/mrbackend-production-[a-zA-Z0-9-]+\.up\.railway\.app/gi, 'D-MAK server')
-        .replace(/https?:\/\/[a-zA-Z0-9-]+\.up\.railway\.app/gi, 'D-MAK server')
-        .replace(/production-[a-zA-Z0-9-]+\.up/gi, 'D-MAK')
-        .replace(/\b[a-zA-Z0-9-]+\.up\.railway\.app\b/gi, 'D-MAK server')
-        .replace(/\s+/g, ' ')
-        .replace(/D-MAK\s+server/gi, 'D-MAK server')
-        .trim();
-      
-      // Re-throw the error with cleaned message so AddMRDialog can catch it
-      throw new Error(errorMessage);
-    }
+  const handleAddMRSuccess = async () => {
+    await fetchContacts();
   };
 
   const handleDeleteClick = (contact: Contact) => {
@@ -220,16 +93,13 @@ const SimpleMRTool: React.FC = () => {
     if (!contactToDelete) return;
 
     try {
-      await api.delete(`/mrs/${contactToDelete.id}`);
-      // Remove from local state
-      const updatedContacts = contacts.filter(c => c.id !== contactToDelete.id);
-      setContacts(updatedContacts);
+      await deleteContact(contactToDelete.id);
       setShowDeleteDialog(false);
       setContactToDelete(null);
-      alert('MR deleted successfully!');
+      await alert('MR deleted successfully!', 'success');
     } catch (error: any) {
       console.error('Error deleting contact:', error);
-      alert('Failed to delete MR');
+      await alert('Failed to delete MR', 'error');
     }
   };
 
@@ -239,8 +109,6 @@ const SimpleMRTool: React.FC = () => {
   };
 
   const handleEditContact = (contact: Contact) => {
-    console.log('Editing contact:', contact);
-    console.log('Available groups:', groups);
     setEditingContact(contact);
     setIsEditDialogOpen(true);
   };
@@ -259,23 +127,15 @@ const SimpleMRTool: React.FC = () => {
         throw new Error('MR ID already exists. Please use a unique MR ID.');
       }
 
-      await api.put(`/mrs/${editingContact.id}`, updatedContact);
-      
-      // Update local state
-      const updatedContacts = contacts.map(c => 
-        c.id === editingContact.id 
-          ? { ...updatedContact, id: editingContact.id }
-          : c
-      );
-      setContacts(updatedContacts);
-      
+      await updateContact(editingContact.id, updatedContact);
+
       setEditingContact(null);
       setIsEditDialogOpen(false);
-      alert('MR updated successfully!');
+      await alert('MR updated successfully!', 'success');
     } catch (error: any) {
       console.error('Error updating contact:', error);
       let errorMessage = error.message || 'Failed to update MR';
-      
+
       // Clean up error messages to replace technical details with app name
       errorMessage = errorMessage
         .replace(/app\.railway\.app/gi, 'D-MAK')
@@ -288,9 +148,18 @@ const SimpleMRTool: React.FC = () => {
         .replace(/\s+/g, ' ')
         .replace(/D-MAK\s+server/gi, 'D-MAK server')
         .trim();
-      
+
       // Re-throw the error with cleaned message so EditMRDialog can catch it
       throw new Error(errorMessage);
+    }
+  };
+
+  const handleSort = (field: keyof Contact) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
     }
   };
 
@@ -299,7 +168,7 @@ const SimpleMRTool: React.FC = () => {
   const exportContactsToCSV = () => {
     const csvContent = [
       'MR ID,First Name,Last Name,Phone,Group,Comments',
-      ...filteredContacts.map(contact => 
+      ...contacts.map(contact =>
         `${contact.mrId},${contact.firstName},${contact.lastName},${contact.phone},${contact.group},${contact.comments || ''}`
       )
     ].join('\n');
@@ -333,7 +202,7 @@ const SimpleMRTool: React.FC = () => {
           <body>
             <h1>MR Contacts Report</h1>
             <p>Generated on: ${new Date().toLocaleDateString()}</p>
-            <p>Showing ${filteredContacts.length} of ${contacts.length}</p>
+            <p>Showing ${contacts.length} MRs</p>
             <table>
               <thead>
                 <tr>
@@ -345,7 +214,7 @@ const SimpleMRTool: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                ${filteredContacts.map(contact => `
+                ${contacts.map(contact => `
                   <tr>
                     <td>${contact.mrId}</td>
                     <td>${contact.firstName} ${contact.lastName}</td>
@@ -366,183 +235,36 @@ const SimpleMRTool: React.FC = () => {
   };
 
   const downloadCSVTemplate = () => {
-    // Remove sample row - only include headers as requested
-    const template = 'MR ID,First Name,Last Name,Phone,Group,Comments';
-    const blob = new Blob([template], { type: 'text/csv' });
+    // Create simple template without naming
+    const templateData = [
+      ['mrId', 'firstName', 'lastName', 'phone', 'Group', 'Comments'],
+      ['MR001', 'John', 'Doe', '+919876543210', 'Group A', 'Sample comment'],
+      ['MR002', 'Jane', 'Smith', '+919876543211', 'Group B', '']
+    ];
+
+    const csvContent = templateData.map(row =>
+      row.map(cell => {
+        // Escape commas and quotes in CSV
+        if (cell.includes(',') || cell.includes('"') || cell.includes('\n')) {
+          return `"${cell.replace(/"/g, '""')}"`;
+        }
+        return cell;
+      }).join(',')
+    ).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'mr_contacts_template.csv';
+    a.download = 'mr_template.csv';
     a.click();
     window.URL.revokeObjectURL(url);
   };
 
-  const handleCSVImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    try {
-      // Mock CSV processing
-      const text = await file.text();
-      const lines = text.split('\n');
-      
-      let created = 0;
-      const errors: string[] = [];
-      
-      for (let i = 1; i < lines.length; i++) {
-        const line = lines[i].trim();
-        
-        // Skip empty lines at end of file (don't report as error)
-        if (!line && i === lines.length - 1) continue;
-        if (!line) {
-          errors.push(`❌ Row ${i + 1}: Empty row found`);
-          continue;
-        }
-        
-        const values = line.split(',');
-        
-        // Validate required columns
-        if (values.length < 5) {
-          errors.push(`❌ Row ${i + 1}: Missing required columns (expected 5+ columns, found ${values.length})`);
-          continue;
-        }
-
-        // Validate MR ID
-        if (!values[0] || !values[0].trim()) {
-          errors.push(`❌ Row ${i + 1}: MR ID is required`);
-          continue;
-        }
-
-        // Validate names
-        if (!values[1] || !values[1].trim()) {
-          errors.push(`❌ Row ${i + 1}: First Name is required`);
-          continue;
-        }
-        if (!values[2] || !values[2].trim()) {
-          errors.push(`❌ Row ${i + 1}: Last Name is required`);
-          continue;
-        }
-
-        // Validate phone number
-        if (!values[3] || !values[3].trim()) {
-          errors.push(`❌ Row ${i + 1}: Phone number is required`);
-          continue;
-        }
-        if (!values[3].startsWith('+91')) {
-          errors.push(`❌ Row ${i + 1}: Phone number must start with +91 (found: ${values[3]})`);
-          continue;
-        }
-        if (values[3].length !== 13) {
-          errors.push(`❌ Row ${i + 1}: Phone number must be 13 digits including +91 (found: ${values[3]})`);
-          continue;
-        }
-
-        // Check for duplicate MR IDs in existing data
-        if (contacts.some(contact => contact.mrId === values[0].trim())) {
-          errors.push(`❌ Row ${i + 1}: MR ID "${values[0]}" already exists in system`);
-          continue;
-        }
-
-        // Note: We can't easily check for duplicates within the same upload file
-        // since we're processing them one by one via API. The backend will handle
-        // duplicate MR ID validation.
-
-        // Group is optional now, so no validation needed
-
-        // If all validations pass, create contact via API
-        try {
-          // Find the group ID by name, if group is provided
-          let groupId = '';
-          if (values[4] && values[4].trim() !== '') {
-            const selectedGroup = groups.find(g => g.name === values[4].trim());
-            if (selectedGroup) {
-              groupId = selectedGroup.id;
-            }
-          }
-
-          await api.post('/mrs', {
-            mrId: values[0].trim(),
-            firstName: values[1].trim(),
-            lastName: values[2].trim(),
-            phone: values[3].trim(),
-            groupId: groupId,
-            comments: values[5] ? values[5].trim() : ''
-          });
-          
-          created++;
-        } catch (apiError: any) {
-          errors.push(`❌ Row ${i + 1}: Failed to create MR "${values[0]}": ${apiError.message || 'Unknown error'}`);
-        }
-      }
-      
-      // Refresh data from backend to get the correct IDs for newly created contacts
-      if (created > 0) {
-        await fetchContactsFromBackend();
-      }
-      
-      // Display results with proper error formatting
-      if (errors.length > 0) {
-        const errorMessage = `❌ Bulk Upload Failed. Please address following errors:\n\n📊 Total Rows Processed: ${lines.length - 1}\n❌ Errors Found (${errors.length}):\n\n${errors.map((error, index) => `${index + 1}. ${error}`).join('\n')}\n\n💡 Please fix the errors and try uploading again.`;
-        alert(errorMessage);
-      } else if (created === 0) {
-        alert(`❌ Bulk Upload Failed!\n\n📊 Total Rows Processed: ${lines.length - 1}\n📊 MRs Created: 0\n\n💡 No valid MRs were found in the uploaded file. Please check your file format and try again.`);
-      } else {
-        alert(`✅ Bulk Upload Successful!\n\nCreated: ${created} MRs\nTotal Processed: ${lines.length - 1}\n\nNo errors found!`);
-      }
-      
-
-      // Reset file input
-      event.target.value = '';
-    } catch (error: any) {
-      console.error('Error uploading file:', error);
-      alert('Failed to upload file');
-    }
+  const handleTemplateDownload = () => {
+    downloadCSVTemplate();
   };
 
-
-
-  const filteredContacts = contacts
-    .filter(contact => {
-      // Search term filter
-      const matchesSearch = contact.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        contact.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        contact.mrId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        contact.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        contact.group.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      return matchesSearch;
-    })
-    .sort((a, b) => {
-      const aValue = a[sortField] || '';
-      const bValue = b[sortField] || '';
-      
-      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
-    });
-
-  // Pagination logic
-  const totalPages = Math.ceil(filteredContacts.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedContacts = filteredContacts.slice(startIndex, endIndex);
-
-  // Reset to first page when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, sortField, sortDirection]);
-
-  const handleSort = (field: keyof Contact) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
-    }
-  };
-
-
-  // Navigation functions
   const handleSidebarNavigation = (route: string) => {
     navigate(route);
   };
@@ -569,9 +291,9 @@ const SimpleMRTool: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50">
       {/* Sidebar */}
-      <Sidebar 
+      <Sidebar
         activePage="dmak"
         onNavigate={handleSidebarNavigation}
         onLogout={handleLogout}
@@ -582,100 +304,86 @@ const SimpleMRTool: React.FC = () => {
       {/* Main Content */}
       <div className="ml-24 p-8">
         {/* Header */}
-        <Header 
-          title="D-MAK"
-          subtitle="Digital - Marketing, Automate & Konnect"
-          onExportCSV={exportContactsToCSV}
-          onExportPDF={exportContactsToPDF}
-          showExportButtons={false}
-        />
-
-        {/* Separator Line */}
-        <div className="border-b-2 border-indigo-500 my-6"></div>
-
-        {/* MR Management Header */}
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">MR Management</h2>
-
-        {/* Main Content Area */}
-        {activeTab === 'contacts' && (
-          <CommonFeatures
-            summaryItems={summaryItems}
+        <div className="mb-8">
+          <Header
+            title="D-MAK"
+            subtitle="Digital - Marketing, Automate & Konnect"
             onExportCSV={exportContactsToCSV}
             onExportPDF={exportContactsToPDF}
-          >
-            <div className="space-y-8">
+            showExportButtons={false}
+          />
+        </div>
 
-              {/* Action Buttons */}
-              <MRActionButtons
-                onAddIndividual={() => setIsAddMRDialogOpen(true)}
-                onCSVImport={handleCSVImport}
-                onDownloadTemplate={downloadCSVTemplate}
-              />
-
-              </div>
-
-            {/* Contacts Table */}
-              <div className="bg-white bg-opacity-40 rounded-lg">
-                <MRSearchAndFilter
-                  searchTerm={searchTerm}
-                  onSearchChange={setSearchTerm}
-                  filteredCount={filteredContacts.length}
-                  totalCount={contacts.length}
-                />
-                
-                {/* Table */}
-                <MRTable
-                  contacts={paginatedContacts}
-                  onEdit={handleEditContact}
-                  onDelete={handleDeleteClick}
-                />
-
-          {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between px-6 py-4 bg-white bg-opacity-40 border-t">
-              <div className="flex items-center text-sm text-gray-700">
-                <span>
-                  Showing {startIndex + 1} to {Math.min(endIndex, filteredContacts.length)} of {filteredContacts.length} results
-                              </span>
-              </div>
-              <div className="flex items-center space-x-2">
-                              <button
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                  className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                  Previous
-                              </button>
-                
-                <div className="flex space-x-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                  <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`px-3 py-2 text-sm font-medium rounded-md ${
-                        currentPage === page
-                          ? 'bg-indigo-600 text-white'
-                          : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      {page}
-                  </button>
-                  ))}
+        {/* MR Management Header */}
+        <div className="mb-8">
+          <div className="flex items-center space-x-4 mb-4">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900">MR Management</h2>
+            </div>
+          </div>
+          
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+              <div className="flex items-center">
+                <div className="p-3 bg-blue-100 rounded-lg">
+                  <Users className="h-6 w-6 text-blue-600" />
                 </div>
-                
-                <button
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
-                    </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Total MRs</p>
+                  <p className="text-2xl font-bold text-gray-900">{contacts.length}</p>
+                </div>
               </div>
-          )}
+            </div>
+            
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+              <div className="flex items-center">
+                <div className="p-3 bg-green-100 rounded-lg">
+                  <FileText className="h-6 w-6 text-green-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Total Groups</p>
+                  <p className="text-2xl font-bold text-gray-900">{groups.length}</p>
+                </div>
               </div>
-          </CommonFeatures>
-        )}
+            </div>
+            
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+              <div className="flex items-center">
+                <div className="p-3 bg-purple-100 rounded-lg">
+                  <Users className="h-6 w-6 text-purple-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Active MRs</p>
+                  <p className="text-2xl font-bold text-gray-900">{contacts.length}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content Area */}
+        <div className="space-y-8">
+          {/* Action Buttons */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <MRActionButtons
+              onAddIndividual={() => setIsAddMRDialogOpen(true)}
+              onCSVImport={handleCSVImport}
+              onDownloadTemplate={handleTemplateDownload}
+            />
+          </div>
+
+          {/* MR List with Advanced Search and Pagination */}
+          <MRList
+            contacts={contacts}
+            groups={groups}
+            onEdit={handleEditContact}
+            onDelete={handleDeleteClick}
+            onSort={handleSort}
+            sortField={sortField}
+            sortDirection={sortDirection}
+          />
+        </div>
 
 
 
@@ -683,8 +391,7 @@ const SimpleMRTool: React.FC = () => {
         <AddMRDialog
           isOpen={isAddMRDialogOpen}
           onClose={() => setIsAddMRDialogOpen(false)}
-          onAdd={handleAddMR}
-          groups={groups}
+          onSuccess={handleAddMRSuccess}
         />
 
         {/* Edit MR Dialog */}
@@ -701,38 +408,51 @@ const SimpleMRTool: React.FC = () => {
 
         {/* Delete Confirmation Dialog */}
         {showDeleteDialog && contactToDelete && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-              <div className="flex items-center mb-4">
-                <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
-                  <Trash2 className="h-6 w-6 text-red-600" />
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-200">
+            <div className="bg-white rounded-xl p-8 w-full max-w-md mx-4 shadow-2xl border border-gray-200 transform transition-all duration-200">
+              <div className="flex items-center justify-center mb-6">
+                <div className="h-16 w-16 rounded-full bg-red-100 flex items-center justify-center">
+                  <Trash2 className="h-8 w-8 text-red-600" />
+                </div>
               </div>
-                          </div>
-              <div className="text-left">
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
+              <div className="text-center">
+                <h3 className="text-xl font-bold text-gray-900 mb-3">
                   Delete MR
                 </h3>
-                <p className="text-sm text-gray-500 mb-6">
-                  Are you sure you want to delete MR <strong>{contactToDelete.mrId}</strong> ({contactToDelete.firstName} {contactToDelete.lastName})? This action cannot be undone.
+                <p className="text-gray-600 mb-8 leading-relaxed">
+                  Are you sure you want to delete MR <span className="font-semibold text-gray-900">{contactToDelete.mrId}</span> ({contactToDelete.firstName} {contactToDelete.lastName})? 
+                  <br />
+                  <span className="text-red-600 font-medium">This action cannot be undone.</span>
                 </p>
-                <div className="flex space-x-3">
+                <div className="flex space-x-4">
                   <button
                     onClick={handleDeleteCancel}
-                    className="flex-1 px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300"
+                    className="flex-1 px-6 py-3 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-all duration-200 font-medium border border-gray-200"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleDeleteConfirm}
-                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                    className="flex-1 px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all duration-200 font-medium shadow-lg hover:shadow-xl"
                   >
                     Delete
                   </button>
                 </div>
               </div>
+
             </div>
           </div>
         )}
+
+
+        {/* Upload Progress Dialog */}
+        <UploadProgressDialog
+          isOpen={showUploadProgress}
+          onClose={() => setShowUploadProgress(false)}
+          progress={uploadProgress}
+          status={uploadStatus}
+          message={uploadMessage}
+        />
 
       </div>
     </div>

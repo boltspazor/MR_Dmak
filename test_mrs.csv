@@ -1,6 +1,0 @@
-mrId,firstName,lastName,phone,email,groupName,marketingManager,comments
-MR001,John,Doe,+1234567890,john.doe@example.com,North Zone,Super Admin,Senior MR with 5 years experience
-MR002,Jane,Smith,+1234567891,jane.smith@example.com,South Zone,Super Admin,New hire
-MR003,Mike,Johnson,+1234567892,mike.johnson@example.com,East Zone,Super Admin,Specialist in cardiology
-MR004,Sarah,Wilson,+1234567893,sarah.wilson@example.com,West Zone,Super Admin,Regional manager
-MR005,David,Brown,+1234567894,david.brown@example.com,Central Zone,Super Admin,Team lead

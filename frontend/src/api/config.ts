@@ -87,8 +87,7 @@ const shouldSuppressErrors = () => {
   return currentPath === '/dashboard' || 
          currentPath === '/konnect' || 
          currentPath === '/campaigns' || 
-         currentPath === '/templates' || 
-         currentPath === '/dmak' ||
+         currentPath === '/templates' ||
          currentPath === '/' || 
          currentPath === '';
 };
@@ -102,26 +101,46 @@ api.interceptors.response.use(
     console.error('Base URL:', error.config?.baseURL);
     console.error('Full URL:', error.config?.baseURL + error.config?.url);
     
-    // COMPLETELY suppress ALL errors on pages that should not show popups
+    // Handle authentication errors first (always clean up tokens)
+    if (error.response?.status === 401) {
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
+      if (!shouldSuppressErrors()) {
+        window.location.href = '/login';
+      }
+    }
+    
+    // Allow 400 errors to propagate so components can handle them
+    if (error.response?.status === 400) {
+      console.log('🚨 400 error - allowing to propagate:', error.response?.data);
+      return Promise.reject(error);
+    }
+    
+    // Suppress other errors on certain pages (but still reject the promise)
     if (shouldSuppressErrors()) {
-      console.log('🔇 Suppressing ALL errors on current page - Error:', error.message || error);
+      console.log('🔇 Suppressing error popup on current page - Error:', error.message || error);
       console.log('🔇 Current path:', window.location.pathname);
       
-      // Clean up tokens but don't show any popups or redirects
-      if (error.response?.status === 401) {
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('user');
-        console.log('🔇 Token expired, cleaned up but not redirecting');
-      }
+      // Clean up error messages and reject with cleaned message
+      let message = error.response?.data?.error || error.response?.data?.message || error.message || 'An error occurred';
+      message = cleanErrorMessage(message);
       
-      // Return a resolved promise to prevent error propagation
-      return Promise.resolve({ data: { data: [] } });
+      // Return a rejected promise with cleaned error
+      return Promise.reject({ 
+        ...error, 
+        response: { 
+          ...error.response, 
+          data: { 
+            ...error.response?.data, 
+            error: message,
+            message: message 
+          } 
+        } 
+      });
     }
     
     // For other pages, handle errors normally
     if (error.response?.status === 401) {
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('user');
       window.location.href = '/login';
     }
     

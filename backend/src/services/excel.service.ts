@@ -160,40 +160,45 @@ export class ExcelService {
     return { valid, errors };
   }
 
-  generateExcelTemplate(): Buffer {
-    const templateData = [
-      {
-        'ID': 'MR001',
-        'Name': 'Sample Name 1',
-        'Phone': '+919876543210',
-        'Designation': 'Senior'
-      },
-      {
-        'ID': 'MR002',
-        'Name': 'Sample Name 2',
-        'Phone': '+919876543211',
-        'Designation': 'Senior'
-      }
+  generateExcelTemplate(templateName: string = 'MR Template'): Buffer {
+    // Create a new workbook
+    const workbook = XLSX.utils.book_new();
+    
+    // Create worksheet data with the new structure
+    const worksheetData = [
+      ['Template Name', templateName], // A1: "Template Name", B1: actual template name
+      ['MR ID', 'First', 'Last', 'Phone', 'Group', 'Comments'], // A2: "MR ID", headers start from B2
+      ['MR001', 'John', 'Doe', '+919876543210', 'Group A', 'Sample comment'],
+      ['MR002', 'Jane', 'Smith', '+919876543211', 'Group B', '']
     ];
 
-    const worksheet = XLSX.utils.json_to_sheet(templateData);
-    const workbook = XLSX.utils.book_new();
+    // Create worksheet from array of arrays
+    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+    
+    // Add the worksheet to workbook
     XLSX.utils.book_append_sheet(workbook, worksheet, 'MR Template');
     
     return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
   }
 
-  generateCSVTemplate(): string {
-    const headers = ['ID', 'Name', 'Phone', 'Designation'];
-    const sampleData = [
-      ['MR001', 'Sample Name 1', '+919876543210', 'Senior'],
-      ['MR002', 'Sample Name 2', '+919876543211', 'Senior']
+  generateCSVTemplate(templateName: string = 'MR Template'): string {
+    const csvData = [
+      ['Template Name', templateName],
+      ['mrId', 'firstName', 'lastName', 'phone', 'Group', 'Comments'],
+      ['MR001', 'John', 'Doe', '+919876543210', 'Group A', 'Sample comment'],
+      ['MR002', 'Jane', 'Smith', '+919876543211', 'Group B', '']
     ];
     
-    const csvContent = [
-      headers.join(','),
-      ...sampleData.map(row => row.join(','))
-    ].join('\n');
+    // Convert to CSV format
+    const csvContent = csvData.map(row => 
+      row.map(cell => {
+        // Escape commas and quotes in CSV
+        if (cell.includes(',') || cell.includes('"') || cell.includes('\n')) {
+          return `"${cell.replace(/"/g, '""')}"`;
+        }
+        return cell;
+      }).join(',')
+    ).join('\n');
     
     return csvContent;
   }
