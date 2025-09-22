@@ -32,3 +32,19 @@ export const validateQuery = (schema: ObjectSchema) => {
     return next();
   };
 };
+
+export const validateParams = (schema: ObjectSchema) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const { error, value } = schema.validate(req.params);
+    
+    if (error) {
+      return res.status(400).json({
+        error: 'Parameter validation failed',
+        details: error.details.map(detail => detail.message)
+      });
+    }
+    
+    req.params = value;
+    return next();
+  };
+};

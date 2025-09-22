@@ -1,5 +1,6 @@
 import React from 'react';
-import { Edit, Trash2, ChevronUp, ChevronDown, User, Phone, Users, MessageSquare } from 'lucide-react';
+import { Edit, Trash2, ChevronUp, ChevronDown, User, Phone, Users, MessageSquare, CheckCircle, XCircle, Clock } from 'lucide-react';
+import useConsentStatus from '../../hooks/useConsentStatus';
 
 interface Contact {
   id: string;
@@ -21,6 +22,23 @@ interface MRTableProps {
 }
 
 const MRTable: React.FC<MRTableProps> = ({ contacts, onEdit, onDelete, onSort, sortField, sortDirection }) => {
+  const { getConsentStatus, fetchConsentStatus, loading: consentLoading } = useConsentStatus();
+  const [fetchedPhones, setFetchedPhones] = React.useState<Set<string>>(new Set());
+
+  // Memoize phone numbers to prevent unnecessary re-fetches
+  const phoneNumbers = React.useMemo(() => 
+    contacts.map(contact => contact.phone), 
+    [contacts]
+  );
+
+  // Fetch consent status for new phone numbers only
+  React.useEffect(() => {
+    const newPhones = phoneNumbers.filter(phone => !fetchedPhones.has(phone));
+    if (newPhones.length > 0) {
+      fetchConsentStatus(newPhones);
+      setFetchedPhones(prev => new Set([...prev, ...newPhones]));
+    }
+  }, [phoneNumbers, fetchConsentStatus, fetchedPhones]);
   const SortableHeader: React.FC<{ field: keyof Contact; children: React.ReactNode; icon?: React.ReactNode }> = ({ field, children, icon }) => (
     <th 
       className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors duration-200"
@@ -71,6 +89,12 @@ const MRTable: React.FC<MRTableProps> = ({ contacts, onEdit, onDelete, onSort, s
               Comments
             </SortableHeader>
             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="h-4 w-4 text-gray-400" />
+                <span>Consent Status</span>
+              </div>
+            </th>
+            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
               Actions
             </th>
           </tr>
@@ -116,6 +140,54 @@ const MRTable: React.FC<MRTableProps> = ({ contacts, onEdit, onDelete, onSort, s
                 <div className="truncate">
                   {contact.comments || <span className="text-gray-400 italic">No comments</span>}
                 </div>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                {(() => {
+                  const consentStatus = getConsentStatus(contact.phone);
+                  
+                  if (consentLoading) {
+                    return (
+                      <div className="flex items-center text-sm text-gray-500">
+                        <Clock className="h-4 w-4 mr-2 animate-spin" />
+                        <span>Checking...</span>
+                      </div>
+                    );
+                  }
+                  
+                  if (!consentStatus) {
+                    return (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        <XCircle className="h-3 w-3 mr-1" />
+                        No Consent
+                      </span>
+                    );
+                  }
+                  
+                  if (consentStatus.opt_out.status) {
+                    return (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        <XCircle className="h-3 w-3 mr-1" />
+                        Opted Out
+                      </span>
+                    );
+                  }
+                  
+                  if (consentStatus.consented) {
+                    return (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Consented
+                      </span>
+                    );
+                  }
+                  
+                  return (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                      <Clock className="h-3 w-3 mr-1" />
+                      Pending
+                    </span>
+                  );
+                })()}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                 <div className="flex space-x-3">

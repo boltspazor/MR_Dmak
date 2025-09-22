@@ -13,6 +13,7 @@ import Campaigns from './pages/Campaigns';
 import Templates from './pages/Templates';
 import SuperAdmin from './pages/SuperAdmin';
 import CampaignWizard from './pages/CampaignWizard';
+import ConsentFormPage from './pages/ConsentFormPage';
 import WhatsAppCloudTest from './components/WhatsAppCloudTest';
 
 function App() {
@@ -93,6 +94,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <SimpleMRTool />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/consent-form"
+              element={
+                <ProtectedRoute>
+                  <ConsentFormPage />
                 </ProtectedRoute>
               }
             />

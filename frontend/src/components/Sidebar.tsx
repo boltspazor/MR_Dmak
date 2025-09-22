@@ -7,7 +7,8 @@ import {
   Shield,
   Users,
   FolderOpen,
-  Wand2
+  Wand2,
+  ClipboardCheck
 } from 'lucide-react';
 
 interface MenuItem {
@@ -39,6 +40,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     { id: 'dmak', label: 'MR Management', icon: Users, route: '/dmak' },
     { id: 'templates', label: 'Templates Management', icon: FolderOpen, route: '/templates' },
     { id: 'campaigns', label: 'Konnect', icon: MessageSquare, route: '/campaigns' },
+    { id: 'consent-form', label: 'Consent Form', icon: ClipboardCheck, route: '/consent-form' },
     { id: 'super-admin', label: 'Super Admin', icon: Shield, route: '/super-admin', clickable: false },
   ];
 

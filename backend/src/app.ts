@@ -19,6 +19,7 @@ import whatsappCloudRoutes from './routes/whatsapp-cloud.routes';
 import metaTemplateRoutes from './routes/meta-template.routes';
 import templateCampaignRoutes from './routes/template-campaign.routes';
 import cacheRoutes from './routes/cache.routes';
+import consentRoutes from './routes/consent.routes';
 
 import logger from './utils/logger';
 import connectDB from './config/database';
@@ -97,6 +98,7 @@ app.use('/api/whatsapp-cloud', whatsappCloudRoutes);
 app.use('/api/meta-templates', metaTemplateRoutes);
 app.use('/api/template-campaigns', templateCampaignRoutes);
 app.use('/api/cache', cacheRoutes);
+app.use('/api/consent', consentRoutes);
 
 // WhatsApp Cloud API Webhook
 
