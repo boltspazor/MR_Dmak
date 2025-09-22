@@ -13,6 +13,7 @@ import Campaigns from './pages/Campaigns';
 import Templates from './pages/Templates';
 import SuperAdmin from './pages/SuperAdmin';
 import CampaignWizard from './pages/CampaignWizard';
+import CampaignProgress from './pages/CampaignProgress';
 import WhatsAppCloudTest from './components/WhatsAppCloudTest';
 
 function App() {
@@ -45,6 +46,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/campaign-progress"
+              element={
+                <ProtectedRoute>
+                  <CampaignProgress />
                 </ProtectedRoute>
               }
             />

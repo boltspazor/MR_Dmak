@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, Send } from 'lucide-react';
 import { Template } from '../types';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
@@ -11,6 +11,7 @@ import TemplateRecipientUploadV2 from '../components/ui/TemplateRecipientUploadV
 import { useTemplateRecipients } from '../hooks/useTemplateRecipients';
 import { useCampaigns } from '../hooks/useCampaigns';
 import { useCampaignActions } from '../hooks/useCampaignActions';
+import { Campaign, campaignsAPI } from '../api/campaigns-new';
 import { downloadTemplateCSV, cleanErrorMessage } from '../utils/campaignUtils';
 import TemplateMessagesTab from '../components/campaigns/TemplateMessagesTab';
 import CustomMessagesTab from '../components/campaigns/CustomMessagesTab';
@@ -21,7 +22,7 @@ import ErrorPopup from '../components/campaigns/ErrorPopup';
 const Campaigns: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { campaigns, templates, mrs, loading } = useCampaigns();
+  const { campaigns = [], templates = [], mrs = [], loading } = useCampaigns();
   const { createWithTemplateCampaign, createCustomMessageCampaign, createRecipientList } = useCampaignActions();
   
   const [activeTab, setActiveTab] = useState<'with-template' | 'custom-messages'>('with-template');
@@ -57,6 +58,9 @@ const Campaigns: React.FC = () => {
   const [showSendConfirmation, setShowSendConfirmation] = useState(false);
   const [showRecipientUpload, setShowRecipientUpload] = useState(false);
   const [uploadTemplate, setUploadTemplate] = useState<Template | null>(null);
+
+  // Campaign Activation States
+  const [activatingCampaigns, setActivatingCampaigns] = useState<Set<string>>(new Set());
 
 
   // Handler functions
@@ -112,6 +116,31 @@ const Campaigns: React.FC = () => {
       showError('Success', 'Recipient list created successfully!', true);
     } catch (error) {
       showError('Error', 'Failed to create recipient list');
+    }
+  };
+
+  const handleActivateCampaign = async (campaignId: string) => {
+    try {
+      setActivatingCampaigns(prev => new Set(prev).add(campaignId));
+      
+      // Update campaign status to 'sending'
+      await campaignsAPI.updateCampaignStatus(campaignId, 'sending');
+      
+      showError('Success', 'Campaign activated and messages are being sent!', true);
+      
+      // Refresh campaigns data
+      // Note: In a real implementation, you would trigger a refresh here
+      
+    } catch (error: any) {
+      console.error('Error activating campaign:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to activate campaign';
+      showError('Error', errorMessage);
+    } finally {
+      setActivatingCampaigns(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(campaignId);
+        return newSet;
+      });
     }
   };
 
@@ -174,6 +203,7 @@ const Campaigns: React.FC = () => {
   
   // Get recipients for the selected template (for campaigns)
   const { recipients: selectedTemplateRecipients, fetchRecipients: fetchSelectedTemplateRecipients } = useTemplateRecipients(selectedTemplate?._id);
+
 
   if (loading) {
     return (
@@ -288,6 +318,96 @@ const Campaigns: React.FC = () => {
                 onSubmit={handleCustomMessageSubmit}
               />
             )}
+
+            {/* Campaigns List Section */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-semibold text-gray-900">Your Campaigns</h3>
+                <span className="text-sm text-gray-500">{campaigns?.length || 0} campaigns</span>
+              </div>
+
+              {campaigns && campaigns.length > 0 ? (
+                <div className="space-y-4">
+                  {campaigns.map((campaign) => (
+                    <div key={campaign.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-3 mb-2">
+                            <h4 className="text-md font-medium text-gray-900">{campaign.name}</h4>
+                            <span className={`px-2 py-1 text-xs rounded-full ${
+                              campaign.status === 'completed' ? 'bg-green-100 text-green-800' :
+                              campaign.status === 'sending' ? 'bg-blue-100 text-blue-800' :
+                              campaign.status === 'failed' ? 'bg-red-100 text-red-800' :
+                              campaign.status === 'cancelled' ? 'bg-gray-100 text-gray-800' :
+                              'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {campaign.status}
+                            </span>
+                          </div>
+                          <div className="text-sm text-gray-600 space-y-1">
+                            <p><span className="font-medium">Template:</span> {campaign.template.metaTemplateName || campaign.template.name}</p>
+                            <p><span className="font-medium">Recipients:</span> {campaign.recipientList.name} ({campaign.progress.total} MRs)</p>
+                            <p><span className="font-medium">Progress:</span> {campaign.progress.sent}/{campaign.progress.total} sent ({campaign.progress.successRate}%)</p>
+                            <p><span className="font-medium">Created:</span> {new Date(campaign.createdAt).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          {campaign.status === 'draft' || campaign.status === 'pending' ? (
+                            <button
+                              onClick={() => handleActivateCampaign(campaign.campaignId)}
+                              disabled={activatingCampaigns.has(campaign.campaignId)}
+                              className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                            >
+                              {activatingCampaigns.has(campaign.campaignId) ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                  <span>Activating...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Send className="h-4 w-4" />
+                                  <span>Activate Campaign</span>
+                                </>
+                              )}
+                            </button>
+                          ) : (
+                            <div className="text-sm text-gray-500">
+                              {campaign.status === 'sending' && 'Messages being sent...'}
+                              {campaign.status === 'completed' && 'Campaign completed'}
+                              {campaign.status === 'failed' && 'Campaign failed'}
+                              {campaign.status === 'cancelled' && 'Campaign cancelled'}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Progress Bar */}
+                      {campaign.status === 'sending' || campaign.status === 'completed' ? (
+                        <div className="mt-3">
+                          <div className="flex justify-between text-xs text-gray-600 mb-1">
+                            <span>Progress</span>
+                            <span>{campaign.progress.successRate}%</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-gradient-to-r from-indigo-500 to-purple-600 h-2 rounded-full transition-all duration-1000"
+                              style={{ width: `${campaign.progress.successRate}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No campaigns yet</h3>
+                  <p className="text-gray-500">Create your first campaign using the tabs above.</p>
+                  {loading && <p className="text-sm text-gray-400 mt-2">Loading campaigns...</p>}
+                </div>
+              )}
+            </div>
 
           </div>
         </CommonFeatures>

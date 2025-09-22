@@ -1,13 +1,19 @@
 import React, { useState, useMemo } from 'react';
-import { X, MessageSquare, BarChart3, Search } from 'lucide-react';
+import { X, MessageSquare, BarChart3, Search, TrendingUp, RefreshCw } from 'lucide-react';
+import { useCampaignProgress } from '../../hooks/useCampaignProgress';
 
 export interface GroupMember {
   id: string;
-  name: string;
+  mrId: string;
+  firstName: string;
+  lastName: string;
   phone: string;
   email?: string;
   group: string;
-  status: 'sent' | 'failed' | 'pending';
+  status: 'sent' | 'failed' | 'pending' | 'queued';
+  sentAt?: string;
+  errorMessage?: string;
+  messageId?: string;
 }
 
 interface RecipientListModalProps {
@@ -15,8 +21,10 @@ interface RecipientListModalProps {
   onClose: () => void;
   recipients: GroupMember[];
   campaignName?: string;
+  campaignId?: string; // Add campaign ID for progress tracking
   onExportCSV?: () => void;
   showExportButton?: boolean;
+  showProgress?: boolean; // Add option to show/hide progress
 }
 
 const RecipientListModal: React.FC<RecipientListModalProps> = ({
@@ -24,22 +32,54 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
   onClose,
   recipients,
   campaignName = 'Campaign',
+  campaignId,
   onExportCSV,
-  showExportButton = true
+  showExportButton = true,
+  showProgress = true
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [groupFilter, setGroupFilter] = useState('all');
+  const [showProgressDetails, setShowProgressDetails] = useState(false);
+
+  // Campaign progress tracking
+  const { progress, loading: progressLoading, refreshing, refreshProgress } = useCampaignProgress({
+    campaignId: campaignId || undefined,
+    autoRefresh: showProgress && !!campaignId,
+    refreshInterval: 10000 // Refresh every 10 seconds
+  });
+
+  // Get recipients from progress data or fallback to props
+  const actualRecipients = useMemo(() => {
+    if (progress?.recipients && progress.recipients.length > 0) {
+      // Use real data from campaign progress
+      return progress.recipients.map(recipient => ({
+        id: recipient.id,
+        mrId: recipient.mrId,
+        firstName: recipient.firstName,
+        lastName: recipient.lastName,
+        name: `${recipient.firstName} ${recipient.lastName}`,
+        phone: recipient.phone,
+        group: recipient.group,
+        status: recipient.status,
+        sentAt: recipient.sentAt,
+        errorMessage: recipient.errorMessage,
+        messageId: recipient.messageId
+      }));
+    }
+    // Fallback to props recipients
+    return recipients;
+  }, [progress?.recipients, recipients]);
 
   // Get unique groups for filter dropdown
   const uniqueGroups = useMemo(() => {
-    const groups = [...new Set(recipients.map(recipient => recipient.group))];
+    const groups = [...new Set(actualRecipients.map(recipient => recipient.group))];
     return groups.sort();
-  }, [recipients]);
+  }, [actualRecipients]);
 
   // Filter recipients based on search and filters
   const filteredRecipients = useMemo(() => {
-    return recipients.filter(recipient => {
+    return actualRecipients.filter(recipient => {
       const matchesSearch = 
         recipient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         recipient.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -50,18 +90,18 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
       
       return matchesSearch && matchesStatus && matchesGroup;
     });
-  }, [recipients, searchTerm, statusFilter, groupFilter]);
+  }, [actualRecipients, searchTerm, statusFilter, groupFilter]);
 
   // Calculate statistics
   const stats = useMemo(() => {
-    const total = recipients.length;
-    const sent = recipients.filter(r => r.status === 'sent').length;
-    const failed = recipients.filter(r => r.status === 'failed').length;
-    const pending = recipients.filter(r => r.status === 'pending').length;
+    const total = actualRecipients.length;
+    const sent = actualRecipients.filter(r => r.status === 'sent').length;
+    const failed = actualRecipients.filter(r => r.status === 'failed').length;
+    const pending = actualRecipients.filter(r => r.status === 'pending' || r.status === 'queued').length;
     const successRate = total > 0 ? Math.round((sent / total) * 100) : 0;
     
     return { total, sent, failed, pending, successRate };
-  }, [recipients]);
+  }, [actualRecipients]);
 
   if (!isOpen) return null;
 
@@ -132,13 +172,105 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Progress Section - Only show if campaignId is provided and showProgress is true */}
+        {showProgress && campaignId && (
+          <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 rounded-lg mb-6">
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center">
+                <TrendingUp className="h-6 w-6 text-indigo-600 mr-2" />
+                <h3 className="text-lg font-semibold text-gray-900">Campaign Progress</h3>
+                {refreshing && (
+                  <RefreshCw className="h-4 w-4 text-indigo-600 ml-2 animate-spin" />
+                )}
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  onClick={refreshProgress}
+                  disabled={refreshing}
+                  className="px-3 py-1 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-1 ${refreshing ? 'animate-spin' : ''}`} />
+                  Refresh
+                </button>
+                <button
+                  onClick={() => setShowProgressDetails(!showProgressDetails)}
+                  className="px-3 py-1 text-sm bg-white text-indigo-600 border border-indigo-600 rounded-lg hover:bg-indigo-50"
+                >
+                  {showProgressDetails ? 'Hide Details' : 'Show Details'}
+                </button>
+              </div>
+            </div>
+
+            {progressLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                <span className="ml-2 text-gray-600">Loading progress...</span>
+              </div>
+            ) : progress ? (
+              <div className="space-y-4">
+                {/* Progress Stats */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-white p-3 rounded-lg text-center">
+                    <div className="text-2xl font-bold text-indigo-600">{progress.progress.total}</div>
+                    <div className="text-sm text-gray-600">Total</div>
+                  </div>
+                  <div className="bg-white p-3 rounded-lg text-center">
+                    <div className="text-2xl font-bold text-green-600">{progress.progress.sent}</div>
+                    <div className="text-sm text-gray-600">Sent</div>
+                  </div>
+                  <div className="bg-white p-3 rounded-lg text-center">
+                    <div className="text-2xl font-bold text-red-600">{progress.progress.failed}</div>
+                    <div className="text-sm text-gray-600">Failed</div>
+                  </div>
+                  <div className="bg-white p-3 rounded-lg text-center">
+                    <div className="text-2xl font-bold text-purple-600">{progress.progress.successRate}%</div>
+                    <div className="text-sm text-gray-600">Success Rate</div>
+                  </div>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="bg-white p-4 rounded-lg">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium text-gray-700">Overall Progress</span>
+                    <span className="text-sm text-gray-600">{progress.progress.successRate}% Complete</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-3">
+                    <div
+                      className="bg-gradient-to-r from-indigo-500 to-purple-600 h-3 rounded-full transition-all duration-1000"
+                      style={{ width: `${progress.progress.successRate}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Detailed Progress - Only show when expanded */}
+                {showProgressDetails && (
+                  <div className="bg-white p-4 rounded-lg">
+                    <h4 className="text-md font-semibold text-gray-900 mb-3">Real-time Status Updates</h4>
+                    <div className="text-sm text-gray-600">
+                      <p>Last updated: {new Date(progress.lastUpdated).toLocaleString()}</p>
+                      <p>Campaign Status: <span className="font-medium capitalize">{progress.campaign.status}</span></p>
+                      {progress.template && (
+                        <p>Template: <span className="font-medium">{progress.template.name}</span></p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-4 text-gray-500">
+                <p>No progress data available for this campaign.</p>
+              </div>
+            )}
+          </div>
+        )}
         
         {/* Filters Section */}
         <div className="bg-gray-50 p-4 rounded-lg mb-6">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
             <p className="text-xs text-gray-500">
-              {filteredRecipients.length} of {recipients.length} recipients
+              {filteredRecipients.length} of {actualRecipients.length} recipients
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -167,6 +299,7 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
                 <option value="sent">Sent</option>
                 <option value="failed">Failed</option>
                 <option value="pending">Pending</option>
+                <option value="queued">Queued</option>
               </select>
             </div>
             
@@ -204,12 +337,12 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
                   <MessageSquare className="h-8 w-8 text-gray-400" />
                 </div>
                 <p className="text-gray-500 text-sm">
-                  {recipients.length === 0 
+                  {actualRecipients.length === 0 
                     ? 'No recipients found for this campaign' 
                     : 'No recipients match the current filters'
                   }
                 </p>
-                {recipients.length === 0 && (
+                {actualRecipients.length === 0 && (
                   <p className="text-xs text-gray-400 mt-1">
                     This campaign may not have any recipients assigned yet.
                   </p>
@@ -221,17 +354,22 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
                   <tr className="bg-indigo-50 border-b">
                     <th className="text-left py-3 px-6 text-sm font-medium text-gray-700 bg-indigo-50">Name</th>
                     <th className="text-left py-3 px-6 text-sm font-medium text-gray-700 bg-indigo-50">Phone</th>
-                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-700 bg-indigo-50">Email</th>
                     <th className="text-left py-3 px-6 text-sm font-medium text-gray-700 bg-indigo-50">Group</th>
                     <th className="text-left py-3 px-6 text-sm font-medium text-gray-700 bg-indigo-50">Status</th>
+                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-700 bg-indigo-50">Sent At</th>
+                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-700 bg-indigo-50">Message ID</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredRecipients.map(recipient => (
                     <tr key={recipient.id} className="border-b hover:bg-gray-50">
-                      <td className="py-3 px-6 text-sm text-gray-900 text-left">{recipient.name}</td>
+                      <td className="py-3 px-6 text-sm text-gray-900 text-left">
+                        <div>
+                          <div className="font-medium">{recipient.name}</div>
+                          <div className="text-xs text-gray-500">ID: {recipient.mrId}</div>
+                        </div>
+                      </td>
                       <td className="py-3 px-6 text-sm text-gray-900 text-left">{recipient.phone}</td>
-                      <td className="py-3 px-6 text-sm text-gray-900 text-left">{recipient.email || '-'}</td>
                       <td className="py-3 px-6 text-sm text-gray-900 text-left">{recipient.group}</td>
                       <td className="py-3 px-6 text-sm text-left">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -239,10 +377,30 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
                             ? 'bg-green-100 text-green-800' 
                             : recipient.status === 'failed'
                             ? 'bg-red-100 text-red-800'
+                            : recipient.status === 'queued'
+                            ? 'bg-blue-100 text-blue-800'
                             : 'bg-yellow-100 text-yellow-800'
                         }`}>
                           {recipient.status}
                         </span>
+                        {recipient.errorMessage && (
+                          <div className="text-xs text-red-600 mt-1" title={recipient.errorMessage}>
+                            {recipient.errorMessage.length > 30 
+                              ? `${recipient.errorMessage.substring(0, 30)}...` 
+                              : recipient.errorMessage
+                            }
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-3 px-6 text-sm text-gray-900 text-left">
+                        {recipient.sentAt ? new Date(recipient.sentAt).toLocaleString() : '-'}
+                      </td>
+                      <td className="py-3 px-6 text-sm text-gray-900 text-left">
+                        {recipient.messageId ? (
+                          <span className="text-xs font-mono bg-gray-100 px-2 py-1 rounded">
+                            {recipient.messageId.substring(0, 20)}...
+                          </span>
+                        ) : '-'}
                       </td>
                     </tr>
                   ))}

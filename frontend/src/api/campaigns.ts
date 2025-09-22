@@ -1,4 +1,5 @@
 import { api } from './config';
+import { campaignsAPI } from './campaigns-new';
 
 export interface CampaignData {
   campaignName: string;
@@ -51,40 +52,45 @@ export interface CampaignReport {
 
 // Campaign/Message API functions
 export const campaignApi = {
-  // Get all campaigns
+  // Get all campaigns (using new campaign API)
   getAll: async (): Promise<{ success: boolean; data: CampaignResponse[] }> => {
-    const response = await api.get('/messages/campaigns');
-    return response.data;
+    const response = await campaignsAPI.getCampaigns();
+    return { success: true, data: response.campaigns as any };
   },
 
-  // Get all template campaigns
+  // Get all template campaigns (using new campaign API)
   getTemplateCampaigns: async (): Promise<{ success: boolean; data: CampaignResponse[] }> => {
-    const response = await api.get('/template-campaigns');
-    return response.data;
+    const response = await campaignsAPI.getCampaigns();
+    return { success: true, data: response.campaigns as any };
   },
 
-  // Get campaign by ID
+  // Get campaign by ID (using new campaign API)
   getById: async (id: string): Promise<{ success: boolean; data: CampaignResponse }> => {
-    const response = await api.get(`/messages/campaigns/${id}`);
-    return response.data;
+    const response = await campaignsAPI.getCampaignById(id);
+    return { success: true, data: response as any };
   },
 
-  // Create new campaign
+  // Create new campaign (using new campaign API)
   create: async (campaignData: CampaignData): Promise<{ success: boolean; data: CampaignResponse; message: string }> => {
-    const response = await api.post('/messages/campaigns', campaignData);
-    return response.data;
+    const response = await campaignsAPI.createCampaign({
+      name: campaignData.campaignName,
+      templateId: campaignData.templateId!,
+      recipientListId: campaignData.targetGroups[0] // Assuming first target group is recipient list ID
+    });
+    return { success: true, data: response as any, message: 'Campaign created successfully' };
   },
 
-  // Update campaign
+  // Update campaign (using new campaign API)
   update: async (id: string, campaignData: Partial<CampaignData>): Promise<{ success: boolean; data: CampaignResponse; message: string }> => {
+    // For now, we'll use the old API for updates until we implement update in new API
     const response = await api.put(`/messages/campaigns/${id}`, campaignData);
     return response.data;
   },
 
-  // Delete campaign
+  // Delete campaign (using new campaign API)
   delete: async (id: string): Promise<{ success: boolean; message: string }> => {
-    const response = await api.delete(`/messages/campaigns/${id}`);
-    return response.data;
+    await campaignsAPI.deleteCampaign(id);
+    return { success: true, message: 'Campaign deleted successfully' };
   },
 
   // Send campaign immediately

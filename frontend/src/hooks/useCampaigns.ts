@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { campaignsAPI, Campaign } from '../api/campaigns-new';
 import { api } from '../lib/api';
-import { Campaign, Template } from '../types';
+import { Template } from '../types';
 
 export const useCampaigns = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -8,12 +9,13 @@ export const useCampaigns = () => {
   const [mrs, setMrs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+
   const fetchData = async () => {
     try {
       const [campaignsRes, templatesRes, mrsRes] = await Promise.all([
-        api.get('/messages/campaigns').catch(err => {
+        campaignsAPI.getCampaigns().catch(err => {
           console.log('Campaigns not available (likely auth issue):', err.message);
-          return { data: { data: [] } };
+          return { campaigns: [] };
         }),
         api.get('/meta-templates/all').catch(err => {
           console.log('Templates not available (likely auth issue):', err.message);
@@ -26,12 +28,16 @@ export const useCampaigns = () => {
       ]);
 
       // Handle different response structures safely
-      setCampaigns(campaignsRes.data?.data || campaignsRes.data || []);
-      setTemplates(templatesRes.data?.data || templatesRes.data || []);
-      setMrs(mrsRes.data?.data || mrsRes.data || []);
+      const campaigns = campaignsRes.campaigns || [];
+      const templates = templatesRes.data?.data || templatesRes.data || [];
+      const mrs = mrsRes.data?.data || mrsRes.data || [];
+
+      setCampaigns(campaigns);
+      setTemplates(templates);
+      setMrs(mrs);
     } catch (error) {
       console.error('Error fetching data:', error);
-      // Set empty arrays on error to prevent undefined access
+      // Set empty arrays on error
       setCampaigns([]);
       setTemplates([]);
       setMrs([]);

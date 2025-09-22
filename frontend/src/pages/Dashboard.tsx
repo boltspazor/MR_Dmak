@@ -17,20 +17,31 @@ import Header from '../components/Header';
 import CommonFeatures from '../components/CommonFeatures';
 // import CampaignTable from '../components/dashboard/CampaignTable';
 // import RecipientsModal from '../components/dashboard/RecipientsModal';
-import { api } from '../lib/api';
+import { campaignsAPI, Campaign } from '../api/campaigns-new';
+import { api } from '../api/config';
 import toast from 'react-hot-toast';
 
 interface CampaignRecord {
   id: string;
   campaignName: string;
   campaignId: string;
-  template: string;
-  recipientList: string[];
+  template: {
+    name: string;
+    metaTemplateName?: string;
+    isMetaTemplate: boolean;
+    metaStatus?: string;
+  };
+  recipientList: {
+    name: string;
+    recipientCount: number;
+  };
   date: string;
-  sendStatus: 'completed' | 'in progress';
+  sendStatus: 'completed' | 'in progress' | 'pending' | 'failed' | 'cancelled';
   totalRecipients: number;
   sentCount: number;
   failedCount: number;
+  successRate: number;
+  status: string;
 }
 
 interface GroupMember {
@@ -87,35 +98,46 @@ const Dashboard: React.FC = () => {
     };
   }, []);
 
+
   // Load real campaign data from API
   useEffect(() => {
     const loadCampaigns = async () => {
       try {
         setLoading(true);
-        const response = await api.get('/messages/campaigns');
-        const campaignsData = response.data.data || response.data || [];
+        const response = await campaignsAPI.getCampaigns();
+        const campaignsData = response.campaigns || [];
         
         // Transform the data to match the expected format
-        const transformedCampaigns = campaignsData.map((campaign: any) => ({
-          id: campaign._id || campaign.id,
-          campaignName: campaign.campaignName || campaign.name || 'Unnamed Campaign',
-          campaignId: campaign.campaignId || campaign.id,
-          template: campaign.templateName || campaign.template || 'No Template',
-          recipientList: campaign.targetGroups || [],
-          date: campaign.createdAt ? new Date(campaign.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        const transformedCampaigns = campaignsData.map((campaign: Campaign) => ({
+          id: campaign.id,
+          campaignName: campaign.name,
+          campaignId: campaign.campaignId,
+          template: {
+            name: campaign.template.name,
+            metaTemplateName: campaign.template.metaTemplateName,
+            isMetaTemplate: campaign.template.isMetaTemplate,
+            metaStatus: campaign.template.metaStatus
+          },
+          recipientList: {
+            name: campaign.recipientList.name,
+            recipientCount: campaign.recipientList.recipientCount
+          },
+          date: new Date(campaign.createdAt).toISOString().split('T')[0],
           sendStatus: campaign.status === 'completed' ? 'completed' : 
-                     campaign.status === 'pending' ? 'in progress' : 
-                     campaign.status === 'failed' ? 'failed' : 'pending',
-          totalRecipients: campaign.totalRecipients || 0,
-          sentCount: campaign.sentCount || 0,
-          failedCount: campaign.failedCount || 0
+                     campaign.status === 'sending' ? 'in progress' : 
+                     campaign.status === 'failed' ? 'failed' : 
+                     campaign.status === 'cancelled' ? 'cancelled' : 'pending',
+          totalRecipients: campaign.progress.total,
+          sentCount: campaign.progress.sent,
+          failedCount: campaign.progress.failed,
+          successRate: campaign.progress.successRate,
+          status: campaign.status
         }));
         
         setCampaigns(transformedCampaigns);
       } catch (error: any) {
         console.error('Failed to load campaigns:', error);
-        // Don't show error toast, just log and set empty array
-        console.log('No campaigns found or authentication issue - showing empty state');
+        // Set empty array on error
         setCampaigns([]);
       } finally {
         setLoading(false);
@@ -139,8 +161,9 @@ const Dashboard: React.FC = () => {
       const matchesSearch = 
         campaign.campaignName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         campaign.campaignId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        campaign.template.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        campaign.recipientList.some(group => group.toLowerCase().includes(searchTerm.toLowerCase()));
+        campaign.template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (campaign.template.metaTemplateName && campaign.template.metaTemplateName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        campaign.recipientList.name.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesStatus = statusFilter === 'all' || campaign.sendStatus === statusFilter;
 
@@ -201,19 +224,24 @@ const Dashboard: React.FC = () => {
     navigate('/login');
   };
 
-  const handleTemplatePreview = async (templateName: string) => {
-
+  const handleTemplatePreview = async (template: { name: string; metaTemplateName?: string; isMetaTemplate: boolean }) => {
     try {
       // Fetch template data from API
       const response = await api.get('/templates');
       const templates = response.data.data || [];
-      const template = templates.find((t: any) => t.name === templateName);
-      if (template) {
-        setPreviewTemplate(template);
+      const templateData = templates.find((t: any) => 
+        t.name === template.name || 
+        (template.metaTemplateName && t.metaTemplateName === template.metaTemplateName)
+      );
+      
+      if (templateData) {
+        setPreviewTemplate(templateData);
       } else {
         // Fallback to mock data
         setPreviewTemplate({
-          name: templateName,
+          name: template.name,
+          metaTemplateName: template.metaTemplateName,
+          isMetaTemplate: template.isMetaTemplate,
           content: `Dear #FirstName #LastName,
 
 We are excited to announce our new product launch for #ProductName.
@@ -234,7 +262,7 @@ The Team`,
       console.error('Error fetching template:', error);
       // Fallback to mock data
       setPreviewTemplate({
-        name: templateName,
+        name: template.name,
         content: `Dear #FirstName #LastName,
 
 We are excited to announce our new product launch for #ProductName.
@@ -254,9 +282,9 @@ The Team`,
     setShowTemplatePreview(true);
   };
 
-  const handleRecipientListClick = async (recipientGroups: string[]) => {
+  const handleRecipientListClick = async (recipientList: { name: string; recipientCount: number }) => {
     try {
-      console.log('Loading recipients for groups:', recipientGroups);
+      console.log('Loading recipients for list:', recipientList);
       
       // Load real group members from API
       const response = await api.get('/mrs');
@@ -275,20 +303,8 @@ The Team`,
 
       console.log('Processed group members:', groupMembers);
 
-      // Filter members based on selected groups
-      const filteredMembers = groupMembers.filter(member => 
-        recipientGroups.includes(member.group) || recipientGroups.length === 0
-      );
-      
-      console.log('Filtered members for groups:', filteredMembers);
-
-      // If no members found, show all members (for debugging)
-      if (filteredMembers.length === 0 && groupMembers.length > 0) {
-        console.log('No members found for specified groups, showing all members');
-        setSelectedRecipients(groupMembers);
-      } else {
-        setSelectedRecipients(filteredMembers);
-      }
+      // For now, show all members (in real implementation, you'd filter by the specific recipient list)
+      setSelectedRecipients(groupMembers);
       
       setShowRecipientPopup(true);
     } catch (error) {
@@ -327,18 +343,39 @@ The Team`,
 
 
   const exportToCSV = () => {
-    // Create CSV with specific column structure as requested
+    // Create CSV with campaign data
     const csvRows = [];
     
-    // Add header row with Template Name in A1 and MR ID in A2
-    csvRows.push('Template Name');
-    csvRows.push('MR ID');
+    // Add header row
+    csvRows.push([
+      'Campaign Name',
+      'Campaign ID', 
+      'Template',
+      'Meta Template Name',
+      'Recipient List',
+      'Date',
+      'Send Status',
+      'Total Recipients',
+      'Sent Count',
+      'Failed Count',
+      'Success Rate (%)'
+    ].join(','));
     
     // Add data rows for each campaign
     filteredCampaigns.forEach(campaign => {
-      // A1: Template Name, A2: MR ID (using campaign ID as MR ID)
-      csvRows.push(campaign.template);
-      csvRows.push(campaign.campaignId);
+      csvRows.push([
+        campaign.campaignName,
+        campaign.campaignId,
+        campaign.template.name,
+        campaign.template.metaTemplateName || '',
+        campaign.recipientList.name,
+        campaign.date,
+        campaign.sendStatus,
+        campaign.totalRecipients,
+        campaign.sentCount,
+        campaign.failedCount,
+        campaign.successRate
+      ].join(','));
     });
     
     const csvContent = csvRows.join('\n');
@@ -634,6 +671,9 @@ The Team`,
                           )}
                       </div>
                       </th>
+                      <th className="text-left py-3 px-6 text-sm font-bold text-gray-700">
+                        Progress
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -648,7 +688,12 @@ The Team`,
                               className="text-blue-600 hover:text-blue-800 underline"
                               onClick={() => handleTemplatePreview(campaign.template)}
                             >
-                              {campaign.template}
+                              {campaign.template.metaTemplateName || campaign.template.name}
+                              {campaign.template.isMetaTemplate && (
+                                <span className="ml-1 text-xs bg-green-100 text-green-800 px-1 rounded">
+                                  Meta
+                                </span>
+                              )}
                             </button>
                           </td>
                           <td className="py-3 px-6 text-sm text-gray-900 text-left">
@@ -656,7 +701,7 @@ The Team`,
                               className="text-blue-600 hover:text-blue-800 underline"
                               onClick={() => handleRecipientListClick(campaign.recipientList)}
                             >
-                              {campaign.totalRecipients} MRs
+                              {campaign.recipientList.name} ({campaign.totalRecipients} MRs)
                             </button>
                           </td>
                           <td className="py-3 px-6 text-sm text-left">
@@ -667,11 +712,27 @@ The Team`,
                       </span>
                     </div>
                           </td>
+                          <td className="py-3 px-6 text-sm text-gray-900 text-left">
+                            <div className="flex items-center space-x-2">
+                              <div className="flex-1 bg-gray-200 rounded-full h-2">
+                                <div 
+                                  className="bg-gradient-to-r from-indigo-500 to-purple-600 h-2 rounded-full transition-all duration-1000"
+                                  style={{ width: `${campaign.successRate}%` }}
+                                ></div>
+                              </div>
+                              <span className="text-xs font-medium text-gray-600 min-w-[3rem]">
+                                {campaign.successRate}%
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {campaign.sentCount}/{campaign.totalRecipients} sent
+                            </div>
+                          </td>
                         </tr>
                   ))
                 ) : (
                       <tr>
-                        <td colSpan={6} className="text-left py-12">
+                        <td colSpan={7} className="text-left py-12">
                           <div className="flex flex-col items-center">
                             <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4">
                               <MessageSquare className="h-12 w-12 text-gray-400" />

@@ -18,7 +18,10 @@ import templateRecipientsRoutes from './routes/templateRecipients.routes';
 import whatsappCloudRoutes from './routes/whatsapp-cloud.routes';
 import metaTemplateRoutes from './routes/meta-template.routes';
 import templateCampaignRoutes from './routes/template-campaign.routes';
+import campaignProgressRoutes from './routes/campaign-progress.routes';
+import campaignRoutes from './routes/campaign.routes';
 import cacheRoutes from './routes/cache.routes';
+import { WebhookController } from './controllers/webhook.controller';
 
 import logger from './utils/logger';
 import connectDB from './config/database';
@@ -96,12 +99,17 @@ app.use('/api/template-recipients', templateRecipientsRoutes);
 app.use('/api/whatsapp-cloud', whatsappCloudRoutes);
 app.use('/api/meta-templates', metaTemplateRoutes);
 app.use('/api/template-campaigns', templateCampaignRoutes);
+app.use('/api/campaigns', campaignRoutes);
+app.use('/api/campaign-progress', campaignProgressRoutes);
 app.use('/api/cache', cacheRoutes);
-
-// WhatsApp Cloud API Webhook
-
 // Webhook verification endpoint (GET) for WhatsApp Cloud API
-app.get('/api/webhook', async (req, res) => {
+app.get('/api/webhook', WebhookController.verifyWebhook);
+
+// Webhook event handler (POST) for WhatsApp Cloud API
+app.post('/api/webhook', WebhookController.handleWebhook);
+
+// Legacy webhook endpoint (for backward compatibility)
+app.get('/api/webhook-legacy', async (req, res) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];

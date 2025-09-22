@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { api } from '../lib/api';
+import { campaignsAPI } from '../api/campaigns-new';
 
 export const useCampaignActions = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -12,8 +12,12 @@ export const useCampaignActions = () => {
   }) => {
     setIsSubmitting(true);
     try {
-      // Use the new template campaign route for proper WhatsApp template sending
-      await api.post('/template-campaigns', campaignData);
+      // Use the new campaign API for proper template + recipient list campaigns
+      await campaignsAPI.createCampaign({
+        name: campaignData.name,
+        templateId: campaignData.templateId,
+        recipientListId: campaignData.recipientListId
+      });
       return { success: true };
     } catch (error) {
       console.error('Error creating template campaign:', error);

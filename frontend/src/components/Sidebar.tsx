@@ -7,7 +7,8 @@ import {
   Shield,
   Users,
   FolderOpen,
-  Wand2
+  Wand2,
+  TrendingUp
 } from 'lucide-react';
 
 interface MenuItem {
@@ -36,6 +37,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const menuItems: MenuItem[] = [
     { id: 'campaign-wizard', label: 'Campaign Wizard', icon: Wand2, route: '/campaign-wizard' },
     { id: 'dashboard', label: 'Campaigns Dashboard', icon: BarChart3, route: '/dashboard' },
+    { id: 'campaign-progress', label: 'Campaign Progress', icon: TrendingUp, route: '/campaign-progress' },
     { id: 'dmak', label: 'MR Management', icon: Users, route: '/dmak' },
     { id: 'templates', label: 'Templates Management', icon: FolderOpen, route: '/templates' },
     { id: 'campaigns', label: 'Konnect', icon: MessageSquare, route: '/campaigns' },

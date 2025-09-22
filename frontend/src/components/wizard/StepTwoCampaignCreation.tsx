@@ -3,6 +3,7 @@ import { Send, Users, FileText, CheckCircle, AlertCircle, Eye } from 'lucide-rea
 import { WizardTemplate, WizardMR, WizardCampaign } from '../../pages/CampaignWizard';
 import TemplatePreviewDialog from '../ui/TemplatePreviewDialog';
 import { api } from '../../api/config';
+import { campaignsAPI } from '../../api/campaigns-new';
 import toast from 'react-hot-toast';
 
 interface StepTwoCampaignCreationProps {
@@ -168,12 +169,11 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
         return;
       }
 
-      // Call the new template campaign API
-      const result = await api.post('/template-campaigns', {
+      // Call the new campaign API
+      const result = await campaignsAPI.createCampaign({
         name: campaignName.trim(),
         templateId: selectedTemplate._id,
-        recipientListId: selectedRecipientList._id,
-        type: 'with-template'
+        recipientListId: selectedRecipientList._id
       });
 
       const campaign: WizardCampaign = {

@@ -71,7 +71,17 @@ const initializeQueue = async () => {
             logger.info('Processing template message job with WhatsApp Cloud API', { campaignId, mrId, phoneNumber, templateName });
             
             // Send template message using WhatsApp Cloud API
-            const processedParameters = (templateParameters || []).map((param: any) => typeof param === 'string' ? param : param.text);
+            // Convert templateParameters object to array format expected by WhatsApp API
+            let processedParameters: string[] = [];
+            if (templateParameters) {
+              if (Array.isArray(templateParameters)) {
+                // If it's already an array, process it as before
+                processedParameters = templateParameters.map((param: any) => typeof param === 'string' ? param : param.text);
+              } else if (typeof templateParameters === 'object') {
+                // If it's an object, convert to array of values
+                processedParameters = Object.values(templateParameters).map((value: any) => String(value));
+              }
+            }
             
             result = await whatsappCloudAPIService.sendTemplateMessage(
               phoneNumber,
@@ -104,7 +114,7 @@ const initializeQueue = async () => {
           );
 
           // Update campaign statistics
-          const MessageCampaign = (await import('../models/MessageCampaign')).default;
+          const Campaign = (await import('../models/Campaign')).default;
           const campaignStats = await MessageLog.aggregate([
             { $match: { campaignId } },
             {
@@ -123,10 +133,12 @@ const initializeQueue = async () => {
             const status = stats.pendingCount > 0 ? 'sending' : 
                           stats.failedCount === stats.totalCount ? 'failed' : 'completed';
 
-            await MessageCampaign.findByIdAndUpdate(campaignId, {
+            await Campaign.findByIdAndUpdate(campaignId, {
               sentCount: stats.sentCount,
               failedCount: stats.failedCount,
-              status: status
+              pendingCount: stats.pendingCount,
+              status: status,
+              ...(status === 'completed' && { completedAt: new Date() })
             });
           }
 
@@ -226,10 +238,22 @@ async function processMessageDirectly(data: MessageJobData) {
     if (messageType === 'template' && templateName) {
       logger.info('Processing template message directly with WhatsApp Cloud API', { campaignId, mrId, phoneNumber, templateName });
       // Send template message using WhatsApp Cloud API
+      // Convert templateParameters object to array format expected by WhatsApp API
+      let processedParameters: string[] = [];
+      if (templateParameters) {
+        if (Array.isArray(templateParameters)) {
+          // If it's already an array, process it as before
+          processedParameters = templateParameters.map((param: any) => typeof param === 'string' ? param : param.text);
+        } else if (typeof templateParameters === 'object') {
+          // If it's an object, convert to array of values
+          processedParameters = Object.values(templateParameters).map((value: any) => String(value));
+        }
+      }
+      
       result = await whatsappCloudAPIService.sendTemplateMessage(
         phoneNumber,
         templateName,
-        (templateParameters || []).map(param => param.text),
+        processedParameters,
         templateLanguage || 'en_US'
       );
     } else if (imageUrl) {
@@ -257,7 +281,7 @@ async function processMessageDirectly(data: MessageJobData) {
     );
 
     // Update campaign statistics
-    const MessageCampaign = (await import('../models/MessageCampaign')).default;
+    const Campaign = (await import('../models/Campaign')).default;
     const campaignStats = await MessageLog.aggregate([
       { $match: { campaignId } },
       {
@@ -276,10 +300,12 @@ async function processMessageDirectly(data: MessageJobData) {
       const status = stats.pendingCount > 0 ? 'sending' : 
                     stats.failedCount === stats.totalCount ? 'failed' : 'completed';
 
-      await MessageCampaign.findByIdAndUpdate(campaignId, {
+      await Campaign.findByIdAndUpdate(campaignId, {
         sentCount: stats.sentCount,
         failedCount: stats.failedCount,
-        status: status
+        pendingCount: stats.pendingCount,
+        status: status,
+        ...(status === 'completed' && { completedAt: new Date() })
       });
     }
 
@@ -400,3 +426,5 @@ export const getQueueStats = async () => {
     mode: 'redis-queue'
   };
 };
+
+export { messageQueue };
