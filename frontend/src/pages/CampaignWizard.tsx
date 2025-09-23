@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, CheckCircle, Circle, ArrowRight, Users, FileText, Send, BarChart3 } from 'lucide-react';
-import Sidebar from '../components/Sidebar';
-import Header from '../components/Header';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../api/config';
 import toast from 'react-hot-toast';
@@ -11,6 +9,8 @@ import toast from 'react-hot-toast';
 import StepOneTemplateSelection from '../components/wizard/StepOneTemplateSelection';
 import StepTwoCampaignCreation from '../components/wizard/StepTwoCampaignCreation';
 import StepThreeProgressCheck from '../components/wizard/StepThreeProgressCheck';
+import Header from '../components/Header';
+import TemplatePreviewDialog from '../components/ui/TemplatePreviewDialog';
 
 // Types
 export interface WizardTemplate {
@@ -20,7 +20,7 @@ export interface WizardTemplate {
   type: 'html' | 'text' | 'image';
   imageUrl?: string;
   footerImageUrl?: string;
-  parameters: string[];
+  parameters: Array<{name: string, type: 'text' | 'number'}> | string[]; // Support both new format and legacy
   createdBy: {
     _id: string;
     name: string;
@@ -57,7 +57,6 @@ export interface WizardCampaign {
 
 const CampaignWizard: React.FC = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
@@ -72,9 +71,8 @@ const CampaignWizard: React.FC = () => {
     failed: 0,
     pending: 0
   });
-  const [showPreview, setShowPreview] = useState(false);
+  const [showTemplatePreview, setShowTemplatePreview] = useState(false);
 
-  // Step configuration
   const steps = [
     {
       id: 1,
@@ -149,7 +147,6 @@ const CampaignWizard: React.FC = () => {
     switch (currentStep) {
       case 1:
         setSelectedTemplate(stepData.template);
-        setShowPreview(true);
         break;
       case 2:
         setCreatedCampaign(stepData.campaign);
@@ -169,14 +166,6 @@ const CampaignWizard: React.FC = () => {
   };
 
   // Handle sidebar navigation
-  const handleSidebarNavigation = (route: string) => {
-    navigate(route);
-  };
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
 
   // Load MRs on component mount
   useEffect(() => {
@@ -185,16 +174,30 @@ const CampaignWizard: React.FC = () => {
         const response = await api.get('/mrs?limit=1000');
         const mrsData = response.data.data || response.data || [];
         
-        const wizardMRs: WizardMR[] = mrsData.map((mr: any) => ({
-          id: mr._id || mr.id,
-          mrId: mr.mrId,
-          firstName: mr.firstName,
-          lastName: mr.lastName,
-          phone: mr.phone,
-          email: mr.email,
-          group: mr.group?.groupName || mr.group || 'Default Group',
-          comments: mr.comments || ''
-        }));
+        const wizardMRs: WizardMR[] = mrsData.map((mr: any) => {
+          // Better group name extraction
+          let groupName = 'No Group';
+          if (mr.group) {
+            if (typeof mr.group === 'string') {
+              groupName = mr.group;
+            } else if (mr.group.groupName) {
+              groupName = mr.group.groupName;
+            } else if (mr.group.name) {
+              groupName = mr.group.name;
+            }
+          }
+          
+          return {
+            id: mr._id || mr.id,
+            mrId: mr.mrId,
+            firstName: mr.firstName,
+            lastName: mr.lastName,
+            phone: mr.phone,
+            email: mr.email,
+            group: groupName,
+            comments: mr.comments || ''
+          };
+        });
         
         setAllMRs(wizardMRs);
       } catch (error: any) {
@@ -210,30 +213,20 @@ const CampaignWizard: React.FC = () => {
   const CurrentStepComponent = steps[currentStep - 1].component;
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
-      {/* Sidebar */}
-      <Sidebar
-        activePage="campaign-wizard"
-        onNavigate={handleSidebarNavigation}
-        onLogout={handleLogout}
-        userName={user?.name}
-        userRole={user?.role}
-      />
-
+    <div className="min-h-screen bg-gray-100 flex flex-col pt-4">
       {/* Main Content */}
-      <div className="flex-1 flex flex-col pl-28 pt-4">
-
-        <Header
-          title="D-MAK"
-          subtitle="Create and send campaigns in 3 easy steps"
-          showExportButtons={false}
-        />
+      <div className="flex-1 flex flex-col px-4">
+          <Header
+            title="D-MAK"
+            subtitle="Create and send campaigns in 3 easy steps"
+            showExportButtons={false}
+          />
 
         {/* Wizard Content */}
         <div className="flex-1 p-6">
-          <div className={`max-w-7xl mx-auto ${showPreview ? 'grid grid-cols-1 lg:grid-cols-2 gap-8' : ''}`}>
+          <div className={`max-w-7xl mx-auto ${selectedTemplate ? 'grid grid-cols-1 lg:grid-cols-2 gap-8' : ''}`}>
             {/* Progress Stepper */}
-            <div className={`mb-8 ${showPreview ? 'lg:col-span-2' : ''}`}>
+            <div className={`mb-8 ${selectedTemplate ? 'lg:col-span-2' : ''}`}>
               <div className="flex items-center justify-between">
                 {steps.map((step, index) => {
                   const isActive = currentStep === step.id;
@@ -291,7 +284,7 @@ const CampaignWizard: React.FC = () => {
             </div>
 
             {/* Step Content */}
-            <div className={`bg-white rounded-lg shadow-sm border ${showPreview ? 'lg:col-span-1' : ''} transition-all duration-500 ease-in-out`}>
+            <div className={`bg-white rounded-lg shadow-sm border transition-all duration-500 ease-in-out ${selectedTemplate ? 'lg:col-span-1' : ''}`}>
               <div className="p-6">
                 <div className="transition-all duration-300 ease-in-out">
                   <CurrentStepComponent
@@ -319,35 +312,21 @@ const CampaignWizard: React.FC = () => {
               </div>
             </div>
 
-            {/* WhatsApp Preview */}
-            {showPreview && selectedTemplate && (
+            {/* Template Preview */}
+            {selectedTemplate && (
               <div className="lg:col-span-1 animate-slide-in-right">
-                <div className="bg-white rounded-lg shadow-sm border p-6 transition-all duration-500 ease-in-out">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">WhatsApp Preview</h3>
-                  <div className="bg-gray-100 rounded-lg p-4">
-                    <div className="bg-white rounded-lg shadow-sm border p-4 max-w-sm mx-auto">
-                      <div className="flex items-center space-x-3 mb-3">
-                        <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
-                          <span className="text-white font-bold text-sm">D</span>
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">D-MAK</p>
-                          <p className="text-xs text-gray-500">now</p>
-                        </div>
-                      </div>
-                      <div className="bg-green-100 rounded-lg p-3">
-                        <p className="text-sm text-gray-800 whitespace-pre-wrap">
-                          {selectedTemplate.content}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <TemplatePreviewDialog
+                  isOpen={true}
+                  onClose={() => {}} // No close function needed for panel variant
+                  template={selectedTemplate}
+                  showDownloadButton={false}
+                  variant="panel"
+                />
               </div>
             )}
 
             {/* Navigation Footer */}
-            <div className={`mt-6 flex justify-between ${showPreview ? 'lg:col-span-2' : ''}`}>
+            <div className={`mt-6 flex justify-between ${selectedTemplate ? 'lg:col-span-2' : ''}`}>
               <button
                 onClick={prevStep}
                 disabled={currentStep <= 1}
@@ -395,6 +374,15 @@ const CampaignWizard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Template Preview Dialog */}
+      <TemplatePreviewDialog
+        isOpen={showTemplatePreview}
+        onClose={() => setShowTemplatePreview(false)}
+        template={selectedTemplate}
+        showDownloadButton={false}
+        variant="full"
+      />
     </div>
   );
 };

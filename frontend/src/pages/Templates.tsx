@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { FileText } from 'lucide-react';
 import { api } from '../lib/api';
 import { Template, AvailableParameters } from '../types';
-import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import CommonFeatures from '../components/CommonFeatures';
 import { useAuth } from '../contexts/AuthContext';
@@ -310,17 +309,6 @@ const Templates: React.FC = () => {
   // Get recipients for the preview template
   const { recipients: previewRecipients, fetchRecipients: fetchPreviewRecipients } = useTemplateRecipients(previewTemplate?._id);
 
-  // Navigation functions
-  const handleSidebarNavigation = (route: string) => {
-    navigate(route);
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
-    navigate('/login');
-  };
-
   const summaryItems = [
     {
       title: 'Total Templates',
@@ -333,14 +321,7 @@ const Templates: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100">
-        <Sidebar
-          activePage="templates"
-          onNavigate={handleSidebarNavigation}
-          onLogout={handleLogout}
-          userName={user?.name || "User"}
-          userRole={user?.role || "Super Admin"}
-        />
-        <div className="ml-24 p-8">
+        <div className="p-8">
           <Header
             title="D-MAK"
             subtitle="Digital - Marketing, Automate & Konnect"
@@ -366,17 +347,8 @@ const Templates: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Sidebar */}
-      <Sidebar
-        activePage="templates"
-        onNavigate={handleSidebarNavigation}
-        onLogout={handleLogout}
-        userName={user?.name || "User"}
-        userRole={user?.role || "Super Admin"}
-      />
-
       {/* Main Content */}
-      <div className="ml-24 p-8">
+      <div className="p-8">
         {/* Header */}
         <Header
           title="D-MAK"

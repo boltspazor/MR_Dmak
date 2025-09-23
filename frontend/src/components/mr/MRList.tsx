@@ -14,6 +14,7 @@ interface MRListProps {
   onSort: (field: keyof Contact) => void;
   sortField: keyof Contact;
   sortDirection: 'asc' | 'desc';
+  loading?: boolean;
 }
 
 const MRList: React.FC<MRListProps> = ({
@@ -23,7 +24,8 @@ const MRList: React.FC<MRListProps> = ({
   onDelete,
   onSort,
   sortField,
-  sortDirection
+  sortDirection,
+  loading = false
 }) => {
   const {
     filters,
@@ -82,6 +84,7 @@ const MRList: React.FC<MRListProps> = ({
           onSort={handleSort}
           sortField={sortField}
           sortDirection={sortDirection}
+          loading={loading}
         />
 
         {/* Enhanced Pagination */}

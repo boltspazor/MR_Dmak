@@ -4,6 +4,9 @@ import { api } from '../../api/config';
 import toast from 'react-hot-toast';
 import { WizardTemplate } from '../../pages/CampaignWizard';
 import { useNavigate } from 'react-router-dom';
+import WizardTemplateTable from './WizardTemplateTable';
+import TemplatePreviewDialog from '../ui/TemplatePreviewDialog';
+import { SkeletonTable } from '../ui/SkeletonLoader';
 
 interface StepOneTemplateSelectionProps {
   stepNumber: number;
@@ -29,6 +32,8 @@ const StepOneTemplateSelection: React.FC<StepOneTemplateSelectionProps> = ({
   const navigate = useNavigate();
   const [templates, setTemplates] = useState<WizardTemplate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showTemplatePreview, setShowTemplatePreview] = useState(false);
+  const [previewTemplate, setPreviewTemplate] = useState<WizardTemplate | null>(null);
 
   // Load Meta templates
   useEffect(() => {
@@ -62,6 +67,11 @@ const StepOneTemplateSelection: React.FC<StepOneTemplateSelectionProps> = ({
     toast.success(`Selected template: ${template.name}`);
   };
 
+  const handleTemplatePreview = (template: WizardTemplate) => {
+    setPreviewTemplate(template);
+    setShowTemplatePreview(true);
+  };
+
   const handleCreateNew = async () => {
     try {
       // Get Meta template creation URL
@@ -76,9 +86,21 @@ const StepOneTemplateSelection: React.FC<StepOneTemplateSelectionProps> = ({
 
   if (loading) {
     return (
-      <div className="text-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-        <p className="mt-4 text-gray-600">Loading templates...</p>
+      <div className="space-y-6 animate-fade-in">
+        {/* Step Header */}
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900">{stepTitle}</h2>
+          <p className="mt-2 text-gray-600">{stepDescription}</p>
+        </div>
+
+        {/* Templates List */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900">Available Templates</h3>
+            <div className="h-10 w-40 bg-gray-200 rounded-lg animate-pulse"></div>
+          </div>
+          <SkeletonTable rows={4} columns={5} />
+        </div>
       </div>
     );
   }
@@ -118,64 +140,54 @@ const StepOneTemplateSelection: React.FC<StepOneTemplateSelectionProps> = ({
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {templates.map((template) => (
-              <div
-                key={template._id}
-                onClick={() => handleTemplateSelect(template)}
-                className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${
-                  selectedTemplate?._id === template._id
-                    ? 'border-indigo-500 bg-indigo-50 shadow-md'
-                    : 'border-gray-200 hover:border-indigo-300 hover:bg-gray-50 hover:shadow-sm'
-                }`}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <FileText className="w-5 h-5 text-indigo-600" />
-                      <h4 className="font-medium text-gray-900">{template.name}</h4>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-2">
-                      {template.type.toUpperCase()} • {template.parameters.length} parameters
-                      {template.isMetaTemplate && (
-                        <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
-                          template.metaStatus === 'APPROVED' 
-                            ? 'bg-green-100 text-green-800' 
-                            : template.metaStatus === 'PENDING'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {template.metaStatus || 'UNKNOWN'}
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-xs text-gray-500 line-clamp-2">
-                      {template.content.substring(0, 100)}
-                      {template.content.length > 100 && '...'}
-                    </p>
-                  </div>
-                  {selectedTemplate?._id === template._id && (
-                    <CheckCircle className="w-6 h-6 text-indigo-600 flex-shrink-0" />
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+          <WizardTemplateTable
+            templates={templates}
+            selectedTemplate={selectedTemplate}
+            onTemplateSelect={handleTemplateSelect}
+            onPreview={handleTemplatePreview}
+            loading={loading}
+          />
         )}
       </div>
 
       {/* Selected Template Summary */}
       {selectedTemplate && (
-        <div className="mt-6 p-4 bg-indigo-50 rounded-lg">
-          <h4 className="font-medium text-indigo-900 mb-2">Selected Template</h4>
-          <div className="flex items-center justify-between">
+        <div className="mt-6 p-6 bg-indigo-50 rounded-lg border border-indigo-200">
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="font-medium text-indigo-900 text-lg">Selected Template</h4>
+            <CheckCircle className="w-6 h-6 text-indigo-600" />
+          </div>
+          
+          <div className="space-y-4">
             <div>
-              <p className="text-indigo-800 font-medium">{selectedTemplate.name}</p>
+              <p className="text-indigo-800 font-medium text-lg">{selectedTemplate.name}</p>
               <p className="text-sm text-indigo-600">
                 {selectedTemplate.type.toUpperCase()} • {selectedTemplate.parameters.length} parameters
               </p>
             </div>
-            <CheckCircle className="w-6 h-6 text-indigo-600" />
+            
+            {selectedTemplate.parameters.length > 0 && (
+              <div>
+                <h5 className="font-medium text-indigo-900 mb-2">Template Parameters:</h5>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {selectedTemplate.parameters.map((param, index) => (
+                    <div key={index} className="bg-white bg-opacity-50 rounded px-3 py-2">
+                      <span className="text-sm font-medium text-indigo-800">{param.name}</span>
+                      <span className="text-xs text-indigo-600 ml-2">({param.type})</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            <div>
+              <h5 className="font-medium text-indigo-900 mb-2">Template Preview:</h5>
+              <div className="bg-white bg-opacity-50 rounded p-3">
+                <p className="text-sm text-indigo-800 whitespace-pre-wrap">
+                  {selectedTemplate.content}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -190,6 +202,15 @@ const StepOneTemplateSelection: React.FC<StepOneTemplateSelectionProps> = ({
           }
         </p>
       </div>
+
+      {/* Template Preview Dialog */}
+      <TemplatePreviewDialog
+        isOpen={showTemplatePreview}
+        onClose={() => setShowTemplatePreview(false)}
+        template={previewTemplate}
+        showDownloadButton={false}
+        variant="full"
+      />
     </div>
   );
 };

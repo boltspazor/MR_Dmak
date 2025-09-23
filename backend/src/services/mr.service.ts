@@ -3,10 +3,48 @@ import Group from '../models/Group';
 import { CreateMRForm, UpdateMRForm } from '../types/mongodb';
 import logger from '../utils/logger';
 import whatsappCloudAPIService from './whatsapp-cloud-api.service';
+import consentService from './consent.service';
 
 export class MRService {
   constructor() {
     // WhatsApp Cloud API service is imported as singleton
+  }
+
+  /**
+   * Determine consent status based on consent data
+   */
+  private determineConsentStatus(consent: any): 'pending' | 'approved' | 'rejected' | 'not_requested' {
+    if (!consent) {
+      return 'not_requested';
+    }
+
+    // Check if user has opted out
+    if (consent.opt_out && consent.opt_out.status) {
+      return 'rejected';
+    }
+
+    // Check if user has consented
+    if (consent.consented) {
+      return 'approved';
+    }
+
+    // If consent record exists but not consented and not opted out
+    return 'pending';
+  }
+
+  /**
+   * Format phone number to E.164 format for consent lookup
+   */
+  private formatPhoneForConsent(phone: string): string {
+    // Remove any non-digit characters except +
+    let cleaned = phone.replace(/[^\d+]/g, '');
+    
+    // If it doesn't start with +, add it
+    if (!cleaned.startsWith('+')) {
+      cleaned = '+' + cleaned;
+    }
+    
+    return cleaned;
   }
 
   async createMR(data: CreateMRForm, userId: string) {
@@ -154,8 +192,30 @@ export class MRService {
 
       const total = await MedicalRepresentative.countDocuments(query);
 
+      // Fetch consent status for each MR
+      const mrsWithConsent = await Promise.all(
+        mrs.map(async (mr) => {
+          try {
+            const phoneE164 = this.formatPhoneForConsent(mr.phone);
+            const consentResult = await consentService.getConsentStatus(phoneE164);
+            const consentStatus = this.determineConsentStatus(consentResult.consent);
+            
+            return {
+              ...mr.toObject(),
+              consentStatus
+            };
+          } catch (error) {
+            logger.warn('Failed to fetch consent status for MR', { mrId: mr._id, phone: mr.phone, error });
+            return {
+              ...mr.toObject(),
+              consentStatus: 'not_requested' as const
+            };
+          }
+        })
+      );
+
       return {
-        mrs,
+        mrs: mrsWithConsent,
         total,
         pagination: {
           page: Math.floor(offset / limit) + 1,
@@ -180,7 +240,23 @@ export class MRService {
         throw new Error('MR not found');
       }
 
-      return mr;
+      // Fetch consent status
+      try {
+        const phoneE164 = this.formatPhoneForConsent(mr.phone);
+        const consentResult = await consentService.getConsentStatus(phoneE164);
+        const consentStatus = this.determineConsentStatus(consentResult.consent);
+        
+        return {
+          ...mr.toObject(),
+          consentStatus
+        };
+      } catch (error) {
+        logger.warn('Failed to fetch consent status for MR', { mrId: mr._id, phone: mr.phone, error });
+        return {
+          ...mr.toObject(),
+          consentStatus: 'not_requested' as const
+        };
+      }
     } catch (error) {
       logger.error('Failed to get MR by ID', { id, userId, error });
       throw error;

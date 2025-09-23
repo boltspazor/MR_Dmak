@@ -48,6 +48,12 @@ const StepThreeProgressCheck: React.FC<StepThreeProgressCheckProps> = ({
       
       setCampaignProgress(prev => {
         const newProgress = { ...prev };
+        
+        // Ensure we don't exceed total
+        if (newProgress.sent + newProgress.failed >= newProgress.total) {
+          return newProgress;
+        }
+        
         newProgress.pending = Math.max(0, newProgress.pending - 1);
         
         // 80% success rate simulation
@@ -69,10 +75,10 @@ const StepThreeProgressCheck: React.FC<StepThreeProgressCheckProps> = ({
     if (createdCampaign) {
       // Reset and restart simulation
       setCampaignProgress({
-        total: createdCampaign.selectedMRs.length,
+        total: campaignProgress.total, // Keep the original total
         sent: 0,
         failed: 0,
-        pending: createdCampaign.selectedMRs.length
+        pending: campaignProgress.total
       });
       setSimulationComplete(false);
     }
@@ -80,7 +86,8 @@ const StepThreeProgressCheck: React.FC<StepThreeProgressCheckProps> = ({
 
   const getProgressPercentage = () => {
     if (campaignProgress.total === 0) return 0;
-    return Math.round(((campaignProgress.sent + campaignProgress.failed) / campaignProgress.total) * 100);
+    const processed = campaignProgress.sent + campaignProgress.failed;
+    return Math.min(100, Math.round((processed / campaignProgress.total) * 100));
   };
 
   const getStatusColor = () => {
@@ -94,7 +101,7 @@ const StepThreeProgressCheck: React.FC<StepThreeProgressCheckProps> = ({
     if (simulationComplete) {
       return campaignProgress.failed === 0 ? 'Completed Successfully' : 'Completed with Issues';
     }
-    return isSimulating ? 'Sending Messages...' : 'Ready to Send';
+    return isSimulating ? 'Sending Messages...' : 'Sending';
   };
 
   const getStatusIcon = () => {
@@ -221,53 +228,7 @@ const StepThreeProgressCheck: React.FC<StepThreeProgressCheckProps> = ({
         </div>
       </div>
 
-      {/* Real-time Status */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Real-time Status</h3>
-        
-        <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg">
-          <div className={`p-2 rounded-lg ${isSimulating ? 'bg-blue-100' : simulationComplete ? 'bg-green-100' : 'bg-gray-100'}`}>
-            <StatusIcon className={`w-6 h-6 ${getStatusColor()} ${isSimulating ? 'animate-spin' : ''}`} />
-          </div>
-          <div className="flex-1">
-            <p className={`font-medium ${getStatusColor()}`}>{getStatusText()}</p>
-            <p className="text-sm text-gray-600">
-              {isSimulating 
-                ? `Sending message ${campaignProgress.sent + campaignProgress.failed + 1} of ${campaignProgress.total}...`
-                : simulationComplete
-                ? `Campaign completed. ${campaignProgress.sent} sent, ${campaignProgress.failed} failed.`
-                : 'Ready to start sending messages.'
-              }
-            </p>
-          </div>
-        </div>
-      </div>
 
-      {/* Success Rate */}
-      {campaignProgress.sent + campaignProgress.failed > 0 && (
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Success Rate</h3>
-          
-          <div className="flex items-center space-x-4">
-            <div className="flex-1">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">Delivery Success Rate</span>
-                <span className="text-sm text-gray-600">
-                  {Math.round((campaignProgress.sent / (campaignProgress.sent + campaignProgress.failed)) * 100)}%
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-green-600 h-2 rounded-full transition-all duration-500"
-                  style={{ 
-                    width: `${(campaignProgress.sent / (campaignProgress.sent + campaignProgress.failed)) * 100}%` 
-                  }}
-                ></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Completion Message */}
       {simulationComplete && (

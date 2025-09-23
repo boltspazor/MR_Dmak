@@ -13,7 +13,7 @@ export const useTemplateRecipients = (templateId?: string) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get(`/template-recipients/template/${id}`);
+      const response = await api.get(`/recipient-lists/template/${id}`);
       setRecipients(response.data.data || []);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to fetch recipients');
@@ -39,7 +39,7 @@ export const useTemplateRecipients = (templateId?: string) => {
       formData.append('description', description);
       formData.append('csvFile', csvFile);
 
-      await api.post('/template-recipients/upload', formData, {
+      await api.post('/recipient-lists/template/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
@@ -64,7 +64,7 @@ export const useTemplateRecipients = (templateId?: string) => {
       setLoading(true);
       setError(null);
 
-      await api.delete(`/template-recipients/${id}`);
+      await api.delete(`/recipient-lists/template/${id}`);
       
       // Refresh recipients list
       if (templateId) {

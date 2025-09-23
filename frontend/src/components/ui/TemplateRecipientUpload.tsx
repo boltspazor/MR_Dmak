@@ -112,7 +112,7 @@ const TemplateRecipientUpload: React.FC<TemplateRecipientUploadProps> = ({
       formData.append('description', recipientListDescription);
       formData.append('csvFile', csvFile);
 
-      const response = await api.post('/template-recipients/upload', formData, {
+      const response = await api.post('/recipient-lists/template/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }

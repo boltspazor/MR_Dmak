@@ -6,6 +6,7 @@ export interface Contact {
   phone: string;
   group: string;
   comments?: string;
+  consentStatus?: 'pending' | 'approved' | 'rejected' | 'not_requested';
 }
 
 export interface Group {

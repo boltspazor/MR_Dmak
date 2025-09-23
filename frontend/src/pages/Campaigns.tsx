@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, Send } from 'lucide-react';
 import { Template } from '../types';
-import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import CommonFeatures from '../components/CommonFeatures';
 import { useAuth } from '../contexts/AuthContext';
@@ -11,6 +10,7 @@ import TemplateRecipientUploadV2 from '../components/ui/TemplateRecipientUploadV
 import { useTemplateRecipients } from '../hooks/useTemplateRecipients';
 import { useCampaigns } from '../hooks/useCampaigns';
 import { useCampaignActions } from '../hooks/useCampaignActions';
+import { Campaign } from '../api/campaigns-new';
 import { downloadTemplateCSV, cleanErrorMessage } from '../utils/campaignUtils';
 import TemplateMessagesTab from '../components/campaigns/TemplateMessagesTab';
 import CustomMessagesTab from '../components/campaigns/CustomMessagesTab';
@@ -21,7 +21,7 @@ import ErrorPopup from '../components/campaigns/ErrorPopup';
 const Campaigns: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { campaigns, templates, mrs, loading } = useCampaigns();
+  const { campaigns = [], templates = [], mrs = [], loading } = useCampaigns();
   const { createWithTemplateCampaign, createCustomMessageCampaign, createRecipientList } = useCampaignActions();
   
   const [activeTab, setActiveTab] = useState<'with-template' | 'custom-messages'>('with-template');
@@ -58,7 +58,6 @@ const Campaigns: React.FC = () => {
   const [showRecipientUpload, setShowRecipientUpload] = useState(false);
   const [uploadTemplate, setUploadTemplate] = useState<Template | null>(null);
 
-
   // Handler functions
   const handleWithTemplateSubmit = async () => {
     if (!selectedTemplate || !selectedRecipientList || !campaignName.trim()) {
@@ -73,10 +72,10 @@ const Campaigns: React.FC = () => {
         recipientListId: selectedRecipientList._id,
         type: 'with-template'
       });
-      setShowSendConfirmation(true);
+      showError('Success', 'Campaign created and activated! Messages are being sent.', true);
       resetTemplateForm();
     } catch (error) {
-      showError('Error', 'Failed to create campaign');
+      showError('Error', 'Failed to create and activate campaign');
     }
   };
 
@@ -95,10 +94,10 @@ const Campaigns: React.FC = () => {
         footerImage: footerImage ?? undefined,
         type: 'custom-messages'
       });
-      setShowSendConfirmation(true);
+      showError('Success', 'Campaign created and activated! Messages are being sent.', true);
       resetCustomMessageForm();
     } catch (error) {
-      showError('Error', 'Failed to create campaign');
+      showError('Error', 'Failed to create and activate campaign');
     }
   };
 
@@ -114,6 +113,7 @@ const Campaigns: React.FC = () => {
       showError('Error', 'Failed to create recipient list');
     }
   };
+
 
   const resetTemplateForm = () => {
     setSelectedTemplate(null);
@@ -142,10 +142,6 @@ const Campaigns: React.FC = () => {
     }
   ];
 
-  const handleSidebarNavigation = (route: string) => {
-    navigate(route);
-  };
-
   const handleTemplatePreview = (template: Template) => {
     setPreviewTemplate(template);
     setShowTemplatePreview(true);
@@ -164,16 +160,13 @@ const Campaigns: React.FC = () => {
     (window as any).lastPopupIsSuccess = isSuccess;
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    navigate('/login');
-  };
 
   // Get recipients for the preview template
   const { recipients: previewRecipients, fetchRecipients: fetchPreviewRecipients } = useTemplateRecipients(previewTemplate?._id);
   
   // Get recipients for the selected template (for campaigns)
   const { recipients: selectedTemplateRecipients, fetchRecipients: fetchSelectedTemplateRecipients } = useTemplateRecipients(selectedTemplate?._id);
+
 
   if (loading) {
     return (
@@ -188,17 +181,8 @@ const Campaigns: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Sidebar */}
-      <Sidebar
-        activePage="campaigns"
-        onNavigate={handleSidebarNavigation}
-        onLogout={handleLogout}
-        userName={user?.name || "User"}
-        userRole={user?.role || "Super Admin"}
-      />
-
       {/* Main Content */}
-      <div className="ml-24 p-8">
+      <div className="p-8">
         {/* Header */}
         <Header
           title="D-MAK"

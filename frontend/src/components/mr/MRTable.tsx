@@ -1,6 +1,6 @@
 import React from 'react';
 import { Edit, Trash2, ChevronUp, ChevronDown, User, Phone, Users, MessageSquare, CheckCircle, XCircle, Clock } from 'lucide-react';
-import useConsentStatus from '../../hooks/useConsentStatus';
+import { SkeletonTable } from '../ui/SkeletonLoader';
 
 interface Contact {
   id: string;
@@ -10,6 +10,7 @@ interface Contact {
   phone: string;
   group: string;
   comments?: string;
+  consentStatus?: 'pending' | 'approved' | 'rejected' | 'not_requested';
 }
 
 interface MRTableProps {
@@ -19,26 +20,10 @@ interface MRTableProps {
   onSort: (field: keyof Contact) => void;
   sortField: keyof Contact;
   sortDirection: 'asc' | 'desc';
+  loading?: boolean;
 }
 
-const MRTable: React.FC<MRTableProps> = ({ contacts, onEdit, onDelete, onSort, sortField, sortDirection }) => {
-  const { getConsentStatus, fetchConsentStatus, loading: consentLoading } = useConsentStatus();
-  const [fetchedPhones, setFetchedPhones] = React.useState<Set<string>>(new Set());
-
-  // Memoize phone numbers to prevent unnecessary re-fetches
-  const phoneNumbers = React.useMemo(() => 
-    contacts.map(contact => contact.phone), 
-    [contacts]
-  );
-
-  // Fetch consent status for new phone numbers only
-  React.useEffect(() => {
-    const newPhones = phoneNumbers.filter(phone => !fetchedPhones.has(phone));
-    if (newPhones.length > 0) {
-      fetchConsentStatus(newPhones);
-      setFetchedPhones(prev => new Set([...prev, ...newPhones]));
-    }
-  }, [phoneNumbers, fetchConsentStatus, fetchedPhones]);
+const MRTable: React.FC<MRTableProps> = ({ contacts, onEdit, onDelete, onSort, sortField, sortDirection, loading = false }) => {
   const SortableHeader: React.FC<{ field: keyof Contact; children: React.ReactNode; icon?: React.ReactNode }> = ({ field, children, icon }) => (
     <th 
       className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors duration-200"
@@ -55,6 +40,10 @@ const MRTable: React.FC<MRTableProps> = ({ contacts, onEdit, onDelete, onSort, s
       </div>
     </th>
   );
+
+  if (loading) {
+    return <SkeletonTable rows={5} columns={7} />;
+  }
 
   if (contacts.length === 0) {
     return (
@@ -143,48 +132,51 @@ const MRTable: React.FC<MRTableProps> = ({ contacts, onEdit, onDelete, onSort, s
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 {(() => {
-                  const consentStatus = getConsentStatus(contact.phone);
+                  const consentStatus = contact.consentStatus || 'not_requested';
                   
-                  if (consentLoading) {
-                    return (
-                      <div className="flex items-center text-sm text-gray-500">
-                        <Clock className="h-4 w-4 mr-2 animate-spin" />
-                        <span>Checking...</span>
-                      </div>
-                    );
-                  }
+                  const getStatusIcon = (status: string) => {
+                    switch (status) {
+                      case 'approved':
+                        return <CheckCircle className="h-3 w-3" />;
+                      case 'rejected':
+                        return <XCircle className="h-3 w-3" />;
+                      case 'pending':
+                        return <Clock className="h-3 w-3" />;
+                      default:
+                        return <Clock className="h-3 w-3" />;
+                    }
+                  };
                   
-                  if (!consentStatus) {
-                    return (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                        <XCircle className="h-3 w-3 mr-1" />
-                        No Consent
-                      </span>
-                    );
-                  }
+                  const getStatusColor = (status: string) => {
+                    switch (status) {
+                      case 'approved':
+                        return 'bg-green-100 text-green-800';
+                      case 'rejected':
+                        return 'bg-red-100 text-red-800';
+                      case 'pending':
+                        return 'bg-yellow-100 text-yellow-800';
+                      default:
+                        return 'bg-gray-100 text-gray-800';
+                    }
+                  };
                   
-                  if (consentStatus.opt_out.status) {
-                    return (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                        <XCircle className="h-3 w-3 mr-1" />
-                        Opted Out
-                      </span>
-                    );
-                  }
-                  
-                  if (consentStatus.consented) {
-                    return (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Consented
-                      </span>
-                    );
-                  }
+                  const getStatusText = (status: string) => {
+                    switch (status) {
+                      case 'approved':
+                        return 'Approved';
+                      case 'rejected':
+                        return 'Rejected';
+                      case 'pending':
+                        return 'Pending';
+                      default:
+                        return 'Not Requested';
+                    }
+                  };
                   
                   return (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                      <Clock className="h-3 w-3 mr-1" />
-                      Pending
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(consentStatus)}`}>
+                      {getStatusIcon(consentStatus)}
+                      <span className="ml-1">{getStatusText(consentStatus)}</span>
                     </span>
                   );
                 })()}

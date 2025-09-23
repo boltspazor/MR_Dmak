@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { api } from '../lib/api';
+import { campaignsAPI } from '../api/campaigns-new';
+import { api } from '../api/config';
 
 export const useCampaignActions = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -12,11 +13,19 @@ export const useCampaignActions = () => {
   }) => {
     setIsSubmitting(true);
     try {
-      // Use the new template campaign route for proper WhatsApp template sending
-      await api.post('/template-campaigns', campaignData);
-      return { success: true };
+      // Create the campaign first
+      const campaign = await campaignsAPI.createCampaign({
+        name: campaignData.name,
+        templateId: campaignData.templateId,
+        recipientListId: campaignData.recipientListId
+      });
+      
+      // Automatically activate the campaign to start sending
+      await campaignsAPI.updateCampaignStatus(campaign.campaignId, 'sending');
+      
+      return { success: true, campaign };
     } catch (error) {
-      console.error('Error creating template campaign:', error);
+      console.error('Error creating and activating template campaign:', error);
       throw error;
     } finally {
       setIsSubmitting(false);
@@ -46,12 +55,19 @@ export const useCampaignActions = () => {
         formData.append('footerImage', campaignData.footerImage);
       }
 
-      await api.post('/messages/campaigns', formData, {
+      // Create the campaign
+      const response = await api.post('/messages/campaigns', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      return { success: true };
+      
+      // If the response contains campaign information, activate it
+      if (response.data?.data?.campaignId) {
+        await campaignsAPI.updateCampaignStatus(response.data.data.campaignId, 'sending');
+      }
+      
+      return { success: true, campaign: response.data?.data };
     } catch (error) {
-      console.error('Error creating campaign:', error);
+      console.error('Error creating and activating custom campaign:', error);
       throw error;
     } finally {
       setIsSubmitting(false);

@@ -8,3 +8,4 @@ export { default as GroupActivity, IGroupActivity } from './GroupActivity';
 export { default as Template, ITemplate } from './Template';
 export { default as TemplateRecipients, ITemplateRecipients } from './TemplateRecipients';
 export { default as RecipientList, IRecipientList } from './RecipientList';
+export { default as Consent, IConsent } from './consent.model';

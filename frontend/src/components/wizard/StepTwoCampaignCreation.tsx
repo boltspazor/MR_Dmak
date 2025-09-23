@@ -2,7 +2,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Send, Users, FileText, CheckCircle, AlertCircle, Eye } from 'lucide-react';
 import { WizardTemplate, WizardMR, WizardCampaign } from '../../pages/CampaignWizard';
 import TemplatePreviewDialog from '../ui/TemplatePreviewDialog';
+import ProgressStats from '../ui/ProgressStats';
+import { SkeletonLoader, SkeletonText } from '../ui/SkeletonLoader';
 import { api } from '../../api/config';
+import { campaignsAPI } from '../../api/campaigns-new';
 import toast from 'react-hot-toast';
 
 interface StepTwoCampaignCreationProps {
@@ -21,10 +24,10 @@ interface StepTwoCampaignCreationProps {
 }
 
 const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
-  stepNumber,
   stepTitle,
   stepDescription,
   onComplete,
+  onNext,
   selectedTemplate,
   allMRs,
   selectedMRs,
@@ -47,18 +50,24 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
       if (selectedTemplate) {
         try {
           setLoadingRecipientLists(true);
-          const response = await api.get(`/template-recipients/template/${selectedTemplate._id}`);
+          console.log('Loading recipient lists for template:', selectedTemplate._id);
+          const response = await api.get(`/recipient-lists/template/${selectedTemplate._id}`);
           const listsData = response.data.data || response.data || [];
+          console.log('Loaded recipient lists:', listsData);
           setRecipientLists(listsData);
           
           // Auto-select the first recipient list if available
           if (listsData.length > 0) {
+            console.log('Auto-selecting first recipient list:', listsData[0]);
             setSelectedRecipientList(listsData[0]);
+          } else {
+            setSelectedRecipientList(null);
           }
         } catch (error: any) {
           console.error('Failed to load recipient lists:', error);
           toast.error('Failed to load recipient lists');
           setRecipientLists([]);
+          setSelectedRecipientList(null);
         } finally {
           setLoadingRecipientLists(false);
         }
@@ -71,34 +80,42 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
     loadRecipientLists();
   }, [selectedTemplate]);
 
-  // Load template recipients when template has parameters (legacy support)
+  // Load template recipients from the selected recipient list
   useEffect(() => {
-    const loadTemplateRecipients = async () => {
-      if (selectedTemplate && selectedTemplate.parameters && selectedTemplate.parameters.length > 0) {
+    const loadTemplateRecipients = () => {
+      if (selectedRecipientList && selectedRecipientList.recipients && selectedRecipientList.recipients.length > 0) {
         try {
           setLoadingRecipients(true);
-          const response = await api.get(`/templates/${selectedTemplate._id}/recipients`);
-          const recipientsData = response.data.data || response.data || [];
           
-          // Convert to WizardMR format
-          const wizardRecipients: WizardMR[] = recipientsData.map((recipient: any) => ({
-            id: recipient._id || recipient.id,
-            mrId: recipient.mrId,
-            firstName: recipient.firstName,
-            lastName: recipient.lastName,
-            phone: recipient.phone,
-            email: recipient.email,
-            group: recipient.group?.groupName || recipient.group || 'Default Group',
-            comments: recipient.comments || ''
-          }));
+          // Convert recipients from the selected recipient list to WizardMR format
+          const wizardRecipients: WizardMR[] = selectedRecipientList.recipients.map((recipient: any) => {
+            // Better group name extraction
+            let groupName = 'No Group';
+            if (recipient.groupId) {
+              // Try to find the group name from allMRs or use groupId as fallback
+              const group = allMRs.find(mr => mr.id === recipient.groupId);
+              groupName = group?.group || recipient.groupId;
+            }
+            
+            return {
+              id: recipient._id || recipient.id,
+              mrId: recipient.mrId,
+              firstName: recipient.firstName,
+              lastName: recipient.lastName,
+              phone: recipient.phone,
+              email: recipient.email || '',
+              group: groupName,
+              comments: recipient.comments || ''
+            };
+          });
           
           setTemplateRecipients(wizardRecipients);
           
           // Auto-select all template recipients
           setSelectedMRs(wizardRecipients.map(r => r.id));
         } catch (error: any) {
-          console.error('Failed to load template recipients:', error);
-          toast.error('Failed to load template recipients');
+          console.error('Failed to process template recipients:', error);
+          toast.error('Failed to process template recipients');
           setTemplateRecipients([]);
         } finally {
           setLoadingRecipients(false);
@@ -110,7 +127,7 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
     };
 
     loadTemplateRecipients();
-  }, [selectedTemplate]);
+  }, [selectedRecipientList, allMRs]);
 
   // Get unique groups
   const uniqueGroups = [...new Set(allMRs.map(mr => mr.group))];
@@ -128,10 +145,16 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
     return matchesSearch && matchesGroup;
   });
 
+  // Helper function to check if template has parameters
+  const hasParameters = (template: WizardTemplate | null): boolean => {
+    if (!template?.parameters) return false;
+    return template.parameters.length > 0;
+  };
+
   // Get MRs to show based on template parameters
   const mrsToShow = useMemo(() => {
     // If template has parameters, show template recipients
-    if (selectedTemplate?.parameters && selectedTemplate.parameters.length > 0) {
+    if (hasParameters(selectedTemplate)) {
       return templateRecipients;
     }
     // If template has no parameters, show filtered MRs
@@ -160,40 +183,75 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
     }
 
     try {
-      toast.loading('Creating template campaign...', { id: 'campaign-creation' });
+      toast.loading('Creating and starting campaign...', { id: 'campaign-creation' });
 
-      // Use the selected recipient list ID
-      if (!selectedRecipientList) {
-        toast.error('Please select a recipient list for this template');
-        return;
+      let result;
+
+      // Check if template has parameters to determine which API to call
+      if (hasParameters(selectedTemplate)) {
+        // Template with parameters - use recipient list
+        if (!selectedRecipientList) {
+          toast.error('Please select a recipient list for this template');
+          return;
+        }
+
+        // Call the standard campaign API with recipient list
+        result = await campaignsAPI.createCampaign({
+          name: campaignName.trim(),
+          templateId: selectedTemplate._id,
+          recipientListId: selectedRecipientList._id
+        });
+      } else {
+        // Template without parameters - use direct MR selection
+        // Call the new campaign API with direct MRs
+        result = await campaignsAPI.createCampaignWithMRs({
+          name: campaignName.trim(),
+          templateId: selectedTemplate._id,
+          mrIds: selectedMRs
+        });
       }
 
-      // Call the new template campaign API
-      const result = await api.post('/template-campaigns', {
-        name: campaignName.trim(),
-        templateId: selectedTemplate._id,
-        recipientListId: selectedRecipientList._id,
-        type: 'with-template'
-      });
+      console.log('Campaign creation result:', result);
+      
+      // The campaignsAPI.createCampaign returns response.data.data, so result is the campaign data
+      const campaignId = result.campaignId;
+      
+      if (!campaignId) {
+        console.error('No campaign ID found in response:', result);
+        toast.error('Campaign created but no ID returned. Please check the campaign manually.');
+        return;
+      }
+      
+      // Automatically start sending messages
+      toast.loading('Starting message sending...', { id: 'campaign-creation' });
+      await campaignsAPI.updateCampaignStatus(campaignId, 'sending');
 
       const campaign: WizardCampaign = {
-        id: result.data.data.campaignId,
+        id: campaignId,
         campaignName: campaignName.trim(),
         templateId: selectedTemplate._id,
         selectedMRs: selectedMRs,
-        status: result.data.data.status,
+        status: 'sending',
         createdAt: new Date().toISOString()
       };
 
-      toast.success(`Template campaign created successfully! ${result.data.data.successCount}/${result.data.data.totalRecipients} messages sent.`, {
+      // Get recipient count based on template type
+      const recipientCount = hasParameters(selectedTemplate) 
+        ? selectedRecipientList.recipients?.length || 0
+        : selectedMRs.length;
+
+      toast.success(`Campaign created and activated! Messages are being sent to ${recipientCount} recipients.`, {
         id: 'campaign-creation'
       });
 
       onComplete({ 
         campaign, 
         selectedMRs,
-        campaignResult: result.data
+        campaignResult: result
       });
+
+      // Automatically move to the next step (Progress Check)
+      onNext();
 
     } catch (error: any) {
       console.error('Template campaign creation error:', error);
@@ -221,7 +279,7 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
 
   const getSelectedMRsData = () => {
     // If template has parameters, use template recipients
-    if (selectedTemplate?.parameters && selectedTemplate.parameters.length > 0) {
+    if (hasParameters(selectedTemplate)) {
       return templateRecipients.filter(mr => selectedMRs.includes(mr.id));
     }
     // If template has no parameters, use all MRs
@@ -229,7 +287,12 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
   };
 
   const isFormValid = () => {
-    return selectedTemplate && selectedMRs.length > 0 && campaignName.trim().length > 0 && selectedRecipientList;
+    // For templates with parameters, we need a recipient list
+    if (hasParameters(selectedTemplate)) {
+      return selectedTemplate && selectedMRs.length > 0 && campaignName.trim().length > 0 && selectedRecipientList;
+    }
+    // For templates without parameters, we only need MRs selected
+    return selectedTemplate && selectedMRs.length > 0 && campaignName.trim().length > 0;
   };
 
   return (
@@ -264,26 +327,67 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
                 Recipient List *
               </label>
               {loadingRecipientLists ? (
-                <div className="flex items-center space-x-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
-                  <span className="text-sm text-gray-600">Loading recipient lists...</span>
+                <div className="space-y-2">
+                  <SkeletonLoader variant="rounded" height={40} width="100%" className="animate-pulse" />
+                  <SkeletonText lines={1} className="text-sm" />
                 </div>
               ) : recipientLists.length > 0 ? (
-                <select
-                  value={selectedRecipientList?._id || ''}
-                  onChange={(e) => {
-                    const list = recipientLists.find(l => l._id === e.target.value);
-                    setSelectedRecipientList(list);
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                >
-                  <option value="">Select a recipient list</option>
-                  {recipientLists.map((list) => (
-                    <option key={list._id} value={list._id}>
-                      {list.name} ({list.recipients?.length || 0} recipients)
-                    </option>
-                  ))}
-                </select>
+                <div className="space-y-2">
+                  <select
+                    value={selectedRecipientList?._id || ''}
+                    onChange={(e) => {
+                      const list = recipientLists.find(l => l._id === e.target.value);
+                      console.log('Selected recipient list:', list);
+                      setSelectedRecipientList(list);
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  >
+                    <option value="">Select a recipient list</option>
+                    {recipientLists.map((list) => {
+                      const recipientNames = list.recipients && list.recipients.length > 0 
+                        ? list.recipients.slice(0, 2).map((r: any) => `${r.firstName} ${r.lastName}`).join(', ') + 
+                          (list.recipients.length > 2 ? ` +${list.recipients.length - 2} more` : '')
+                        : 'No recipients';
+                      
+                      return (
+                        <option key={list._id} value={list._id}>
+                          {list.name}: {recipientNames}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  
+                  {selectedRecipientList && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                      <div className="flex items-center space-x-2">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <span className="text-sm font-medium text-green-800">
+                          Selected: {selectedRecipientList.name}
+                        </span>
+                      </div>
+                      <div className="text-xs text-green-600 mt-1">
+                        {selectedRecipientList.recipients?.length || selectedRecipientList.data?.length || 0} recipients ready
+                      </div>
+                      {/* Show individual recipient names */}
+                      {selectedRecipientList.recipients && selectedRecipientList.recipients.length > 0 && (
+                        <div className="mt-2">
+                          <div className="text-xs text-green-700 font-medium mb-1">Recipients:</div>
+                          <div className="text-xs text-green-600">
+                            {selectedRecipientList.recipients.slice(0, 3).map((recipient: any, index: number) => (
+                              <span key={recipient._id || index}>
+                                {recipient.firstName} {recipient.lastName}
+                                {index < Math.min(selectedRecipientList.recipients.length, 3) - 1 ? ', ' : ''}
+                              </span>
+                            ))}
+                            {selectedRecipientList.recipients.length > 3 && (
+                              <span> and {selectedRecipientList.recipients.length - 3} more...</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="text-center py-4 text-gray-500">
                   <p className="text-sm">No recipient lists found for this template.</p>
@@ -323,7 +427,7 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
       )}
 
       {/* Template Recipients - Show if template has parameters */}
-      {selectedTemplate?.parameters && selectedTemplate.parameters.length > 0 && (
+      {hasParameters(selectedTemplate) && (
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">
@@ -338,9 +442,24 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
           </div>
 
           {loadingRecipients ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
-              <p className="mt-2 text-gray-600">Loading template recipients...</p>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <SkeletonLoader variant="text" height={20} width="40%" className="animate-pulse" />
+                <SkeletonLoader variant="text" height={16} width="20%" className="animate-pulse" />
+              </div>
+              <div className="space-y-2">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div key={index} className="p-3 border border-gray-200 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <SkeletonLoader variant="text" height={16} width="60%" className="animate-pulse mb-1" />
+                        <SkeletonLoader variant="text" height={14} width="80%" className="animate-pulse" />
+                      </div>
+                      <SkeletonLoader variant="circular" width={20} height={20} className="animate-pulse" />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : templateRecipients.length > 0 ? (
             <div className="space-y-4">
@@ -387,7 +506,7 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
       )}
 
       {/* MR Selection - Only show if template has no parameters */}
-      {selectedTemplate?.parameters.length === 0 && (
+      {selectedTemplate && !hasParameters(selectedTemplate) && (
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">
@@ -509,6 +628,25 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
         </div>
       )}
 
+      {/* Campaign Progress Preview */}
+      {(selectedRecipientList || (selectedTemplate && !hasParameters(selectedTemplate) && selectedMRs.length > 0)) && (
+        <div className="mb-6">
+          <ProgressStats
+            totalRecipients={
+              hasParameters(selectedTemplate)
+                ? selectedRecipientList.recipients?.length || selectedRecipientList.data?.length || 0
+                : selectedMRs.length
+            }
+            sentCount={0}
+            pendingCount={
+              hasParameters(selectedTemplate)
+                ? selectedRecipientList.recipients?.length || selectedRecipientList.data?.length || 0
+                : selectedMRs.length
+            }
+          />
+        </div>
+      )}
+
       {/* Create Campaign Button */}
       <div className="text-center">
         <button
@@ -522,7 +660,7 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
         >
           <div className="flex items-center space-x-2">
             <Send className="w-5 h-5" />
-            <span>Create Campaign</span>
+            <span>Create & Start Campaign</span>
           </div>
         </button>
       </div>
@@ -537,7 +675,7 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
               <ul className="list-disc list-inside space-y-1">
                 {!campaignName.trim() && <li>Enter a campaign name</li>}
                 {!selectedTemplate && <li>Select a template</li>}
-                {!selectedRecipientList && <li>Select a recipient list</li>}
+                {hasParameters(selectedTemplate) && !selectedRecipientList && <li>Select a recipient list</li>}
                 {selectedMRs.length === 0 && <li>Select at least one medical representative</li>}
               </ul>
             </div>
@@ -550,12 +688,47 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
         <h4 className="font-medium text-blue-900 mb-2">💡 What's Next?</h4>
         <p className="text-sm text-blue-800">
           {isFormValid() 
-            ? `Perfect! Your campaign "${campaignName}" is ready to be created with ${selectedRecipientList?.recipients?.length || 0} recipients from "${selectedRecipientList?.name}". Click "Create Campaign" to proceed.`
-            : selectedTemplate?.parameters && selectedTemplate.parameters.length > 0
+            ? hasParameters(selectedTemplate)
+              ? `Perfect! Your campaign "${campaignName}" is ready to be created and started with ${selectedRecipientList?.recipients?.length || 0} recipients from "${selectedRecipientList?.name}". Click "Create & Start Campaign" to proceed.`
+              : `Perfect! Your campaign "${campaignName}" is ready to be created and started with ${selectedMRs.length} medical representatives. Click "Create & Start Campaign" to proceed.`
+            : hasParameters(selectedTemplate)
             ? "Complete the campaign details above. Make sure to enter a campaign name, select a template, and choose a recipient list. The template recipients will be automatically loaded."
-            : "Complete the campaign details above. Make sure to enter a campaign name, select a template, choose a recipient list, and select which medical representatives to include."
+            : "Complete the campaign details above. Make sure to enter a campaign name, select a template, and select which medical representatives to include."
           }
         </p>
+        {/* Show recipient names in the preview */}
+        {isFormValid() && (
+          <div className="mt-2 text-xs text-blue-700">
+            <div className="font-medium mb-1">
+              {hasParameters(selectedTemplate) ? 'Recipients included:' : 'Medical Representatives included:'}
+            </div>
+            <div>
+              {hasParameters(selectedTemplate) ? (
+                // Show recipient list recipients
+                selectedRecipientList?.recipients?.slice(0, 5).map((recipient: any, index: number) => (
+                  <span key={recipient._id || index}>
+                    {recipient.firstName} {recipient.lastName}
+                    {index < Math.min(selectedRecipientList.recipients.length, 5) - 1 ? ', ' : ''}
+                  </span>
+                )) &&
+                selectedRecipientList.recipients.length > 5 && (
+                  <span> and {selectedRecipientList.recipients.length - 5} more...</span>
+                )
+              ) : (
+                // Show selected MRs
+                getSelectedMRsData().slice(0, 5).map((mr, index) => (
+                  <span key={mr.id}>
+                    {mr.firstName} {mr.lastName}
+                    {index < Math.min(selectedMRs.length, 5) - 1 ? ', ' : ''}
+                  </span>
+                ))
+              )}
+              {selectedTemplate && !hasParameters(selectedTemplate) && selectedMRs.length > 5 && (
+                <span> and {selectedMRs.length - 5} more...</span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Template Preview Dialog */}

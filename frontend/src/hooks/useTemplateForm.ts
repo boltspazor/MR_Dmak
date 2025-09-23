@@ -10,7 +10,7 @@ export interface TemplateFormData {
   imageFileName: string;
   footerImageUrl: string;
   footerImageFileName: string;
-  parameters: string[];
+  parameters: Array<{name: string, type: 'text' | 'number'}> | string[]; // Support both new format and legacy
 }
 
 export interface UseTemplateFormReturn {

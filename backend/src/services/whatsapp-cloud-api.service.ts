@@ -282,6 +282,24 @@ class WhatsAppCloudAPIService {
 
       return response.data;
     } catch (error: any) {
+      // Handle specific WhatsApp API errors more gracefully
+      if (error.response?.data?.error?.code === 100) {
+        // Message ID doesn't exist or has expired
+        logger.warn('WhatsApp message ID expired or not found', {
+          messageId,
+          errorCode: error.response.data.error.code,
+          errorSubcode: error.response.data.error.error_subcode
+        });
+        
+        // Return a default status indicating the message ID is no longer valid
+        return {
+          id: messageId,
+          status: 'failed' as const,
+          timestamp: new Date().toISOString(),
+          recipient_id: 'unknown'
+        };
+      }
+      
       logger.error('Error getting WhatsApp message status', {
         error: error.response?.data || error.message,
         messageId

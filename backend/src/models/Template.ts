@@ -9,7 +9,7 @@ export interface ITemplate extends Document {
   imageFileName?: string; // Original filename of header image
   footerImageUrl?: string; // Footer image for templates
   footerImageFileName?: string; // Original filename of footer image
-  parameters: string[]; // Array of parameter names like ['Param1', 'Param2', 'Param3']
+  parameters: Array<{name: string, type: 'text' | 'number'}> | string[]; // Array of parameter objects with types or legacy string array
   createdBy?: mongoose.Types.ObjectId; // Marketing manager who created the template (optional for Meta templates)
   isActive: boolean;
   
@@ -71,8 +71,18 @@ const templateSchema = new Schema<ITemplate>({
     trim: true
   },
   parameters: [{
-    type: String,
-    trim: true
+    // Support both new format (with type) and legacy format (string only)
+    type: Schema.Types.Mixed,
+    validate: {
+      validator: function(v: any) {
+        // Allow string (legacy format) or object with name and type (new format)
+        return typeof v === 'string' || 
+               (typeof v === 'object' && v !== null && 
+                typeof v.name === 'string' && 
+                ['text', 'number'].includes(v.type));
+      },
+      message: 'Parameter must be a string (legacy) or object with name and type'
+    }
   }],
   createdBy: {
     type: Schema.Types.ObjectId,

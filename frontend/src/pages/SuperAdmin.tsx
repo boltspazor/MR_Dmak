@@ -9,9 +9,9 @@ import {
   MessageSquare,
   Building2
 } from 'lucide-react';
-import Sidebar from '../components/Sidebar';
-import Header from '../components/Header';
-import CommonFeatures from '../components/CommonFeatures';
+import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
+import { CardContent, CardHeader } from '../components/ui/Card';
 import { api } from '../lib/api';
 import { User } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -165,28 +165,10 @@ const SuperAdmin: React.FC = () => {
     setShowCreateForm(true);
   };
 
-  // Navigation functions
-  const handleSidebarNavigation = (route: string) => {
-    navigate(route);
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
-    navigate('/login');
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100">
-        <Sidebar 
-          activePage="super-admin"
-          onNavigate={handleSidebarNavigation}
-          onLogout={handleLogout}
-          userName={user?.name || "User"}
-          userRole={user?.role || "Super Admin"}
-        />
-        <div className="ml-24 p-8">
+        <div className="p-8">
           <div className="animate-pulse">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               {[...Array(4)].map((_, i) => (
@@ -201,14 +183,7 @@ const SuperAdmin: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <Sidebar 
-        activePage="super-admin"
-        onNavigate={handleSidebarNavigation}
-        onLogout={handleLogout}
-        userName={user?.name || "User"}
-        userRole={user?.role || "Super Admin"}
-      />
-      <div className="ml-24 p-8">
+      <div className="p-8">
       <div className="space-y-8">
         {/* Header */}
         <div className="flex justify-between items-center">

@@ -68,7 +68,18 @@ class MetaTemplateSyncService {
         logger.info('No templates found in Meta WhatsApp Business Platform');
       } else {
         logger.info(`Fetched ${templates.length} templates from Meta`, { 
-          templates: templates.map(t => ({ name: t.name, status: t.status }))
+          templates: templates.map((t: any) => ({ name: t.name, status: t.status }))
+        });
+        
+        // Log detailed structure of templates with IMAGE components for debugging
+        templates.forEach((template: any) => {
+          if (template.components?.some((comp: any) => comp.type === 'HEADER' && comp.format === 'IMAGE')) {
+            logger.info(`Template with IMAGE header found: ${template.name}`, {
+              templateId: template.id,
+              components: template.components,
+              fullTemplate: JSON.stringify(template, null, 2)
+            });
+          }
         });
       }
 
@@ -146,6 +157,19 @@ class MetaTemplateSyncService {
    */
   private async syncSingleMetaTemplate(metaTemplate: any): Promise<ITemplate> {
     try {
+      // Fetch detailed template information including media handles
+      let detailedTemplate = metaTemplate;
+      try {
+        detailedTemplate = await this.fetchDetailedTemplateInfo(metaTemplate.id);
+        logger.info(`Fetched detailed template info for ${metaTemplate.name}`);
+      } catch (error) {
+        logger.warn(`Failed to fetch detailed template info for ${metaTemplate.name}:`, error.message);
+        // Continue with basic template info
+      }
+
+      // Extract image information from components (now with detailed info)
+      const imageInfo = await this.extractImageFromMetaComponents(detailedTemplate.components);
+
       const templateData = {
         name: metaTemplate.name,
         metaTemplateId: metaTemplate.id,
@@ -153,15 +177,17 @@ class MetaTemplateSyncService {
         metaStatus: metaTemplate.status,
         metaCategory: metaTemplate.category,
         metaLanguage: metaTemplate.language,
-        metaComponents: metaTemplate.components || [],
+        metaComponents: detailedTemplate.components || metaTemplate.components || [],
         isMetaTemplate: true,
         type: 'template' as const,
-        content: this.extractContentFromMetaComponents(metaTemplate.components),
-        parameters: this.extractParametersFromMetaComponents(metaTemplate.components),
+        content: this.extractContentFromMetaComponents(detailedTemplate.components || metaTemplate.components),
+        parameters: this.extractParametersFromMetaComponents(detailedTemplate.components || metaTemplate.components),
         createdBy: null, // Meta templates are not created by a specific user
         isActive: metaTemplate.status === 'APPROVED',
         lastSyncedAt: new Date(),
-        syncStatus: 'synced' as const
+        syncStatus: 'synced' as const,
+        // Add image information if present
+        ...imageInfo
       };
 
       // Find existing template by Meta template ID
@@ -204,24 +230,114 @@ class MetaTemplateSyncService {
   }
 
   /**
-   * Extract parameters from Meta template components
+   * Extract image URL from Meta template components
    */
-  private extractParametersFromMetaComponents(components: any[]): string[] {
+  private async extractImageFromMetaComponents(components: any[]): Promise<{ imageUrl?: string; imageFileName?: string }> {
+    if (!components || components.length === 0) return {};
+
+    // Find the header component with IMAGE format
+    const headerComponent = components.find(comp => 
+      comp.type === 'HEADER' && comp.format === 'IMAGE'
+    );
+
+    if (headerComponent) {
+      logger.info('Found IMAGE header component:', {
+        componentId: headerComponent._id,
+        hasExample: !!headerComponent.example,
+        hasHeaderHandle: !!headerComponent.example?.header_handle,
+        fullComponent: JSON.stringify(headerComponent, null, 2)
+      });
+
+      // Check different possible structures for media handle
+      let mediaHandle = null;
+      
+      if (headerComponent.example?.header_handle?.[0]?.handle) {
+        mediaHandle = headerComponent.example.header_handle[0].handle;
+      } else if (headerComponent.example?.header_handle) {
+        mediaHandle = headerComponent.example.header_handle;
+      } else if (headerComponent.example?.handle) {
+        mediaHandle = headerComponent.example.handle;
+      } else if (headerComponent.handle) {
+        mediaHandle = headerComponent.handle;
+      }
+
+      if (mediaHandle) {
+        // For Meta templates, the header_handle is already the actual image URL
+        // No need to make an additional API call
+        logger.info(`Found Meta image URL: ${mediaHandle}`);
+        return {
+          imageUrl: mediaHandle,
+          imageFileName: `template-header-${headerComponent._id || 'image'}.jpg`
+        };
+      } else {
+        logger.warn(`No media handle found in IMAGE header component:`, headerComponent);
+        // Fallback to placeholder
+        return {
+          imageUrl: `meta://template/header-image/${headerComponent._id || 'unknown'}`,
+          imageFileName: `template-header-image.jpg`
+        };
+      }
+    }
+
+    return {};
+  }
+
+  /**
+   * Fetch detailed template information including media handles
+   */
+  private async fetchDetailedTemplateInfo(templateId: string): Promise<any> {
+    try {
+      const headers = this.getHeaders();
+      if (!headers.Authorization) {
+        throw new Error('WhatsApp Cloud API access token not configured');
+      }
+
+      // Fetch detailed template information
+      const response = await axios.get(
+        `${this.graphAPIBaseURL}/${templateId}`,
+        { headers }
+      );
+
+      if (response.data) {
+        logger.info(`Fetched detailed template info for ${templateId}:`, {
+          hasComponents: !!response.data.components,
+          componentCount: response.data.components?.length || 0,
+          hasImageComponents: response.data.components?.some((comp: any) => 
+            comp.type === 'HEADER' && comp.format === 'IMAGE'
+          ) || false
+        });
+        return response.data;
+      }
+
+      throw new Error('No template data found in response');
+    } catch (error) {
+      logger.error(`Error fetching detailed template info for ${templateId}:`, error.message);
+      throw error;
+    }
+  }
+
+
+  /**
+   * Extract parameters from Meta template components and categorize them by type
+   */
+  private extractParametersFromMetaComponents(components: any[]): Array<{name: string, type: 'text' | 'number'}> {
     if (!components || components.length === 0) return [];
 
-    const parameters: string[] = [];
+    const parameters: Array<{name: string, type: 'text' | 'number'}> = [];
     
     // Extract parameters from all components that have text
     components.forEach(component => {
       if (component.text) {
-        // Find all {{1}}, {{2}}, etc. patterns
-        const matches = component.text.match(/\{\{(\d+)\}\}/g);
+        // Find all {{parameter}} patterns (both named and numbered)
+        const matches = component.text.match(/\{\{([A-Za-z0-9_]+)\}\}/g);
         if (matches) {
-          matches.forEach(match => {
-            const paramNumber = match.replace(/[{}]/g, '');
-            const paramName = `param${paramNumber}`;
-            if (!parameters.includes(paramName)) {
-              parameters.push(paramName);
+          matches.forEach((match: any) => {
+            const paramName = match.replace(/[{}]/g, '');
+            
+            // Check if parameter already exists
+            const existingParam = parameters.find(p => p.name === paramName);
+            if (!existingParam) {
+              parameters.push({ name: paramName, type: 'text' });
             }
           });
         }
@@ -229,9 +345,15 @@ class MetaTemplateSyncService {
     });
 
     return parameters.sort((a, b) => {
-      const aNum = parseInt(a.replace('param', ''));
-      const bNum = parseInt(b.replace('param', ''));
-      return aNum - bNum;
+      // Sort by parameter number if they're numbered, otherwise alphabetically
+      const aNum = parseInt(a.name.replace(/[^0-9]/g, ''));
+      const bNum = parseInt(b.name.replace(/[^0-9]/g, ''));
+      
+      if (!isNaN(aNum) && !isNaN(bNum)) {
+        return aNum - bNum;
+      }
+      
+      return a.name.localeCompare(b.name);
     });
   }
 

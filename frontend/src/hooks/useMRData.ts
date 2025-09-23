@@ -26,7 +26,8 @@ export const useMRData = () => {
         lastName: mr.lastName,
         phone: mr.phone,
         group: mr.group?.groupName || 'Default Group',
-        comments: mr.comments || ''
+        comments: mr.comments || '',
+        consentStatus: mr.consentStatus || 'not_requested'
       }));
       
       console.log('Transformed contacts:', transformedContacts);
@@ -81,7 +82,8 @@ export const useMRData = () => {
         lastName: newContact.lastName,
         phone: newContact.phone,
         group: newContact.group?.groupName || 'Default Group',
-        comments: newContact.comments || ''
+        comments: newContact.comments || '',
+        consentStatus: newContact.consentStatus || 'not_requested'
       };
       
       setContacts(prev => [...prev, transformedContact]);

@@ -4,7 +4,6 @@ import { useAuth } from '../contexts/AuthContext';
 import ConsentForm from '../components/ConsentForm';
 import OptOutForm from '../components/OptOutForm';
 import ConsentStatusChecker from '../components/ConsentStatusChecker';
-import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 
 const ConsentFormPage: React.FC = () => {
@@ -38,14 +37,7 @@ const ConsentFormPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Sidebar 
-        activePage="consent-form" 
-        onNavigate={navigate}
-        onLogout={logout}
-        userName={user?.name || "User"}
-        userRole={user?.role || "User"}
-      />
-      <div className="pl-28 p-10">
+      <div className=" p-10">
         <Header 
           title="Consent Management"
           subtitle="Manage your communication preferences with D-MAK Medical Representatives"

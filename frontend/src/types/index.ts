@@ -15,6 +15,15 @@ export interface AuthContextType {
   register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
+  isAuthenticated: boolean;
+  // Role management
+  userRole: 'super_admin' | 'marketing_manager' | 'admin' | 'user';
+  hasPermission: (page: string) => boolean;
+  canAccess: (page: string) => boolean;
+  isSuperAdmin: () => boolean;
+  isMarketingManager: () => boolean;
+  isAdmin: () => boolean;
+  isUser: () => boolean;
 }
 
 export interface MedicalRepresentative {
@@ -34,6 +43,7 @@ export interface MedicalRepresentative {
     email: string;
   };
   comments?: string;
+  consentStatus: 'pending' | 'approved' | 'rejected' | 'not_requested';
   createdAt: string;
   updatedAt: string;
 }
@@ -100,7 +110,7 @@ export interface Template {
   imageFileName?: string;
   footerImageUrl?: string;
   footerImageFileName?: string;
-  parameters: string[];
+  parameters: Array<{name: string, type: 'text' | 'number'}> | string[]; // Support both new format and legacy
   createdBy: {
     _id: string;
     name: string;

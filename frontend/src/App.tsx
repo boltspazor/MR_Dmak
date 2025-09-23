@@ -1,20 +1,47 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
 import { ConfirmProvider } from './contexts/ConfirmContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import RoleProtectedRoute from './components/RoleProtectedRoute';
+import AppLayout from './components/layout/AppLayout';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import SimpleMRTool from './pages/SimpleMRTool';
-import MedicalReps from './pages/MedicalReps';
+import MedicalReps from './pages/SimpleMRTool';
 import Campaigns from './pages/Campaigns';
 import Templates from './pages/Templates';
 import SuperAdmin from './pages/SuperAdmin';
 import CampaignWizard from './pages/CampaignWizard';
 import ConsentFormPage from './pages/ConsentFormPage';
-import WhatsAppCloudTest from './components/WhatsAppCloudTest';
+
+// Component to determine active page from route
+const RouteWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const location = useLocation();
+  
+  const getActivePage = (pathname: string) => {
+    switch (pathname) {
+      case '/campaign-wizard': return 'campaign-wizard';
+      case '/dashboard': return 'dashboard';
+      case '/mrs': return 'dmak';
+      case '/campaigns': return 'campaigns';
+      case '/templates': return 'templates';
+      case '/super-admin': return 'super-admin';
+      case '/simple-tool': return 'dmak';
+      case '/dmak': return 'dmak';
+      case '/consent-form': return 'consent-form';
+      default: return 'dashboard';
+    }
+  };
+
+  return (
+    <AppLayout activePage={getActivePage(location.pathname)}>
+      {children}
+    </AppLayout>
+  );
+};
 
 function App() {
   return (
@@ -25,75 +52,15 @@ function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route
-              path="/campaign-wizard"
-              element={
-                <ProtectedRoute>
-                  <CampaignWizard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/whatsapp-cloud-test"
-              element={
-                <ProtectedRoute>
-                  <WhatsAppCloudTest />
-                </ProtectedRoute>
-              }
-            />
+            
+            {/* Public routes accessible to all authenticated users */}
             <Route
               path="/dashboard"
               element={
                 <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/mrs"
-              element={
-                <ProtectedRoute>
-                  <MedicalReps />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/campaigns"
-              element={
-                <ProtectedRoute>
-                  <Campaigns />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/templates"
-              element={
-                <ProtectedRoute>
-                  <Templates />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/super-admin"
-              element={
-                <ProtectedRoute>
-                  <SuperAdmin />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/simple-tool"
-              element={
-                <ProtectedRoute>
-                  <SimpleMRTool />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dmak"
-              element={
-                <ProtectedRoute>
-                  <SimpleMRTool />
+                  <RouteWrapper>
+                    <Dashboard />
+                  </RouteWrapper>
                 </ProtectedRoute>
               }
             />
@@ -101,10 +68,89 @@ function App() {
               path="/consent-form"
               element={
                 <ProtectedRoute>
-                  <ConsentFormPage />
+                  <RouteWrapper>
+                    <ConsentFormPage />
+                  </RouteWrapper>
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/simple-tool"
+              element={
+                <ProtectedRoute>
+                  <RouteWrapper>
+                    <SimpleMRTool />
+                  </RouteWrapper>
+                </ProtectedRoute>
+              }
+            />
+            
+            {/* Admin+ routes (Admin, Marketing Manager, Super Admin) */}
+            <Route
+              path="/campaign-wizard"
+              element={
+                <RoleProtectedRoute requiredRoles={['admin', 'marketing_manager', 'super_admin']}>
+                  <RouteWrapper>
+                    <CampaignWizard />
+                  </RouteWrapper>
+                </RoleProtectedRoute>
+              }
+            />
+            <Route
+              path="/campaigns"
+              element={
+                <RoleProtectedRoute requiredRoles={['admin', 'marketing_manager', 'super_admin']}>
+                  <RouteWrapper>
+                    <Campaigns />
+                  </RouteWrapper>
+                </RoleProtectedRoute>
+              }
+            />
+            <Route
+              path="/templates"
+              element={
+                <RoleProtectedRoute requiredRoles={['admin', 'marketing_manager', 'super_admin']}>
+                  <RouteWrapper>
+                    <Templates />
+                  </RouteWrapper>
+                </RoleProtectedRoute>
+              }
+            />
+            
+            {/* Marketing Manager+ routes (Marketing Manager, Super Admin) */}
+            <Route
+              path="/dmak"
+              element={
+                <RoleProtectedRoute requiredRoles={['marketing_manager', 'super_admin']}>
+                  <RouteWrapper>
+                    <SimpleMRTool />
+                  </RouteWrapper>
+                </RoleProtectedRoute>
+              }
+            />
+            <Route
+              path="/mrs"
+              element={
+                <RoleProtectedRoute requiredRoles={['marketing_manager', 'super_admin']}>
+                  <RouteWrapper>
+                    <MedicalReps />
+                  </RouteWrapper>
+                </RoleProtectedRoute>
+              }
+            />
+            
+            {/* Super Admin only routes */}
+            <Route
+              path="/super-admin"
+              element={
+                <RoleProtectedRoute requiredRoles={['super_admin']}>
+                  <RouteWrapper>
+                    <SuperAdmin />
+                  </RouteWrapper>
+                </RoleProtectedRoute>
+              }
+            />
+            
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Routes>
           <Toaster 

@@ -103,10 +103,13 @@ api.interceptors.response.use(
     
     // Handle authentication errors first (always clean up tokens)
     if (error.response?.status === 401) {
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('user');
-      if (!shouldSuppressErrors()) {
-        window.location.href = '/login';
+      // Only clear tokens and redirect if we're not already on login page
+      if (window.location.pathname !== '/login') {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
+        if (!shouldSuppressErrors()) {
+          window.location.href = '/login';
+        }
       }
     }
     
@@ -140,7 +143,7 @@ api.interceptors.response.use(
     }
     
     // For other pages, handle errors normally
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && window.location.pathname !== '/login') {
       window.location.href = '/login';
     }
     

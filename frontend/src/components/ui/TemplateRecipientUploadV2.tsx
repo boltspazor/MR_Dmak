@@ -68,7 +68,7 @@ const TemplateRecipientUploadV2: React.FC<TemplateRecipientUploadV2Props> = ({
       }
 
       // Upload to backend
-      const response = await api.post('/template-recipients/upload-v2', {
+      const response = await api.post('/recipient-lists/template/upload-v2', {
         templateId: template._id,
         name: recipientListName.trim(),
         description: description.trim(),

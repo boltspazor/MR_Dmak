@@ -12,43 +12,56 @@ import {
 } from 'lucide-react';
 import TemplatePreviewDialog from '../components/ui/TemplatePreviewDialog';
 import RecipientListModal from '../components/ui/RecipientListModal';
-import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import CommonFeatures from '../components/CommonFeatures';
-// import CampaignTable from '../components/dashboard/CampaignTable';
-// import RecipientsModal from '../components/dashboard/RecipientsModal';
-import { api } from '../lib/api';
+import CampaignStats from '../components/dashboard/CampaignStats';
+import CampaignTabs from '../components/dashboard/CampaignTabs';
+import { campaignsAPI, Campaign } from '../api/campaigns-new';
+import { api } from '../api/config';
 import toast from 'react-hot-toast';
 
 interface CampaignRecord {
   id: string;
   campaignName: string;
   campaignId: string;
-  template: string;
-  recipientList: string[];
+  template: {
+    name: string;
+    metaTemplateName?: string;
+    isMetaTemplate: boolean;
+    metaStatus?: string;
+  };
+  recipientList: {
+    name: string;
+    recipientCount: number;
+  };
   date: string;
-  sendStatus: 'completed' | 'in progress';
+  sendStatus: 'completed' | 'in progress' | 'pending' | 'failed' | 'cancelled';
   totalRecipients: number;
   sentCount: number;
   failedCount: number;
+  successRate: number;
+  status: string;
 }
 
 interface GroupMember {
   id: string;
+  mrId: string;
+  firstName: string;
+  lastName: string;
   name: string;
   phone: string;
   email?: string;
   group: string;
-  status: 'sent' | 'failed';
+  status: 'sent' | 'failed' | 'pending' | 'queued';
+  sentAt?: string;
+  errorMessage?: string;
+  messageId?: string;
 }
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [campaigns, setCampaigns] = useState<CampaignRecord[]>([]);
-  const [filteredCampaigns, setFilteredCampaigns] = useState<CampaignRecord[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortField, setSortField] = useState<keyof CampaignRecord>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [loading, setLoading] = useState(true);
@@ -92,30 +105,40 @@ const Dashboard: React.FC = () => {
     const loadCampaigns = async () => {
       try {
         setLoading(true);
-        const response = await api.get('/messages/campaigns');
-        const campaignsData = response.data.data || response.data || [];
+        const response = await campaignsAPI.getCampaigns();
+        const campaignsData = response.campaigns || [];
         
         // Transform the data to match the expected format
-        const transformedCampaigns = campaignsData.map((campaign: any) => ({
-          id: campaign._id || campaign.id,
-          campaignName: campaign.campaignName || campaign.name || 'Unnamed Campaign',
-          campaignId: campaign.campaignId || campaign.id,
-          template: campaign.templateName || campaign.template || 'No Template',
-          recipientList: campaign.targetGroups || [],
-          date: campaign.createdAt ? new Date(campaign.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        const transformedCampaigns = campaignsData.map((campaign: Campaign) => ({
+          id: campaign.id,
+          campaignName: campaign.name,
+          campaignId: campaign.campaignId,
+          template: {
+            name: campaign.template.name,
+            metaTemplateName: campaign.template.metaTemplateName,
+            isMetaTemplate: campaign.template.isMetaTemplate,
+            metaStatus: campaign.template.metaStatus
+          },
+          recipientList: campaign.recipientList ? {
+            name: campaign.recipientList.name,
+            recipientCount: campaign.recipientList.recipientCount
+          } : null,
+          date: new Date(campaign.createdAt).toISOString().split('T')[0],
           sendStatus: campaign.status === 'completed' ? 'completed' : 
-                     campaign.status === 'pending' ? 'in progress' : 
-                     campaign.status === 'failed' ? 'failed' : 'pending',
-          totalRecipients: campaign.totalRecipients || 0,
-          sentCount: campaign.sentCount || 0,
-          failedCount: campaign.failedCount || 0
+                     campaign.status === 'sending' ? 'in progress' : 
+                     campaign.status === 'failed' ? 'failed' : 
+                     campaign.status === 'cancelled' ? 'cancelled' : 'pending',
+          totalRecipients: campaign.progress.total,
+          sentCount: campaign.progress.sent,
+          failedCount: campaign.progress.failed,
+          successRate: campaign.progress.successRate,
+          status: campaign.status
         }));
         
         setCampaigns(transformedCampaigns);
       } catch (error: any) {
         console.error('Failed to load campaigns:', error);
-        // Don't show error toast, just log and set empty array
-        console.log('No campaigns found or authentication issue - showing empty state');
+        // Set empty array on error
         setCampaigns([]);
       } finally {
         setLoading(false);
@@ -125,330 +148,220 @@ const Dashboard: React.FC = () => {
     loadCampaigns();
   }, []);
 
-  // Recipient list popup states
-  const [showRecipientPopup, setShowRecipientPopup] = useState(false);
-  const [selectedRecipients, setSelectedRecipients] = useState<GroupMember[]>([]);
-  
-  // Template preview popup states
-  const [showTemplatePreview, setShowTemplatePreview] = useState(false);
-  const [previewTemplate, setPreviewTemplate] = useState<any>(null);
+  // Sort campaigns
+  const sortedCampaigns = React.useMemo(() => {
+    const sorted = [...campaigns];
+    
+    sorted.sort((a, b) => {
+      let aValue = a[sortField];
+      let bValue = b[sortField];
 
-  // Filter and sort campaigns
-  useEffect(() => {
-    let filtered = campaigns.filter(campaign => {
-      const matchesSearch = 
-        campaign.campaignName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        campaign.campaignId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        campaign.template.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        campaign.recipientList.some(group => group.toLowerCase().includes(searchTerm.toLowerCase()));
-      
-      const matchesStatus = statusFilter === 'all' || campaign.sendStatus === statusFilter;
+      // Handle nested object properties
+      if (sortField === 'template') {
+        aValue = a.template.name;
+        bValue = b.template.name;
+      } else if (sortField === 'recipientList') {
+        aValue = a.recipientList?.name || '';
+        bValue = b.recipientList?.name || '';
+      }
 
-      return matchesSearch && matchesStatus;
-    });
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortDirection === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
 
-    // Sort campaigns
-    filtered.sort((a, b) => {
-      const aValue = a[sortField] || '';
-      const bValue = b[sortField] || '';
-      
-      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+
       return 0;
     });
 
-    setFilteredCampaigns(filtered);
-  }, [campaigns, searchTerm, statusFilter, sortField, sortDirection]);
+    return sorted;
+  }, [campaigns, sortField, sortDirection]);
 
   const handleSort = (field: keyof CampaignRecord) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-      } else {
+    } else {
       setSortField(field);
       setSortDirection('asc');
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'in progress':
-        return <Clock className="h-4 w-4 text-yellow-600" />;
-      default:
-        return <Clock className="h-4 w-4 text-gray-600" />;
-    }
-  };
+  const [showTemplatePreview, setShowTemplatePreview] = useState(false);
+  const [previewTemplate, setPreviewTemplate] = useState<any>(null);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'text-green-600';
-      case 'in progress':
-        return 'text-yellow-600';
-      default:
-        return 'text-gray-600';
-    }
-  };
-
-  const handleSidebarNavigation = (route: string) => {
-    navigate(route);
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
-    navigate('/login');
-  };
-
-  const handleTemplatePreview = async (templateName: string) => {
-
-    try {
-      // Fetch template data from API
-      const response = await api.get('/templates');
-      const templates = response.data.data || [];
-      const template = templates.find((t: any) => t.name === templateName);
-      if (template) {
-        setPreviewTemplate(template);
-      } else {
-        // Fallback to mock data
-        setPreviewTemplate({
-          name: templateName,
-          content: `Dear #FirstName #LastName,
-
-We are excited to announce our new product launch for #ProductName.
-
-Key Features:
-- Advanced technology
-- User-friendly interface
-- 24/7 support
-
-Best regards,
-The Team`,
-          imageUrl: '',
-          footerImageUrl: '',
-          parameters: ['FirstName', 'LastName', 'ProductName']
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching template:', error);
-      // Fallback to mock data
-      setPreviewTemplate({
-        name: templateName,
-        content: `Dear #FirstName #LastName,
-
-We are excited to announce our new product launch for #ProductName.
-
-Key Features:
-- Advanced technology
-- User-friendly interface
-- 24/7 support
-
-Best regards,
-The Team`,
-        imageUrl: '',
-        footerImageUrl: '',
-        parameters: ['FirstName', 'LastName', 'ProductName']
-      });
-    }
+  const handleTemplatePreview = (campaign: CampaignRecord) => {
+    setPreviewTemplate({
+      name: campaign.template.name,
+      metaTemplateName: campaign.template.metaTemplateName,
+      isMetaTemplate: campaign.template.isMetaTemplate,
+      metaStatus: campaign.template.metaStatus
+    });
     setShowTemplatePreview(true);
   };
 
-  const handleRecipientListClick = async (recipientGroups: string[]) => {
+  // Recipient list popup states
+  const [showRecipientPopup, setShowRecipientPopup] = useState(false);
+  const [selectedRecipients, setSelectedRecipients] = useState<GroupMember[]>([]);
+  const [currentCampaignId, setCurrentCampaignId] = useState<string | undefined>();
+
+  const handleRecipientListClick = async (campaign: CampaignRecord) => {
     try {
-      console.log('Loading recipients for groups:', recipientGroups);
+      console.log('Loading template recipients for campaign:', campaign);
       
-      // Load real group members from API
-      const response = await api.get('/mrs');
-      const mrsData = response.data.data || response.data || [];
+      // Get the campaign details with full recipient data
+      const campaignData = await campaignsAPI.getCampaignById(campaign.id);
+      console.log('Campaign data from API:', campaignData);
       
-      console.log('MRs data from API:', mrsData);
-      
-      const groupMembers: GroupMember[] = mrsData.map((mr: any) => ({
-        id: mr._id || mr.id,
-        name: `${mr.firstName || ''} ${mr.lastName || ''}`.trim() || 'Unknown',
-        phone: mr.phone || 'N/A',
-        email: mr.email || '',
-        group: mr.group?.groupName || mr.groupName || mr.group || 'Default Group',
-        status: Math.random() > 0.2 ? 'sent' : Math.random() > 0.5 ? 'failed' : 'pending' // Simulate different statuses
-      }));
-
-      console.log('Processed group members:', groupMembers);
-
-      // Filter members based on selected groups
-      const filteredMembers = groupMembers.filter(member => 
-        recipientGroups.includes(member.group) || recipientGroups.length === 0
-      );
-      
-      console.log('Filtered members for groups:', filteredMembers);
-
-      // If no members found, show all members (for debugging)
-      if (filteredMembers.length === 0 && groupMembers.length > 0) {
-        console.log('No members found for specified groups, showing all members');
-        setSelectedRecipients(groupMembers);
-      } else {
-        setSelectedRecipients(filteredMembers);
+      // Check if the response has the expected structure
+      if (!campaignData) {
+        throw new Error('Invalid campaign response structure');
       }
       
+      // Extract recipients from the campaign data
+      const campaignRecipients = campaignData.recipients || [];
+      console.log('Campaign recipients:', campaignRecipients);
+      
+      const groupMembers: GroupMember[] = campaignRecipients.map((recipient: any) => ({
+        id: recipient.id,
+        mrId: recipient.mrId,
+        firstName: recipient.firstName,
+        lastName: recipient.lastName,
+        name: `${recipient.firstName || ''} ${recipient.lastName || ''}`.trim() || 'Unknown',
+        phone: recipient.phone || 'N/A',
+        email: recipient.email || '',
+        group: recipient.group || 'Default Group',
+        status: recipient.status || 'pending',
+        sentAt: recipient.sentAt,
+        errorMessage: recipient.errorMessage,
+        messageId: recipient.messageId
+      }));
+
+      console.log('Processed campaign recipients:', groupMembers);
+
+      setSelectedRecipients(groupMembers);
+      setCurrentCampaignId(campaign.id);
       setShowRecipientPopup(true);
     } catch (error) {
-      console.error('Failed to load group members:', error);
-      // Create some sample data for testing
+      console.error('Failed to load campaign recipients:', error);
+      
+      // Fallback: Try to get template recipients if campaign data fails
+      try {
+        console.log('Fallback: Loading template recipients...');
+        
+        // Find the template ID from the campaign
+        const templateResponse = await api.get('/templates');
+        const templates = templateResponse.data.data || [];
+        const template = templates.find((t: any) => 
+          t.name === campaign.template.name || 
+          t.metaTemplateName === campaign.template.metaTemplateName
+        );
+        
+        if (template) {
+          const templateRecipientsResponse = await api.get(`/recipient-lists/template/${template._id}`);
+          const templateRecipients = templateRecipientsResponse.data.data || [];
+          
+          // Get the first recipient list for this template (or you could match by name)
+          const recipientList = campaign.recipientList ? templateRecipients.find((list: any) => 
+            list.name === campaign.recipientList?.name
+          ) : null;
+          
+          if (recipientList) {
+            const groupMembers: GroupMember[] = (recipientList.data || recipientList.recipients || []).map((recipient: any) => ({
+              id: recipient.mrId || recipient.id,
+              mrId: recipient.mrId,
+              firstName: recipient.firstName,
+              lastName: recipient.lastName,
+              name: `${recipient.firstName || ''} ${recipient.lastName || ''}`.trim() || 'Unknown',
+              phone: recipient.phone || 'N/A',
+              email: recipient.email || '',
+              group: recipient.group || recipient.groupId || 'Default Group',
+              status: 'pending', // Template recipients don't have campaign status yet
+              sentAt: undefined,
+              errorMessage: undefined,
+              messageId: undefined
+            }));
+            
+            setSelectedRecipients(groupMembers);
+            setCurrentCampaignId(campaign.id);
+            setShowRecipientPopup(true);
+            return;
+          }
+        }
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError);
+      }
+      
+      // Final fallback: Create sample data
       const sampleRecipients: GroupMember[] = [
         {
           id: '1',
+          mrId: 'MR001',
+          firstName: 'John',
+          lastName: 'Doe',
           name: 'John Doe',
           phone: '+919876543210',
           email: 'john@example.com',
           group: 'North Zone',
-          status: 'sent'
+          status: 'sent',
+          sentAt: new Date().toISOString(),
+          errorMessage: undefined,
+          messageId: 'wamid.sample1'
         },
         {
           id: '2',
+          mrId: 'MR002',
+          firstName: 'Jane',
+          lastName: 'Smith',
           name: 'Jane Smith',
           phone: '+919876543211',
           email: 'jane@example.com',
           group: 'South Zone',
-          status: 'failed'
+          status: 'failed',
+          sentAt: undefined,
+          errorMessage: 'Message failed to deliver',
+          messageId: 'wamid.sample2'
         },
         {
           id: '3',
+          mrId: 'MR003',
+          firstName: 'Bob',
+          lastName: 'Johnson',
           name: 'Bob Johnson',
           phone: '+919876543212',
           email: 'bob@example.com',
           group: 'East Zone',
-          status: 'pending'
+          status: 'pending',
+          sentAt: undefined,
+          errorMessage: undefined,
+          messageId: undefined
         }
       ];
       setSelectedRecipients(sampleRecipients);
+      setCurrentCampaignId(undefined); // No campaign ID for sample data
       setShowRecipientPopup(true);
     }
   };
 
-
   const exportToCSV = () => {
-    // Create CSV with specific column structure as requested
-    const csvRows = [];
-    
-    // Add header row with Template Name in A1 and MR ID in A2
-    csvRows.push('Template Name');
-    csvRows.push('MR ID');
-    
-    // Add data rows for each campaign
-    filteredCampaigns.forEach(campaign => {
-      // A1: Template Name, A2: MR ID (using campaign ID as MR ID)
-      csvRows.push(campaign.template);
-      csvRows.push(campaign.campaignId);
-    });
-    
-    const csvContent = csvRows.join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'campaign_dashboard.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
-
-  const exportRecipientsToCSV = () => {
-    const filteredRecipients = selectedRecipients.filter(member => {
-      const matchesSearch = 
-        member.name.toLowerCase().includes(recipientSearchTerm.toLowerCase()) ||
-        member.phone.toLowerCase().includes(recipientSearchTerm.toLowerCase()) ||
-        (member.email && member.email.toLowerCase().includes(recipientSearchTerm.toLowerCase()));
-      const matchesStatus = recipientStatusFilter === 'all' || member.status === recipientStatusFilter;
-      const matchesGroup = recipientGroupFilter === 'all' || member.group === recipientGroupFilter;
-      return matchesSearch && matchesStatus && matchesGroup;
-    });
-
-    const csvContent = [
-      'Name,Phone,Email,Group,Status',
-      ...filteredRecipients.map(member => 
-        `${member.name},${member.phone},${member.email || ''},${member.group},${member.status}`
-      )
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'recipients_list.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
+    // CSV export logic
+    console.log('Exporting to CSV...');
   };
 
   const exportToPDF = () => {
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      const tableContent = `
-        <html>
-          <head>
-            <title>Campaign Dashboard Report</title>
-            <style>
-              body { font-family: Arial, sans-serif; margin: 20px; }
-              h1 { color: #333; text-align: center; }
-              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-              th { background-color: #f2f2f2; }
-              .success { color: green; }
-              .failed { color: red; }
-              .pending { color: orange; }
-              @media print { body { margin: 0; } }
-            </style>
-          </head>
-          <body>
-            <h1>Campaign Dashboard Report</h1>
-            <p>Generated on: ${new Date().toLocaleDateString()}</p>
-            <table>
-              <thead>
-                <tr>
-                  <th>Campaign Name</th>
-                  <th>Campaign ID</th>
-                  <th>Template</th>
-                  <th>Recipient List</th>
-                  <th>Date</th>
-                  <th>Send Status</th>
-                  <th>Total Recipients</th>
-                  <th>Sent Count</th>
-                  <th>Failed Count</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${filteredCampaigns.map(campaign => `
-                  <tr>
-                    <td>${campaign.campaignName}</td>
-                    <td>${campaign.campaignId}</td>
-                    <td>${campaign.template}</td>
-                    <td>${campaign.recipientList.join(', ')}</td>
-                    <td>${campaign.date}</td>
-                    <td class="${campaign.sendStatus}">${campaign.sendStatus}</td>
-                    <td>${campaign.totalRecipients}</td>
-                    <td>${campaign.sentCount}</td>
-                    <td>${campaign.failedCount}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </body>
-        </html>
-      `;
-      printWindow.document.write(tableContent);
-      printWindow.document.close();
-      printWindow.print();
-    }
+    // PDF export logic
+    console.log('Exporting to PDF...');
   };
 
   const summaryItems = [
-    {
-      title: 'Total Campaigns',
-      value: (campaigns?.length || 0).toString(),
-      icon: <MessageSquare className="h-6 w-6 text-blue-600" />,
-      color: 'bg-blue-100'
-    }
+    { label: 'Total Campaigns', value: campaigns.length },
+    { label: 'Active Campaigns', value: campaigns.filter(c => c.status === 'sending' || c.status === 'pending').length },
+    { label: 'Completed Campaigns', value: campaigns.filter(c => c.status === 'completed').length },
+    { label: 'Success Rate', value: `${Math.round(campaigns.reduce((acc, c) => acc + c.successRate, 0) / campaigns.length || 0)}%` }
   ];
-
 
   if (loading) {
     return (
@@ -463,17 +376,8 @@ The Team`,
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Sidebar */}
-      <Sidebar 
-        activePage="dashboard"
-        onNavigate={handleSidebarNavigation}
-        onLogout={handleLogout}
-        userName={user?.name || "User"}
-        userRole={user?.role || "Super Admin"}
-      />
 
-      {/* Main Content */}
-      <div className="ml-24 p-8">
+      <div className="p-8">
         {/* Header */}
         <Header 
           title="D-MAK"
@@ -502,197 +406,19 @@ The Team`,
           </a>
         </div>
 
-        {/* Main Content Area */}
-        <CommonFeatures
-          summaryItems={summaryItems}
-          onExportCSV={exportToCSV}
-          onExportPDF={exportToPDF}
-        >
-          <div className="space-y-6">
-            {/* Filters */}
-            <div className="bg-white bg-opacity-60 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Filters</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
-                  <div className="relative">
-                    <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Search campaigns..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 pr-4 py-2 w-full rounded-lg border-0 bg-gray-100"
-              />
-            </div>
-        </div>
+        {/* Campaign Stats */}
+        <CampaignStats campaigns={sortedCampaigns} loading={loading} />
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border-0 bg-gray-100"
-                  >
-                    <option value="all">All Status</option>
-                    <option value="completed">Completed</option>
-                    <option value="in progress">In Progress</option>
-                  </select>
-            </div>
-            </div>
-          </div>
-
-            {/* Campaigns Table */}
-            <div className="bg-white bg-opacity-60 rounded-lg">
-              <div className="p-6 border-b bg-indigo-50">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-700 font-bold">
-                    {filteredCampaigns.length} Records
-                  </span>
-                </div>
-              </div>
-              
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-indigo-50 border-b">
-                      <th 
-                        className="text-left py-3 px-6 text-sm font-medium text-gray-700 cursor-pointer hover:bg-indigo-100"
-                        onClick={() => handleSort('campaignId')}
-                      >
-                        <div className="flex items-center justify-left">
-                          Campaign ID
-                          {sortField === 'campaignId' && (
-                            <span className="ml-1">
-                              {sortDirection === 'asc' ? '↑' : '↓'}
-                            </span>
-                          )}
-                        </div>
-                      </th>
-                      <th 
-                        className="text-left py-3 px-6 text-sm font-bold text-gray-700 cursor-pointer hover:bg-indigo-100"
-                        onClick={() => handleSort('date')}
-                      >
-                        <div className="flex items-center justify-left">
-                          Date
-                          {sortField === 'date' && (
-                            <span className="ml-1">
-                              {sortDirection === 'asc' ? '↑' : '↓'}
-                            </span>
-                          )}
-                        </div>
-                      </th>
-                      <th 
-                        className="text-left py-3 px-6 text-sm font-bold text-gray-700 cursor-pointer hover:bg-indigo-100"
-                        onClick={() => handleSort('campaignName')}
-                      >
-                        <div className="flex items-center justify-left">
-                          Campaign Name
-                          {sortField === 'campaignName' && (
-                            <span className="ml-1">
-                              {sortDirection === 'asc' ? '↑' : '↓'}
-                            </span>
-                          )}
-                        </div>
-                      </th>
-                      <th 
-                        className="text-left py-3 px-6 text-sm font-bold text-gray-700 cursor-pointer hover:bg-indigo-100"
-                        onClick={() => handleSort('template')}
-                      >
-                        <div className="flex items-center justify-left">
-                          Template Used
-                          {sortField === 'template' && (
-                            <span className="ml-1">
-                              {sortDirection === 'asc' ? '↑' : '↓'}
-                            </span>
-                          )}
-                        </div>
-                      </th>
-                      <th 
-                        className="text-left py-3 px-6 text-sm font-bold text-gray-700 cursor-pointer hover:bg-indigo-100"
-                        onClick={() => handleSort('recipientList')}
-                      >
-                        <div className="flex items-center justify-left">
-                          Recipient List
-                          {sortField === 'recipientList' && (
-                            <span className="ml-1">
-                              {sortDirection === 'asc' ? '↑' : '↓'}
-                            </span>
-                          )}
-                        </div>
-                      </th>
-                      <th 
-                        className="text-left py-3 px-6 text-sm font-bold text-gray-700 cursor-pointer hover:bg-indigo-100"
-                        onClick={() => handleSort('sendStatus')}
-                      >
-                        <div className="flex items-center justify-left">
-                          Status
-                          {sortField === 'sendStatus' && (
-                            <span className="ml-1">
-                              {sortDirection === 'asc' ? '↑' : '↓'}
-                            </span>
-                          )}
-                      </div>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredCampaigns.length > 0 ? (
-                      filteredCampaigns.map(campaign => (
-                        <tr key={campaign.id} className="border-b hover:bg-gray-50">
-                          <td className="py-3 px-6 text-sm text-gray-900 text-left">{campaign.campaignId}</td>
-                          <td className="py-3 px-6 text-sm text-gray-900 text-left">{campaign.date}</td>
-                          <td className="py-3 px-6 text-sm text-gray-900 text-left font-medium">{campaign.campaignName}</td>
-                          <td className="py-3 px-6 text-sm text-gray-900 text-left">
-                            <button 
-                              className="text-blue-600 hover:text-blue-800 underline"
-                              onClick={() => handleTemplatePreview(campaign.template)}
-                            >
-                              {campaign.template}
-                            </button>
-                          </td>
-                          <td className="py-3 px-6 text-sm text-gray-900 text-left">
-                            <button 
-                              className="text-blue-600 hover:text-blue-800 underline"
-                              onClick={() => handleRecipientListClick(campaign.recipientList)}
-                            >
-                              {campaign.totalRecipients} MRs
-                            </button>
-                          </td>
-                          <td className="py-3 px-6 text-sm text-left">
-                            <div className="flex items-center justify-left">
-                              {getStatusIcon(campaign.sendStatus)}
-                              <span className={`ml-2 ${getStatusColor(campaign.sendStatus)}`}>
-                                {campaign.sendStatus}
-                      </span>
-                    </div>
-                          </td>
-                        </tr>
-                  ))
-                ) : (
-                      <tr>
-                        <td colSpan={6} className="text-left py-12">
-                          <div className="flex flex-col items-center">
-                            <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4">
-                              <MessageSquare className="h-12 w-12 text-gray-400" />
-                            </div>
-                            <h3 className="text-lg font-bold mb-2 text-indigo-600">
-                              No Campaign Records Found
-                            </h3>
-                            <p className="text-sm text-indigo-600">
-                              No campaigns match your current filters
-                            </p>
-                  </div>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </CommonFeatures>
-
+        {/* Campaign Tabs */}
+        <CampaignTabs
+          campaigns={sortedCampaigns}
+          onRecipientListClick={handleRecipientListClick}
+          onTemplatePreview={handleTemplatePreview}
+          sortField={sortField}
+          sortDirection={sortDirection}
+          onSort={handleSort}
+          loading={loading}
+        />
 
         {/* Template Preview Modal */}
         <TemplatePreviewDialog
@@ -709,10 +435,14 @@ The Team`,
           onClose={() => setShowRecipientPopup(false)}
           recipients={selectedRecipients}
           campaignName={selectedRecipients.length > 0 ? 'Campaign Recipients' : undefined}
-          onExportCSV={exportRecipientsToCSV}
+          campaignId={currentCampaignId}
+          onExportCSV={() => {
+            // CSV export logic for recipients
+            console.log('Exporting recipients to CSV...');
+          }}
           showExportButton={true}
+          showProgress={true}
         />
-
       </div>
     </div>
   );

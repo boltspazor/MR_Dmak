@@ -119,7 +119,7 @@ const TemplateMessagesTab: React.FC<TemplateMessagesTabProps> = ({
           className="px-8 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-colors"
         >
           <Send className="h-5 w-5" />
-          <span>Send Campaign</span>
+          <span>Send & Activate Campaign</span>
         </button>
       </div>
     </div>
