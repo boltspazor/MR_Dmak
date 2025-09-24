@@ -415,8 +415,8 @@ const Templates: React.FC = () => {
                 onClick={handleCreateTemplate}
                 className="px-6 py-3 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors flex items-center space-x-2"
               >
-                <span>+</span>
-                <span>Create Template</span>
+                {/*<span>+</span>*/}
+                {/*<span>Create Template</span> */}
               </button>
             </div>
 
