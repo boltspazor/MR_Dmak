@@ -10,7 +10,7 @@ let redisAvailable = false;
 // Check if Redis is available
 const checkRedisAvailability = async () => {
   try {
-    const testQueue = new Bull('message queue', "rediss://default:ASmoAAIncDIwOGZhOGVhMDM0Zjg0OWU4YTk3ZjZhMzI3MWQ1MzM1YXAyMTA2NjQ@outgoing-glider-10664.upstash.io:6379")
+    const testQueue = new Bull('message queue', "redis://default:EKbrullKNdJjgxJWFvunVTnmZKKbGQjJ@interchange.proxy.rlwy.net:43926")
     
     await testQueue.isReady();
     await testQueue.close();
@@ -27,7 +27,7 @@ const initializeQueue = async () => {
   
   if (redisAvailable) {
     try {
-      messageQueue = new Bull('message queue', "rediss://default:ASmoAAIncDIwOGZhOGVhMDM0Zjg0OWU4YTk3ZjZhMzI3MWQ1MzM1YXAyMTA2NjQ@outgoing-glider-10664.upstash.io:6379", {
+      messageQueue = new Bull('message queue', "redis://default:EKbrullKNdJjgxJWFvunVTnmZKKbGQjJ@interchange.proxy.rlwy.net:43926", {
         defaultJobOptions: {
           removeOnComplete: 100,
           removeOnFail: 50,

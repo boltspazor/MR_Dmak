@@ -12,7 +12,7 @@ class CacheService {
   private async initializeRedis() {
     try {
       this.redis = new Redis(
-        "rediss://default:ASmoAAIncDIwOGZhOGVhMDM0Zjg0OWU4YTk3ZjZhMzI3MWQ1MzM1YXAyMTA2NjQ@outgoing-glider-10664.upstash.io:6379"
+        "redis://default:EKbrullKNdJjgxJWFvunVTnmZKKbGQjJ@interchange.proxy.rlwy.net:43926"
       );
 
       this.redis.on('connect', () => {
