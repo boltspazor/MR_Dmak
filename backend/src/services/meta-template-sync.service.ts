@@ -163,7 +163,8 @@ class MetaTemplateSyncService {
         detailedTemplate = await this.fetchDetailedTemplateInfo(metaTemplate.id);
         logger.info(`Fetched detailed template info for ${metaTemplate.name}`);
       } catch (error) {
-        logger.warn(`Failed to fetch detailed template info for ${metaTemplate.name}:`, error.message);
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        logger.warn(`Failed to fetch detailed template info for ${metaTemplate.name}:`, errorMsg);
         // Continue with basic template info
       }
 
@@ -182,7 +183,7 @@ class MetaTemplateSyncService {
         type: 'template' as const,
         content: this.extractContentFromMetaComponents(detailedTemplate.components || metaTemplate.components),
         parameters: this.extractParametersFromMetaComponents(detailedTemplate.components || metaTemplate.components),
-        createdBy: null, // Meta templates are not created by a specific user
+        createdBy: null as any, // Meta templates are not created by a specific user
         isActive: metaTemplate.status === 'APPROVED',
         lastSyncedAt: new Date(),
         syncStatus: 'synced' as const,
@@ -207,7 +208,11 @@ class MetaTemplateSyncService {
         return newTemplate;
       }
     } catch (error: any) {
-      logger.error(`Error syncing single Meta template ${metaTemplate.name}:`, error.message);
+      logger.error(`Error syncing single Meta template ${metaTemplate.name}:`, {
+        error: error.message,
+        stack: error.stack,
+        fullError: error
+      });
       throw error;
     }
   }
@@ -263,10 +268,15 @@ class MetaTemplateSyncService {
 
       if (mediaHandle) {
         // For Meta templates, the header_handle is already the actual image URL
-        // No need to make an additional API call
-        logger.info(`Found Meta image URL: ${mediaHandle}`);
+        // Handle both array and string formats
+        let imageUrl = mediaHandle;
+        if (Array.isArray(mediaHandle)) {
+          imageUrl = mediaHandle[0]; // Take the first URL if it's an array
+        }
+        
+        logger.info(`Found Meta image URL: ${imageUrl}`);
         return {
-          imageUrl: mediaHandle,
+          imageUrl: imageUrl,
           imageFileName: `template-header-${headerComponent._id || 'image'}.jpg`
         };
       } else {
@@ -310,8 +320,8 @@ class MetaTemplateSyncService {
       }
 
       throw new Error('No template data found in response');
-    } catch (error) {
-      logger.error(`Error fetching detailed template info for ${templateId}:`, error.message);
+    } catch (error: any) {
+      logger.error(`Error fetching detailed template info for ${templateId}:`, error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
@@ -334,25 +344,33 @@ class MetaTemplateSyncService {
           matches.forEach((match: any) => {
             const paramName = match.replace(/[{}]/g, '');
             
-            // Check if parameter already exists
-            const existingParam = parameters.find(p => p.name === paramName);
+            // Check if parameter already exists (case-insensitive)
+            const existingParam = parameters.find(p => p.name.toLowerCase() === paramName.toLowerCase());
             if (!existingParam) {
-              parameters.push({ name: paramName, type: 'text' });
+              parameters.push({ name: paramName, type: 'text' }); // Preserve original casing from Meta template
             }
           });
         }
       }
     });
 
+    // Sort parameters by their order of appearance in the template content
     return parameters.sort((a, b) => {
-      // Sort by parameter number if they're numbered, otherwise alphabetically
-      const aNum = parseInt(a.name.replace(/[^0-9]/g, ''));
-      const bNum = parseInt(b.name.replace(/[^0-9]/g, ''));
+      // Find the first occurrence of each parameter in the template content
+      const templateContent = components.find(c => c.text)?.text || '';
+      const aIndex = templateContent.indexOf(`{{${a.name}}}`);
+      const bIndex = templateContent.indexOf(`{{${b.name}}}`);
       
-      if (!isNaN(aNum) && !isNaN(bNum)) {
-        return aNum - bNum;
+      // If both parameters are found in the content, sort by their position
+      if (aIndex !== -1 && bIndex !== -1) {
+        return aIndex - bIndex;
       }
       
+      // If only one is found, prioritize it
+      if (aIndex !== -1) return -1;
+      if (bIndex !== -1) return 1;
+      
+      // If neither is found, sort alphabetically
       return a.name.localeCompare(b.name);
     });
   }
@@ -369,6 +387,119 @@ class MetaTemplateSyncService {
    */
   getMetaBusinessManagerUrl(): string {
     return whatsappConfig.getMetaBusinessManagerUrl();
+  }
+
+  /**
+   * Delete a template from Meta WhatsApp Business Platform
+   * Based on official Meta API documentation for template deletion
+   */
+  async deleteMetaTemplate(templateName: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const headers = this.getHeaders();
+      if (!headers.Authorization) {
+        throw new Error('WhatsApp Cloud API access token not configured');
+      }
+
+      logger.info(`Attempting to delete Meta template: ${templateName}`);
+
+      // First, check if template exists in Meta API
+      const checkUrl = `${this.graphAPIBaseURL}/${this.businessAccountId}/message_templates?name=${templateName}`;
+      const checkResponse = await axios.get(checkUrl, { headers });
+
+      if (!checkResponse.data.data || checkResponse.data.data.length === 0) {
+        return {
+          success: false,
+          message: `Template '${templateName}' not found in Meta WhatsApp Business Platform`
+        };
+      }
+
+      const template = checkResponse.data.data[0];
+      logger.info(`Found template in Meta API:`, { 
+        id: template.id, 
+        name: template.name, 
+        status: template.status 
+      });
+
+      // Use the correct Meta API endpoint for template deletion
+      // Based on Postman documentation: DELETE /{whatsapp-business-account-id}/message_templates
+      const deleteUrl = `${this.graphAPIBaseURL}/${this.businessAccountId}/message_templates`;
+      
+      try {
+        // Delete by template name as per Meta API documentation
+        const deleteResponse = await axios.delete(deleteUrl, { 
+          headers,
+          data: {
+            name: templateName
+          }
+        });
+        
+        logger.info(`Template deleted from Meta API:`, { 
+          templateId: template.id, 
+          templateName: template.name,
+          response: deleteResponse.data 
+        });
+
+        // Verify deletion by checking if template still exists
+        const verifyResponse = await axios.get(checkUrl, { headers });
+        const stillExists = verifyResponse.data.data && verifyResponse.data.data.length > 0;
+
+        if (stillExists) {
+          return {
+            success: false,
+            message: `Template '${templateName}' was not successfully deleted from Meta API`
+          };
+        }
+
+        return {
+          success: true,
+          message: `Template '${templateName}' successfully deleted from Meta WhatsApp Business Platform`
+        };
+      } catch (deleteError: any) {
+        logger.error(`Meta API deletion error for '${templateName}':`, {
+          status: deleteError.response?.status,
+          error: deleteError.response?.data,
+          templateId: template.id
+        });
+
+        // Handle specific Meta API errors
+        if (deleteError.response?.status === 400) {
+          const errorData = deleteError.response?.data?.error;
+          if (errorData?.message?.includes('Unsupported delete request')) {
+            return {
+              success: true, // Consider as success since we can't delete from Meta API
+              message: `Template '${templateName}' cannot be deleted from Meta API (not supported), but will be removed from local database`
+            };
+          } else if (errorData?.message?.includes('Template not found')) {
+            return {
+              success: true, // Template already deleted or doesn't exist
+              message: `Template '${templateName}' was already deleted or not found in Meta API`
+            };
+          }
+        }
+        
+        // Re-throw other errors
+        throw deleteError;
+      }
+
+    } catch (error: any) {
+      logger.error(`Error deleting Meta template '${templateName}':`, {
+        error: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+
+      if (error.response?.status === 404) {
+        return {
+          success: true, // Consider 404 as success since template is already deleted
+          message: `Template '${templateName}' was already deleted or not found in Meta API`
+        };
+      }
+
+      return {
+        success: false,
+        message: `Failed to delete template '${templateName}' from Meta API: ${error.message}`
+      };
+    }
   }
 
   /**

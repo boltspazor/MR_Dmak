@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X, Upload } from 'lucide-react';
 import { AvailableParameters } from '../../types';
 import { TemplateFormData } from '../../hooks/useTemplateForm';
@@ -30,6 +30,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
   editingTemplate,
   onImageUpload
 }) => {
+
   if (!isOpen) return null;
 
   return (
@@ -71,6 +72,36 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 Image (Optional)
               </label>
+              
+              {/* Image URL Input */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-600 mb-2">
+                  Image URL:
+                </label>
+                <input
+                  type="url"
+                  value={imagePlacement === 'header' ? formData.imageUrl : formData.footerImageUrl}
+                  onChange={(e) => {
+                    if (imagePlacement === 'header') {
+                      setFormData(prev => ({ ...prev, imageUrl: e.target.value }));
+                    } else {
+                      setFormData(prev => ({ ...prev, footerImageUrl: e.target.value }));
+                    }
+                  }}
+                  placeholder="https://example.com/image.jpg"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Enter a publicly accessible image URL
+                </p>
+              </div>
+
+              {/* OR Divider */}
+              <div className="flex items-center my-4">
+                <div className="flex-1 border-t border-gray-300"></div>
+                <span className="px-3 text-sm text-gray-500 bg-white">OR</span>
+                <div className="flex-1 border-t border-gray-300"></div>
+              </div>
 
               {/* Image Placement Selection */}
               <div className="mb-4">

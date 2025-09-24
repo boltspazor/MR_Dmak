@@ -317,8 +317,8 @@ const WhatsAppCloudTest: React.FC = () => {
         <div className="text-sm text-blue-800 space-y-2">
           <p><strong>Phone Number ID:</strong> 715904891617490</p>
           <p><strong>Business Account ID:</strong> 1176186791172596</p>
-          <p><strong>API Version:</strong> v18.0</p>
-          <p><strong>Base URL:</strong> https://graph.facebook.com/v18.0/715904891617490</p>
+          <p><strong>API Version:</strong> v19.0</p>
+          <p><strong>Base URL:</strong> https://graph.facebook.com/v19.0/715904891617490</p>
         </div>
       </div>
     </div>

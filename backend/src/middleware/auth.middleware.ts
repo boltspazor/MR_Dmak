@@ -10,22 +10,23 @@ export const authenticateToken = (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
-) => {
+): void => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ error: 'Access token required' });
+    res.status(401).json({ error: 'Access token required' });
+    return;
   }
 
-  jwt.verify(token, process.env.JWT_SECRET!, (err, user) => {
+  jwt.verify(token, process.env.JWT_SECRET!, (err, user): void => {
     if (err) {
-      return res.status(403).json({ error: 'Invalid or expired token' });
+      res.status(403).json({ error: 'Invalid or expired token' });
+      return;
     }
     req.user = user as JwtPayload;
-    return next();
+    next();
   });
-  return;
 };
 
 export const requireRole = (roles: string[]) => {

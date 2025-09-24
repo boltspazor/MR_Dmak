@@ -158,6 +158,149 @@ class MetaTemplateController {
   }
 
   /**
+   * Delete a template from Meta API and database
+   */
+  async deleteTemplate(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      
+      if (!id) {
+        res.status(400).json({
+          success: false,
+          error: 'Template ID is required'
+        });
+        return;
+      }
+
+      logger.info('Deleting template', { templateId: id });
+
+      // First, find the template in database
+      const template = await Template.findById(id);
+      if (!template) {
+        res.status(404).json({
+          success: false,
+          error: 'Template not found in database'
+        });
+        return;
+      }
+
+      let metaDeletionResult = { success: true, message: 'Not a Meta template' };
+
+      // If it's a Meta template, delete from Meta API first
+      if (template.isMetaTemplate && template.metaTemplateName) {
+        logger.info('Template is a Meta template, deleting from Meta API first', { 
+          templateId: id, 
+          templateName: template.metaTemplateName 
+        });
+
+        const service = this.getMetaTemplateSyncService();
+        metaDeletionResult = await service.deleteMetaTemplate(template.metaTemplateName);
+
+        // Check if Meta API deletion failed (but still allow database deletion)
+        if (!metaDeletionResult.success) {
+          // Check if it's a "not supported" error (which we should allow)
+          if (metaDeletionResult.message.includes('cannot be deleted from Meta API (not supported)')) {
+            logger.warn('Meta API deletion not supported, proceeding with database deletion', { 
+              templateId: id, 
+              templateName: template.metaTemplateName,
+              message: metaDeletionResult.message 
+            });
+          } else {
+            // For other Meta API errors, still proceed but log the issue
+            logger.error('Meta API deletion failed, but proceeding with database deletion', { 
+              templateId: id, 
+              templateName: template.metaTemplateName,
+              error: metaDeletionResult.message 
+            });
+          }
+        }
+
+        logger.info('Successfully deleted template from Meta API', { 
+          templateId: id, 
+          templateName: template.metaTemplateName 
+        });
+      }
+
+      // Delete from database
+      await Template.findByIdAndDelete(id);
+
+      logger.info('Successfully deleted template from database', { templateId: id });
+
+      res.json({
+        success: true,
+        message: 'Template deleted successfully',
+        metaDeletion: metaDeletionResult
+      });
+
+    } catch (error: any) {
+      logger.error('Error deleting template:', {
+        error: error.message,
+        stack: error.stack,
+        templateId: req.params.id
+      });
+      
+      res.status(500).json({
+        success: false,
+        error: 'Failed to delete template',
+        details: error.message
+      });
+    }
+  }
+
+  /**
+   * Update template image URL
+   */
+  async updateTemplateImageUrl(req: Request, res: Response): Promise<void> {
+    try {
+      const { templateName, imageUrl } = req.body;
+      
+      if (!templateName || !imageUrl) {
+        res.status(400).json({
+          success: false,
+          error: 'Template name and image URL are required'
+        });
+        return;
+      }
+
+      // Find and update the template
+      const template = await Template.findOneAndUpdate(
+        { name: templateName },
+        { imageUrl: imageUrl },
+        { new: true }
+      );
+
+      if (!template) {
+        res.status(404).json({
+          success: false,
+          error: 'Template not found'
+        });
+        return;
+      }
+
+      console.log('✅ Template image URL updated:', {
+        templateName: template.name,
+        oldImageUrl: template.imageUrl,
+        newImageUrl: imageUrl
+      });
+
+      res.json({
+        success: true,
+        message: 'Template image URL updated successfully',
+        data: {
+          templateName: template.name,
+          imageUrl: template.imageUrl
+        }
+      });
+    } catch (error) {
+      logger.error('Error updating template image URL:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to update template image URL'
+      });
+    }
+  }
+
+  /**
    * Get all templates (both Meta and custom) with filtering
    */
   async getAllTemplates(req: Request, res: Response): Promise<void> {
@@ -349,7 +492,9 @@ const boundController = {
   getTemplateStatusSummary: metaTemplateController.getTemplateStatusSummary.bind(metaTemplateController),
   getAllTemplates: metaTemplateController.getAllTemplates.bind(metaTemplateController),
   getMetaTemplates: metaTemplateController.getMetaTemplates.bind(metaTemplateController),
-  syncSpecificTemplate: metaTemplateController.syncSpecificTemplate.bind(metaTemplateController)
+  syncSpecificTemplate: metaTemplateController.syncSpecificTemplate.bind(metaTemplateController),
+  deleteTemplate: metaTemplateController.deleteTemplate.bind(metaTemplateController),
+  updateTemplateImageUrl: metaTemplateController.updateTemplateImageUrl.bind(metaTemplateController)
 };
 
 export default boundController;

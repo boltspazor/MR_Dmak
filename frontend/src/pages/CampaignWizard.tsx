@@ -343,7 +343,7 @@ const CampaignWizard: React.FC = () => {
               </button>
 
               <div className="flex space-x-3">
-                {currentStep < steps.length ? (
+                {currentStep < steps.length && currentStep !== 2 ? (
                   <button
                     onClick={nextStep}
                     disabled={!isStepValid(currentStep)}
@@ -358,7 +358,7 @@ const CampaignWizard: React.FC = () => {
                       <ChevronRight className="w-4 h-4" />
                     </div>
                   </button>
-                ) : (
+                ) : currentStep === steps.length ? (
                   <button
                     onClick={() => navigate('/dashboard')}
                     className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
@@ -368,7 +368,8 @@ const CampaignWizard: React.FC = () => {
                       <ArrowRight className="w-4 h-4" />
                     </div>
                   </button>
-                )}
+                )
+                : null}
               </div>
             </div>
           </div>

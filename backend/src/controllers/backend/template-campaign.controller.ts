@@ -125,12 +125,15 @@ export class TemplateCampaignController {
           });
 
           // Use template parameters from the recipient data
-          const templateParameters = Object.values(recipient.parameters || {});
+          const templateParameters: Array<{name: string, value: string}> = Object.entries(recipient.parameters || {}).map(([name, value]) => ({
+            name,
+            value: String(value)
+          }));
           
           // If no parameters are provided, use basic name parameters
           if (templateParameters.length === 0) {
-            templateParameters.push(recipient.firstName || 'User');
-            templateParameters.push(recipient.lastName || '');
+            templateParameters.push({ name: 'first_name', value: recipient.firstName || 'User' });
+            templateParameters.push({ name: 'last_name', value: recipient.lastName || '' });
           }
 
           const result = await whatsappCloudAPI.sendTemplateMessage(

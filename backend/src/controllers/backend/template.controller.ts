@@ -11,7 +11,10 @@ export class TemplateController {
       const { search, type, page = 1, limit = 10 } = req.query;
 
       const query: any = { 
-        createdBy: userId,
+        $or: [
+          { createdBy: userId }, // User-created templates
+          { createdBy: null }    // Meta templates
+        ],
         isActive: true 
       };
 
@@ -37,7 +40,13 @@ export class TemplateController {
 
       // Get summary statistics
       const stats = await Template.aggregate([
-        { $match: { createdBy: userId, isActive: true } },
+        { $match: { 
+          $or: [
+            { createdBy: userId }, // User-created templates
+            { createdBy: null }    // Meta templates
+          ],
+          isActive: true 
+        } },
         {
           $group: {
             _id: null,
@@ -90,7 +99,10 @@ export class TemplateController {
 
       const template = await Template.findOne({ 
         _id: id, 
-        createdBy: userId,
+        $or: [
+          { createdBy: userId }, // User-created templates
+          { createdBy: null }    // Meta templates
+        ],
         isActive: true 
       }).populate('createdBy', 'name email');
 
@@ -199,7 +211,10 @@ export class TemplateController {
 
       const template = await Template.findOne({ 
         _id: id, 
-        createdBy: userId,
+        $or: [
+          { createdBy: userId }, // User-created templates
+          { createdBy: null }    // Meta templates
+        ],
         isActive: true 
       });
 
@@ -215,7 +230,10 @@ export class TemplateController {
       if (name && name !== template.name) {
         const existingTemplate = await Template.findOne({ 
           name: name.trim(),
-          createdBy: userId,
+          $or: [
+            { createdBy: userId }, // User-created templates
+            { createdBy: null }    // Meta templates
+          ],
           isActive: true,
           _id: { $ne: id }
         });
@@ -288,7 +306,10 @@ export class TemplateController {
 
       const template = await Template.findOne({ 
         _id: id, 
-        createdBy: userId,
+        $or: [
+          { createdBy: userId }, // User-created templates
+          { createdBy: null }    // Meta templates
+        ],
         isActive: true 
       });
 
@@ -301,7 +322,8 @@ export class TemplateController {
         // Check if template exists but belongs to another user or is already deleted
         const existingTemplate = await Template.findById(id);
         if (existingTemplate) {
-          if (existingTemplate.createdBy?.toString() !== userId) {
+          // Allow deletion of Meta templates (createdBy: null) or user's own templates
+          if (existingTemplate.createdBy && existingTemplate.createdBy.toString() !== userId) {
             res.status(403).json({ 
               success: false, 
               error: 'You do not have permission to delete this template' 
@@ -393,7 +415,13 @@ export class TemplateController {
       const userId = (req as any).user.userId;
 
       const stats = await Template.aggregate([
-        { $match: { createdBy: userId, isActive: true } },
+        { $match: { 
+          $or: [
+            { createdBy: userId }, // User-created templates
+            { createdBy: null }    // Meta templates
+          ],
+          isActive: true 
+        } },
         {
           $group: {
             _id: null,
@@ -440,7 +468,10 @@ export class TemplateController {
       const { type } = req.query;
 
       const query: any = { 
-        createdBy: userId,
+        $or: [
+          { createdBy: userId }, // User-created templates
+          { createdBy: null }    // Meta templates
+        ],
         isActive: true 
       };
 
@@ -498,12 +529,19 @@ export class TemplateController {
       }
 
       const query = {
-        createdBy: userId,
-        isActive: true,
         $or: [
-          { name: { $regex: q, $options: 'i' } },
-          { content: { $regex: q, $options: 'i' } },
-          { parameters: { $in: [new RegExp(q, 'i')] } }
+          { createdBy: userId }, // User-created templates
+          { createdBy: null }    // Meta templates
+        ],
+        isActive: true,
+        $and: [
+          {
+            $or: [
+              { name: { $regex: q, $options: 'i' } },
+              { content: { $regex: q, $options: 'i' } },
+              { parameters: { $in: [new RegExp(q, 'i')] } }
+            ]
+          }
         ]
       };
 
@@ -534,7 +572,10 @@ export class TemplateController {
       const { page = 1, limit = 10 } = req.query;
 
       const query = {
-        createdBy: userId,
+        $or: [
+          { createdBy: userId }, // User-created templates
+          { createdBy: null }    // Meta templates
+        ],
         isActive: true,
         category: category
       };

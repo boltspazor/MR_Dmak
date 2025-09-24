@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FileText } from 'lucide-react';
 import { api } from '../lib/api';
+import { templateApi } from '../api/templates';
+import toast from 'react-hot-toast';
 import { Template, AvailableParameters } from '../types';
 import Header from '../components/Header';
 import CommonFeatures from '../components/CommonFeatures';
@@ -76,6 +78,7 @@ const Templates: React.FC = () => {
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState<Template | null>(null);
+  const [isDeletingTemplate, setIsDeletingTemplate] = useState(false);
   const [showRecipientUpload, setShowRecipientUpload] = useState(false);
   const [uploadTemplate, setUploadTemplate] = useState<Template | null>(null);
   const [templateFilter, setTemplateFilter] = useState<'all' | 'custom' | 'meta'>('all');
@@ -231,15 +234,50 @@ const Templates: React.FC = () => {
   const handleDeleteConfirm = async () => {
     if (!templateToDelete) return;
 
+    setIsDeletingTemplate(true);
+    
     try {
-      await deleteTemplate(templateToDelete._id);
+      let result;
+      
+      // Use Meta API deletion for Meta templates
+      if (templateToDelete.isMetaTemplate) {
+        result = await templateApi.deleteWithMeta(templateToDelete._id);
+        
+        if (result.metaDeletion.success) {
+          console.log('Meta API deletion:', result.metaDeletion.message);
+        } else {
+          console.warn('Meta API deletion warning:', result.metaDeletion.message);
+        }
+      } else {
+        // Use regular deletion for custom templates
+        result = await templateApi.delete(templateToDelete._id);
+      }
+      
       setShowDeleteDialog(false);
       setTemplateToDelete(null);
-      await alert('Template deleted successfully!');
+      
+      // Refresh templates list
+      await loadTemplates();
+      
+      // Show success message with Meta deletion info if applicable
+      let successMessage = 'Template deleted successfully!';
+      if (templateToDelete.isMetaTemplate && result.metaDeletion) {
+        if (result.metaDeletion.message.includes('cannot be deleted from Meta API (not supported)')) {
+          successMessage += ` Note: Template removed from local database. Meta API deletion is not supported by WhatsApp Business Platform.`;
+        } else if (result.metaDeletion.success) {
+          successMessage += ` Meta API: ${result.metaDeletion.message}`;
+        } else {
+          successMessage += ` Meta API warning: ${result.metaDeletion.message}`;
+        }
+      }
+      
+      toast.success(successMessage, { duration: 5000 });
     } catch (error: any) {
       console.error('Error deleting template:', error);
       const errorMessage = error.response?.data?.error || error.message || 'Failed to delete template';
-      await alert(`Error: ${errorMessage}`);
+      toast.error(`Error: ${errorMessage}`, { duration: 5000 });
+    } finally {
+      setIsDeletingTemplate(false);
     }
   };
 
@@ -388,6 +426,7 @@ const Templates: React.FC = () => {
               syncingTemplates={syncingTemplates}
               onGetMetaTemplateCreationUrl={getMetaTemplateCreationUrl}
               onSyncTemplatesWithMeta={syncTemplatesWithMeta}
+              onRefreshTemplates={loadTemplates}
             />
 
             {/* Filters and Search */}
@@ -451,6 +490,7 @@ const Templates: React.FC = () => {
           showDownloadButton={true}
           showBulkUploadButton={true}
           variant="full"
+          onUpdateTemplate={updateTemplate}
         />
 
         {/* Recipient Upload Modal */}
@@ -481,6 +521,7 @@ const Templates: React.FC = () => {
             setShowDeleteDialog(false);
             setTemplateToDelete(null);
           }}
+          isDeleting={isDeletingTemplate}
         />
       </div>
     </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { FileText, CheckCircle, Clock, XCircle, Image } from 'lucide-react';
 import { Template } from '../../types';
 import TemplateActions from './TemplateActions';
 
@@ -123,6 +123,12 @@ const TemplateTable: React.FC<TemplateTableProps> = ({
                       {template.isMetaTemplate && (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                           Meta
+                        </span>
+                      )}
+                      {(template.imageUrl && template.imageUrl.trim() !== '') && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800" title="Has Image">
+                          <Image className="h-3 w-3 mr-1" />
+                          Image
                         </span>
                       )}
                       {template.metaStatus && (

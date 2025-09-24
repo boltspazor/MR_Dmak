@@ -147,6 +147,7 @@ export const campaignsAPI = {
     };
   }> => {
     const response = await api.get('/campaigns', { params });
+    console.log('API Response:', response.data);
     return response.data.data;
   },
 
@@ -178,6 +179,44 @@ export const campaignsAPI = {
    */
   getCampaignProgress: async (campaignId: string): Promise<CampaignProgress> => {
     const response = await api.get(`/campaigns/${campaignId}`);
+    return response.data.data;
+  }
+};
+
+// Template API
+export interface Template {
+  id: string;
+  name: string;
+  content: string;
+  type: 'html' | 'text' | 'image' | 'template';
+  imageUrl?: string;
+  footerImageUrl?: string;
+  parameters: Array<{name: string, type: 'text' | 'number'}> | string[];
+  isActive: boolean;
+  metaTemplateId?: string;
+  metaTemplateName?: string;
+  metaStatus?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'DISABLED' | 'PAUSED' | 'PENDING_DELETION';
+  metaCategory?: 'AUTHENTICATION' | 'MARKETING' | 'UTILITY';
+  metaLanguage?: string;
+  isMetaTemplate: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const templateAPI = {
+  /**
+   * Get template by ID
+   */
+  getTemplateById: async (templateId: string): Promise<Template> => {
+    const response = await api.get(`/templates/${templateId}`);
+    return response.data.data;
+  },
+
+  /**
+   * Get all templates
+   */
+  getTemplates: async (): Promise<Template[]> => {
+    const response = await api.get('/templates');
     return response.data.data;
   }
 };

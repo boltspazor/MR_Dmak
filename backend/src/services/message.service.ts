@@ -300,7 +300,10 @@ export class MessageService {
           templateName: template.name,
           metaTemplateName: template.metaTemplateName,
           isMetaTemplate: template.isMetaTemplate,
-          metaStatus: template.metaStatus
+          metaStatus: template.metaStatus,
+          imageUrl: template.imageUrl,
+          hasImageUrl: !!template.imageUrl,
+          imageUrlLength: template.imageUrl ? template.imageUrl.length : 0
         });
 
         // Validate template for WhatsApp API
@@ -347,13 +350,41 @@ export class MessageService {
 
         // For template-based campaigns, we need to process parameters for each MR
         // Store template info for later processing
+        // Convert parameters to the format expected by the message queue
+        const templateParameters = (template.parameters || []).map((param: any) => {
+          // Handle both new format {name, type} and legacy string format
+          if (typeof param === 'string') {
+            return param;
+          } else if (param && param.name) {
+            return param.name; // Use original casing from Meta template
+          }
+          return param;
+        });
+
+        // Debug: Log template imageUrl before creating templateInfo
+        logger.info('🔍 Template imageUrl before templateInfo creation', {
+          templateImageUrl: template.imageUrl,
+          hasTemplateImageUrl: !!template.imageUrl,
+          templateImageUrlLength: template.imageUrl ? template.imageUrl.length : 0,
+          templateImageUrlType: typeof template.imageUrl
+        });
+
         templateInfo = {
           name: template.metaTemplateName || template.name, // Use Meta template name if available, fallback to our name
           content: template.content,
           imageUrl: template.imageUrl || '',
-          parameters: template.parameters || [],
+          parameters: templateParameters,
           language: template.metaLanguage || 'en_US' // Use template's actual language code
         };
+        
+        // Debug: Log template info including image URL
+        logger.info('🔍 Template info created', {
+          templateName: templateInfo.name,
+          imageUrl: templateInfo.imageUrl,
+          hasImageUrl: !!templateInfo.imageUrl,
+          imageUrlLength: templateInfo.imageUrl ? templateInfo.imageUrl.length : 0,
+          parametersCount: templateParameters.length
+        });
         
         messageContent = template.content; // This will be replaced with processed content per MR
         imageUrl = template.imageUrl || '';
@@ -463,12 +494,37 @@ export class MessageService {
           if (recipientData) {
             // Extract parameters for this recipient (now directly from parameters object)
             const templateParameters = templateInfo.parameters.map((param: string) => {
-              const paramValue = recipientData.parameters[param] || '';
+              // Look for parameter value using multiple case variations
+              let paramValue = recipientData.parameters[param] || 
+                              recipientData.parameters[param.toLowerCase()] || 
+                              recipientData.parameters[param.charAt(0).toUpperCase() + param.slice(1)] ||
+                              recipientData.parameters[param.toUpperCase()] || '';
+              
+              // If still not found, try common parameter name variations
+              if (!paramValue) {
+                const commonMappings: { [key: string]: string[] } = {
+                  'firstname': ['FirstName', 'first_name', 'firstname', 'fname'],
+                  'lastname': ['LastName', 'last_name', 'lastname', 'lname'],
+                  'month': ['Month', 'month_name', 'month'],
+                  'target': ['Target', 'target_value', 'target'],
+                  'doctor': ['Doctor', 'doctor_name', 'doctor'],
+                  'product': ['Product', 'product_name', 'product'],
+                  'area': ['Area', 'area_name', 'area']
+                };
+                
+                const variations = commonMappings[param.toLowerCase()] || [];
+                for (const variation of variations) {
+                  if (recipientData.parameters[variation]) {
+                    paramValue = recipientData.parameters[variation];
+                    break;
+                  }
+                }
+              }
               
               // Ensure we have a valid text value
               const finalValue = paramValue && paramValue.toString().trim() !== '' ? paramValue.toString() : 'N/A';
               
-              return { text: finalValue };
+              return { name: param, value: finalValue };
             });
             
             logger.info('📤 Adding template message to queue', { 
@@ -485,7 +541,8 @@ export class MessageService {
               mr.phone,
               templateInfo.name,
               templateInfo.language, // Use template's actual language code
-              templateParameters
+              templateParameters,
+              templateInfo.imageUrl // Pass the template image URL
             );
           } else {
             logger.warn('⚠️ No recipient data found for MR', { mrId: mr.mrId, mrName: `${mr.firstName} ${mr.lastName}` });

@@ -143,10 +143,7 @@ export const extractTemplateParameters = (content: string): string[] => {
   if (paramMatches) {
     return [...new Set(paramMatches.map((param: string) => {
       const paramName = param.replace(/\{\{|\}\}/g, '');
-      // Convert numeric parameters to param1, param2, etc.
-      if (/^\d+$/.test(paramName)) {
-        return `param${paramName}`;
-      }
+      // Preserve original parameter names (including numeric ones like 1, 2, 3)
       return paramName;
     }))];
   }

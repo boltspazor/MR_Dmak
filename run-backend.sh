@@ -15,7 +15,7 @@ export JWT_SECRET=your-super-secret-jwt-key-development
 export WHATSAPP_ACCESS_TOKEN=qt3yb4Lgty5SjeJeflqEYvdWJy9id8IzpC3Ha4C1M5jtaBomySZFJ4aXQIRN4uN4
 export WHATSAPP_PHONE_NUMBER_ID=778806801982541
 export WHATSAPP_VERIFY_TOKEN=token1234
-export WHATSAPP_API_URL=https://graph.facebook.com/v18.0
+export WHATSAPP_API_URL=https://graph.facebook.com/v19.0
 
 echo "📋 Environment Configuration:"
 echo "  • NODE_ENV: $NODE_ENV"

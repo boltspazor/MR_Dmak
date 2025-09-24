@@ -540,7 +540,7 @@ export class MRService {
       // This would require a GroupActivity model
       // For now, return empty result
       return {
-        activities: [],
+        activities: [] as any[],
         total: 0
       };
     } catch (error) {

@@ -56,9 +56,19 @@ export const templateApi = {
     return response.data;
   },
 
-  // Delete template
+  // Delete template (regular template)
   delete: async (id: string): Promise<{ success: boolean; message: string }> => {
     const response = await api.delete(`/templates/${id}`);
+    return response.data;
+  },
+
+  // Delete template with Meta API integration
+  deleteWithMeta: async (id: string): Promise<{ 
+    success: boolean; 
+    message: string; 
+    metaDeletion: { success: boolean; message: string } 
+  }> => {
+    const response = await api.delete(`/meta-templates/${id}`);
     return response.data;
   },
 

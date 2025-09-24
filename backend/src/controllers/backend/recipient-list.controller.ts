@@ -8,7 +8,7 @@ export class RecipientListController {
   // ===== REGULAR RECIPIENT LISTS FUNCTIONALITY =====
 
   // Get all recipient lists for a user
-  async getRecipientLists(req: Request, res: Response): Promise<void> {
+  async getRecipientLists(req: Request, res: Response): Promise<Response> {
     try {
       const userId = (req as any).user.userId;
       
@@ -17,14 +17,14 @@ export class RecipientListController {
         isActive: true 
       }).sort({ createdAt: -1 });
 
-      res.json({
+      return res.json({
         success: true,
         data: recipientLists,
         message: 'Recipient lists retrieved successfully'
       });
     } catch (error) {
       logger.error('Error fetching recipient lists:', error);
-      res.status(500).json({ 
+      return res.status(500).json({ 
         success: false, 
         error: 'Failed to fetch recipient lists' 
       });
@@ -32,7 +32,7 @@ export class RecipientListController {
   }
 
   // Get a specific recipient list
-  async getRecipientList(req: Request, res: Response): Promise<void> {
+  async getRecipientList(req: Request, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
       const userId = (req as any).user.userId;
@@ -44,21 +44,20 @@ export class RecipientListController {
       });
 
       if (!recipientList) {
-        res.status(404).json({ 
+        return res.status(404).json({ 
           success: false, 
           error: 'Recipient list not found' 
         });
-        return;
       }
 
-      res.json({
+      return res.json({
         success: true,
         data: recipientList,
         message: 'Recipient list retrieved successfully'
       });
     } catch (error) {
       logger.error('Error fetching recipient list:', error);
-      res.status(500).json({ 
+      return res.status(500).json({ 
         success: false, 
         error: 'Failed to fetch recipient list' 
       });
@@ -66,7 +65,7 @@ export class RecipientListController {
   }
 
   // Create a new recipient list
-  async createRecipientList(req: Request, res: Response): Promise<void> {
+  async createRecipientList(req: Request, res: Response): Promise<Response> {
     try {
       const userId = (req as any).user.userId;
       const { name, description, columns, data } = req.body;
@@ -79,11 +78,10 @@ export class RecipientListController {
       });
 
       if (existingList) {
-        res.status(400).json({ 
+        return res.status(400).json({ 
           success: false, 
-          error: 'Recipient list name already exists' 
+          error: 'Recipient list name already exists'
         });
-        return;
       }
 
       const recipientListData: any = {
@@ -102,14 +100,14 @@ export class RecipientListController {
         createdBy: userId 
       });
 
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         data: recipientList,
         message: 'Recipient list created successfully'
       });
     } catch (error) {
       logger.error('Error creating recipient list:', error);
-      res.status(500).json({ 
+      return res.status(500).json({ 
         success: false, 
         error: 'Failed to create recipient list' 
       });
@@ -117,7 +115,7 @@ export class RecipientListController {
   }
 
   // Update a recipient list
-  async updateRecipientList(req: Request, res: Response): Promise<void> {
+  async updateRecipientList(req: Request, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
       const userId = (req as any).user.userId;
@@ -130,11 +128,10 @@ export class RecipientListController {
       });
 
       if (!recipientList) {
-        res.status(404).json({ 
+        return res.status(404).json({ 
           success: false, 
           error: 'Recipient list not found' 
         });
-        return;
       }
 
       // Check if new name conflicts with existing lists (excluding current one)
@@ -147,11 +144,10 @@ export class RecipientListController {
         });
 
         if (existingList) {
-          res.status(400).json({ 
-            success: false, 
-            error: 'Recipient list name already exists' 
+          return res.status(400).json({ 
+          success: false, 
+          error: 'Recipient list name already exists'
           });
-          return;
         }
       }
 
@@ -168,14 +164,14 @@ export class RecipientListController {
         updatedBy: userId 
       });
 
-      res.json({
+      return res.json({
         success: true,
         data: recipientList,
         message: 'Recipient list updated successfully'
       });
     } catch (error) {
       logger.error('Error updating recipient list:', error);
-      res.status(500).json({ 
+      return res.status(500).json({ 
         success: false, 
         error: 'Failed to update recipient list' 
       });
@@ -183,7 +179,7 @@ export class RecipientListController {
   }
 
   // Delete a recipient list
-  async deleteRecipientList(req: Request, res: Response): Promise<void> {
+  async deleteRecipientList(req: Request, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
       const userId = (req as any).user.userId;
@@ -195,11 +191,10 @@ export class RecipientListController {
       });
 
       if (!recipientList) {
-        res.status(404).json({ 
+        return res.status(404).json({ 
           success: false, 
           error: 'Recipient list not found' 
         });
-        return;
       }
 
       // Soft delete
@@ -211,13 +206,13 @@ export class RecipientListController {
         deletedBy: userId 
       });
 
-      res.json({
+      return res.json({
         success: true,
         message: 'Recipient list deleted successfully'
       });
     } catch (error) {
       logger.error('Error deleting recipient list:', error);
-      res.status(500).json({ 
+      return res.status(500).json({ 
         success: false, 
         error: 'Failed to delete recipient list' 
       });
@@ -225,17 +220,16 @@ export class RecipientListController {
   }
 
   // Upload recipient list from CSV
-  async uploadRecipientList(req: Request, res: Response): Promise<void> {
+  async uploadRecipientList(req: Request, res: Response): Promise<Response> {
     try {
       const userId = (req as any).user.userId;
       const { name, description, csvData } = req.body;
 
       if (!csvData || !Array.isArray(csvData) || csvData.length === 0) {
-        res.status(400).json({ 
+        return res.status(400).json({ 
           success: false, 
           error: 'Invalid CSV data provided' 
         });
-        return;
       }
 
       // Extract columns from first row
@@ -256,11 +250,10 @@ export class RecipientListController {
       });
 
       if (existingList) {
-        res.status(400).json({ 
+        return res.status(400).json({ 
           success: false, 
-          error: 'Recipient list name already exists' 
+          error: 'Recipient list name already exists'
         });
-        return;
       }
 
       const recipientListData: any = {
@@ -280,14 +273,14 @@ export class RecipientListController {
         recordCount: data.length
       });
 
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         data: recipientList,
         message: `Recipient list uploaded successfully with ${data.length} records`
       });
     } catch (error) {
       logger.error('Error uploading recipient list:', error);
-      res.status(500).json({ 
+      return res.status(500).json({ 
         success: false, 
         error: 'Failed to upload recipient list' 
       });
@@ -295,7 +288,7 @@ export class RecipientListController {
   }
 
   // Get available parameters from recipient lists
-  async getAvailableParameters(req: Request, res: Response): Promise<void> {
+  async getAvailableParameters(req: Request, res: Response): Promise<Response> {
     try {
       const userId = (req as any).user.userId;
       
@@ -308,7 +301,7 @@ export class RecipientListController {
       const allColumns = recipientLists.flatMap(list => list.columns);
       const parameterColumns = [...new Set(allColumns.filter(col => col.startsWith('#')))];
 
-      res.json({
+      return res.json({
         success: true,
         data: {
           parameters: parameterColumns,
@@ -323,7 +316,7 @@ export class RecipientListController {
       });
     } catch (error) {
       logger.error('Error fetching available parameters:', error);
-      res.status(500).json({ 
+      return res.status(500).json({ 
         success: false, 
         error: 'Failed to fetch available parameters' 
       });
@@ -335,7 +328,7 @@ export class RecipientListController {
   /**
    * Upload template recipients from CSV
    */
-  async uploadTemplateRecipients(req: Request, res: Response): Promise<void> {
+  async uploadTemplateRecipients(req: Request, res: Response): Promise<Response> {
     try {
       const { templateId, name, description } = req.body;
       const csvFile = req.file;
@@ -348,7 +341,7 @@ export class RecipientListController {
       });
 
       if (!templateId || !name || !csvFile) {
-        res.status(400).json({
+        return res.status(400).json({
           success: false,
           error: 'Template ID, name, and CSV file are required'
         });
@@ -359,7 +352,7 @@ export class RecipientListController {
       const lines = csvContent?.split('\n').filter(line => line.trim()) || [];
       
       if (lines.length < 3) {
-        res.status(400).json({
+        return res.status(400).json({
           success: false,
           error: 'CSV file must have at least 3 rows (template name, parameters, and sample data)'
         });
@@ -376,7 +369,7 @@ export class RecipientListController {
       const dataRows = csvData.slice(2);
 
       if (!csvTemplateName || !parameterRow || dataRows.length === 0) {
-        res.status(400).json({
+        return res.status(400).json({
           success: false,
           error: 'Invalid CSV format'
         });
@@ -385,7 +378,7 @@ export class RecipientListController {
       // Get the template to understand its parameters
       const template = await Template.findById(templateId);
       if (!template) {
-        res.status(404).json({
+        return res.status(404).json({
           success: false,
           error: 'Template not found'
         });
@@ -398,7 +391,8 @@ export class RecipientListController {
       // Map CSV parameter columns (starting from index 3) to template parameters
       for (let i = 0; i < templateParameters.length && i + 3 < parameterRow.length; i++) {
         const csvColumnName = parameterRow[i + 3]; // Skip: TemplateName, MR ID, First Name, Last Name
-        const templateParamName = templateParameters[i];
+        const templateParam = templateParameters[i];
+        const templateParamName = typeof templateParam === 'string' ? templateParam : templateParam.name;
         parameterMapping[csvColumnName] = templateParamName;
       }
 
@@ -500,7 +494,7 @@ export class RecipientListController {
 
       // If there are validation errors, return them
       if (validationResults.errors.length > 0 || validationResults.invalidRecipients.length > 0) {
-        res.status(400).json({
+        return res.status(400).json({
           success: false,
           error: 'Validation failed',
           validationResults
@@ -516,7 +510,7 @@ export class RecipientListController {
       });
 
       if (existingList) {
-        res.status(400).json({
+        return res.status(400).json({
           success: false,
           error: 'A recipient list with this name already exists for this template'
         });
@@ -547,7 +541,7 @@ export class RecipientListController {
         createdBy: (req as AuthenticatedRequest).user?.userId
       });
 
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         message: 'Recipients uploaded successfully',
         data: {
@@ -560,7 +554,7 @@ export class RecipientListController {
 
     } catch (error) {
       logger.error('❌ Error uploading template recipients:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         error: 'Failed to upload recipients'
       });
@@ -570,7 +564,7 @@ export class RecipientListController {
   /**
    * Get template recipients for a specific template
    */
-  async getTemplateRecipients(req: Request, res: Response): Promise<void> {
+  async getTemplateRecipients(req: Request, res: Response): Promise<Response> {
     try {
       const { templateId } = req.params;
 
@@ -579,14 +573,14 @@ export class RecipientListController {
         isActive: true
       }).populate('createdBy', 'name email');
 
-      res.json({
+      return res.json({
         success: true,
         data: recipients
       });
 
     } catch (error) {
       logger.error('❌ Error fetching template recipients:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         error: 'Failed to fetch recipients'
       });
@@ -596,7 +590,7 @@ export class RecipientListController {
   /**
    * Delete template recipients
    */
-  async deleteTemplateRecipients(req: Request, res: Response): Promise<void> {
+  async deleteTemplateRecipients(req: Request, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
 
@@ -607,7 +601,7 @@ export class RecipientListController {
       );
 
       if (!recipients) {
-        res.status(404).json({
+        return res.status(404).json({
           success: false,
           error: 'Recipient list not found'
         });
@@ -618,14 +612,14 @@ export class RecipientListController {
         deletedBy: (req as AuthenticatedRequest).user?.userId
       });
 
-      res.json({
+      return res.json({
         success: true,
         message: 'Recipient list deleted successfully'
       });
 
     } catch (error) {
       logger.error('❌ Error deleting template recipients:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         error: 'Failed to delete recipient list'
       });
@@ -635,7 +629,7 @@ export class RecipientListController {
   /**
    * Upload template recipients using clean JSON data (V2)
    */
-  async uploadTemplateRecipientsV2(req: Request, res: Response): Promise<void> {
+  async uploadTemplateRecipientsV2(req: Request, res: Response): Promise<Response> {
     try {
       const { templateId, name, description, recipients } = req.body;
 
@@ -647,7 +641,7 @@ export class RecipientListController {
       });
 
       if (!templateId || !name || !recipients || !Array.isArray(recipients)) {
-        res.status(400).json({
+        return res.status(400).json({
           success: false,
           error: 'Template ID, name, and recipients array are required'
         });
@@ -656,7 +650,7 @@ export class RecipientListController {
       // Get the template to validate parameters
       const template = await Template.findById(templateId);
       if (!template) {
-        res.status(404).json({
+        return res.status(404).json({
           success: false,
           error: 'Template not found'
         });
@@ -696,13 +690,36 @@ export class RecipientListController {
           continue;
         }
 
-        // Validate parameters match template
+        // Validate parameters match template (case-insensitive)
         const recipientParams = recipient.parameters || {};
-        const missingParams = templateParameters.filter(param => !recipientParams[param]);
+        const missingParams = templateParameters.filter(param => {
+          const paramName = typeof param === 'string' ? param : param.name;
+          // Check for exact match first
+          if (recipientParams[paramName]) return false;
+          
+          // Check for case-insensitive match
+          const paramKey = Object.keys(recipientParams).find(key => 
+            key.toLowerCase() === paramName.toLowerCase()
+          );
+          return !paramKey;
+        });
+        
         if (missingParams.length > 0) {
-          validationErrors.push(`Recipient ${i + 1}: Missing parameters: ${missingParams.join(', ')}`);
+          validationErrors.push(`Recipient ${i + 1}: Missing parameters: ${missingParams.map(p => typeof p === 'string' ? p : p.name).join(', ')}`);
           continue;
         }
+
+        // Normalize parameter keys to match template parameter names (lowercase)
+        const normalizedParams: { [key: string]: any } = {};
+        templateParameters.forEach(templateParam => {
+          const paramName = typeof templateParam === 'string' ? templateParam : templateParam.name;
+          // Find the matching parameter key (case-insensitive)
+          const paramKey = Object.keys(recipientParams).find(key => 
+            key.toLowerCase() === paramName.toLowerCase()
+          ) || paramName;
+          
+          normalizedParams[paramName] = recipientParams[paramKey] || recipientParams[paramName];
+        });
 
         validRecipients.push({
           mrId: mr.mrId, // Use the actual MR ID from database
@@ -711,12 +728,12 @@ export class RecipientListController {
           phone: mr.phone, // Use phone from database
           email: mr.email,
           groupId: mr.groupId,
-          parameters: recipientParams
+          parameters: normalizedParams
         });
       }
 
       if (validationErrors.length > 0) {
-        res.status(400).json({
+        return res.status(400).json({
           success: false,
           error: 'Validation failed',
           validationErrors
@@ -732,7 +749,7 @@ export class RecipientListController {
       });
 
       if (existingList) {
-        res.status(400).json({
+        return res.status(400).json({
           success: false,
           error: 'A recipient list with this name already exists for this template'
         });
@@ -756,7 +773,7 @@ export class RecipientListController {
         recipientsCount: validRecipients.length
       });
 
-      res.json({
+      return res.json({
         success: true,
         message: 'Template recipients uploaded successfully',
         data: {
@@ -767,7 +784,7 @@ export class RecipientListController {
       });
     } catch (error) {
       logger.error('Error uploading template recipients (V2):', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         error: 'Failed to upload template recipients'
       });

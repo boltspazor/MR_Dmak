@@ -71,23 +71,50 @@ const initializeQueue = async () => {
             logger.info('Processing template message job with WhatsApp Cloud API', { campaignId, mrId, phoneNumber, templateName });
             
             // Send template message using WhatsApp Cloud API
-            // Convert templateParameters object to array format expected by WhatsApp API
-            let processedParameters: string[] = [];
+            // Convert templateParameters to named parameter format expected by WhatsApp API
+            let processedParameters: Array<{name: string, value: string}> = [];
             if (templateParameters) {
               if (Array.isArray(templateParameters)) {
-                // If it's already an array, process it as before
-                processedParameters = templateParameters.map((param: any) => typeof param === 'string' ? param : param.text);
+                // Check if it's an array of objects with name and value properties
+                if (templateParameters.length > 0 && typeof templateParameters[0] === 'object' && 'name' in templateParameters[0]) {
+                  // New format: array of {name, value} objects
+                  processedParameters = templateParameters.map((param: any) => ({
+                    name: param.name,
+                    value: param.value || param.text || String(param)
+                  }));
+                } else {
+                  // Legacy format: array of parameter names or values
+                  processedParameters = templateParameters.map((param: any, index: number) => ({
+                    name: `param_${index + 1}`,
+                    value: typeof param === 'string' ? param : String(param)
+                  }));
+                }
               } else if (typeof templateParameters === 'object') {
-                // If it's an object, convert to array of values
-                processedParameters = Object.values(templateParameters).map((value: any) => String(value));
+                // If it's an object with parameter names as keys and values as values
+                processedParameters = Object.entries(templateParameters).map(([paramName, paramValue]) => ({
+                  name: paramName,
+                  value: String(paramValue)
+                }));
               }
             }
+            
+            // Debug logging to see exactly what parameters are being sent
+            logger.info('🔍 Template parameters debug', {
+              originalTemplateParameters: templateParameters,
+              processedParameters: processedParameters,
+              parametersCount: processedParameters.length,
+              templateName,
+              imageUrl: imageUrl,
+              hasImageUrl: !!imageUrl,
+              imageUrlLength: imageUrl ? imageUrl.length : 0
+            });
             
             result = await whatsappCloudAPIService.sendTemplateMessage(
               phoneNumber,
               templateName,
               processedParameters,
-              templateLanguage || 'en_US'
+              templateLanguage || 'en_US',
+              imageUrl // Pass the template image URL
             );
           } else if (imageUrl) {
             logger.info('Processing image message job with WhatsApp Cloud API', { campaignId, mrId, phoneNumber, imageUrl });
@@ -204,10 +231,10 @@ const initializeQueue = async () => {
       },
       process: () => {},
       on: () => {},
-      getWaiting: async () => [],
-      getActive: async () => [],
-      getCompleted: async () => [],
-      getFailed: async () => [],
+      getWaiting: async (): Promise<any[]> => [],
+      getActive: async (): Promise<any[]> => [],
+      getCompleted: async (): Promise<any[]> => [],
+      getFailed: async (): Promise<any[]> => [],
     } as any;
     logger.info('✅ Direct processing mode initialized (Redis not available)');
   }
@@ -225,7 +252,7 @@ interface MessageJobData {
   messageType?: 'text' | 'image' | 'template';
   templateName?: string;
   templateLanguage?: string;
-  templateParameters?: Array<{ type: string; text: string }>;
+  templateParameters?: Array<{ name: string; value: string }> | Array<{ type: string; text: string }>;
 }
 
 // Direct message processing function for when Redis is not available
@@ -238,15 +265,30 @@ async function processMessageDirectly(data: MessageJobData) {
     if (messageType === 'template' && templateName) {
       logger.info('Processing template message directly with WhatsApp Cloud API', { campaignId, mrId, phoneNumber, templateName });
       // Send template message using WhatsApp Cloud API
-      // Convert templateParameters object to array format expected by WhatsApp API
-      let processedParameters: string[] = [];
+      // Convert templateParameters to named parameter format expected by WhatsApp API
+      let processedParameters: Array<{name: string, value: string}> = [];
       if (templateParameters) {
         if (Array.isArray(templateParameters)) {
-          // If it's already an array, process it as before
-          processedParameters = templateParameters.map((param: any) => typeof param === 'string' ? param : param.text);
+          // Check if it's an array of objects with name and value properties
+          if (templateParameters.length > 0 && typeof templateParameters[0] === 'object' && 'name' in templateParameters[0]) {
+            // New format: array of {name, value} objects
+            processedParameters = templateParameters.map((param: any) => ({
+              name: param.name,
+              value: param.value || param.text || String(param)
+            }));
+          } else {
+            // Legacy format: array of parameter names or values
+            processedParameters = templateParameters.map((param: any, index: number) => ({
+              name: `param_${index + 1}`,
+              value: typeof param === 'string' ? param : String(param)
+            }));
+          }
         } else if (typeof templateParameters === 'object') {
-          // If it's an object, convert to array of values
-          processedParameters = Object.values(templateParameters).map((value: any) => String(value));
+          // If it's an object with parameter names as keys and values as values
+          processedParameters = Object.entries(templateParameters).map(([paramName, paramValue]) => ({
+            name: paramName,
+            value: String(paramValue)
+          }));
         }
       }
       
@@ -254,7 +296,8 @@ async function processMessageDirectly(data: MessageJobData) {
         phoneNumber,
         templateName,
         processedParameters,
-        templateLanguage || 'en_US'
+        templateLanguage || 'en_US',
+        imageUrl // Pass the template image URL
       );
     } else if (imageUrl) {
       logger.info('Processing image message directly with WhatsApp Cloud API', { campaignId, mrId, phoneNumber, imageUrl });
@@ -386,6 +429,7 @@ export const addTemplateMessageToQueue = async (
   templateName: string,
   templateLanguage: string = 'en_US',
   templateParameters?: Array<{ type: string; text: string }>,
+  templateImageUrl?: string,
   delay?: number
 ) => {
   const data: MessageJobData = {
@@ -393,6 +437,7 @@ export const addTemplateMessageToQueue = async (
     mrId,
     phoneNumber,
     content: '', // Not used for templates
+    imageUrl: templateImageUrl,
     messageType: 'template',
     templateName,
     templateLanguage,

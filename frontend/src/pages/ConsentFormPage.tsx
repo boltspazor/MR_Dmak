@@ -1,14 +1,10 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import ConsentForm from '../components/ConsentForm';
 import OptOutForm from '../components/OptOutForm';
 import ConsentStatusChecker from '../components/ConsentStatusChecker';
 import Header from '../components/Header';
 
 const ConsentFormPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'consent' | 'optout' | 'status'>('consent');
   const [consentData, setConsentData] = useState<any>(null);
   const [optOutData, setOptOutData] = useState<any>(null);

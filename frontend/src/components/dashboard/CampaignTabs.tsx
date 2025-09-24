@@ -8,69 +8,74 @@ interface CampaignTabsProps {
   campaigns: CampaignRecord[];
   onRecipientListClick: (campaign: CampaignRecord) => void;
   onTemplatePreview: (campaign: CampaignRecord) => void;
+  onViewTemplate?: (campaign: CampaignRecord) => void;
   onResendCampaign?: (campaign: CampaignRecord) => void;
   sortField: keyof CampaignRecord;
   sortDirection: 'asc' | 'desc';
   onSort: (field: keyof CampaignRecord) => void;
   loading?: boolean;
+  templateLoading?: boolean;
 }
 
 const CampaignTabs: React.FC<CampaignTabsProps> = ({
   campaigns,
   onRecipientListClick,
   onTemplatePreview,
+  onViewTemplate,
   onResendCampaign,
   sortField,
   sortDirection,
   onSort,
-  loading = false
+  loading = false,
+  templateLoading = false
 }) => {
-  const [activeTab, setActiveTab] = useState<'ongoing' | 'completed'>('ongoing');
+  const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  // Separate campaigns into ongoing and completed
-  const { ongoingCampaigns, completedCampaigns } = useMemo(() => {
-    const ongoing = campaigns.filter(campaign => {
-      // If status is explicitly completed, cancelled, or failed, it's completed
-      if (campaign.status === 'completed' || 
-          campaign.status === 'cancelled' || 
-          campaign.status === 'failed') {
+  // Separate campaigns into active and completed based on recipient processing
+  const { activeCampaigns, completedCampaigns } = useMemo(() => {
+    const active = campaigns.filter(campaign => {
+      // Calculate how many recipients have been processed (sent + failed)
+      const processed = campaign.sentCount + campaign.failedCount;
+      
+      // If all recipients have been processed, it's completed
+      if (processed >= campaign.totalRecipients) {
         return false;
       }
       
-      // If status is sending but all messages are processed, consider it completed
-      if (campaign.status === 'sending') {
-        const processed = campaign.sentCount + campaign.failedCount;
-        if (processed >= campaign.totalRecipients) {
-          return false; // This should be in completed
-        }
-      }
-      
-      // Otherwise, it's ongoing
+      // If not all recipients have been processed, it's active
       return true;
     });
     
     const completed = campaigns.filter(campaign => {
-      // Explicitly completed statuses
-      if (campaign.status === 'completed' || 
-          campaign.status === 'cancelled' || 
-          campaign.status === 'failed') {
-        return true;
-      }
+      // Calculate how many recipients have been processed (sent + failed)
+      const processed = campaign.sentCount + campaign.failedCount;
       
-      // Sending campaigns where all messages are processed
-      if (campaign.status === 'sending') {
-        const processed = campaign.sentCount + campaign.failedCount;
-        if (processed >= campaign.totalRecipients) {
-          return true;
-        }
+      // If all recipients have been processed, it's completed
+      if (processed >= campaign.totalRecipients) {
+        return true;
       }
       
       return false;
     });
 
-    return { ongoingCampaigns: ongoing, completedCampaigns: completed };
+    console.log('Campaign filtering by recipient processing:', {
+      total: campaigns.length,
+      active: active.length,
+      completed: completed.length,
+      campaigns: campaigns.map(c => ({
+        name: c.campaignName,
+        status: c.status,
+        sent: c.sentCount,
+        failed: c.failedCount,
+        total: c.totalRecipients,
+        processed: c.sentCount + c.failedCount,
+        isComplete: (c.sentCount + c.failedCount) >= c.totalRecipients
+      }))
+    });
+
+    return { activeCampaigns: active, completedCampaigns: completed };
   }, [campaigns]);
 
   // Filter campaigns based on search and status
@@ -88,17 +93,17 @@ const CampaignTabs: React.FC<CampaignTabsProps> = ({
     });
   };
 
-  const filteredOngoingCampaigns = filterCampaigns(ongoingCampaigns);
+  const filteredActiveCampaigns = filterCampaigns(activeCampaigns);
   const filteredCompletedCampaigns = filterCampaigns(completedCampaigns);
 
-  const currentCampaigns = activeTab === 'ongoing' ? filteredOngoingCampaigns : filteredCompletedCampaigns;
+  const currentCampaigns = activeTab === 'active' ? filteredActiveCampaigns : filteredCompletedCampaigns;
   const currentCount = currentCampaigns.length;
 
   const tabs = [
     {
-      id: 'ongoing' as const,
-      label: 'Ongoing Campaigns',
-      count: ongoingCampaigns.length,
+      id: 'active' as const,
+      label: 'Active Campaigns',
+      count: activeCampaigns.length,
       icon: Clock,
       color: 'text-blue-600',
       bgColor: 'bg-blue-100'
@@ -157,11 +162,13 @@ const CampaignTabs: React.FC<CampaignTabsProps> = ({
         campaigns={currentCampaigns}
         onRecipientListClick={onRecipientListClick}
         onTemplatePreview={onTemplatePreview}
+        onViewTemplate={onViewTemplate}
         onResendCampaign={onResendCampaign}
         sortField={sortField}
         sortDirection={sortDirection}
         onSort={onSort}
         loading={loading}
+        templateLoading={templateLoading}
       />
     </div>
   );

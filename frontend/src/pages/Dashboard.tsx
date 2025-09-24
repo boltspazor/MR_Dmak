@@ -16,7 +16,7 @@ import Header from '../components/Header';
 import CommonFeatures from '../components/CommonFeatures';
 import CampaignStats from '../components/dashboard/CampaignStats';
 import CampaignTabs from '../components/dashboard/CampaignTabs';
-import { campaignsAPI, Campaign } from '../api/campaigns-new';
+import { campaignsAPI, templateAPI, Campaign, Template } from '../api/campaigns-new';
 import { api } from '../api/config';
 import toast from 'react-hot-toast';
 
@@ -25,6 +25,7 @@ interface CampaignRecord {
   campaignName: string;
   campaignId: string;
   template: {
+    id: string;
     name: string;
     metaTemplateName?: string;
     isMetaTemplate: boolean;
@@ -105,36 +106,51 @@ const Dashboard: React.FC = () => {
     const loadCampaigns = async () => {
       try {
         setLoading(true);
+        console.log('Loading campaigns...');
         const response = await campaignsAPI.getCampaigns();
+        console.log('Campaigns API response:', response);
         const campaignsData = response.campaigns || [];
+        console.log('Campaigns data:', campaignsData);
         
         // Transform the data to match the expected format
-        const transformedCampaigns = campaignsData.map((campaign: Campaign) => ({
-          id: campaign.id,
-          campaignName: campaign.name,
-          campaignId: campaign.campaignId,
-          template: {
-            name: campaign.template.name,
-            metaTemplateName: campaign.template.metaTemplateName,
-            isMetaTemplate: campaign.template.isMetaTemplate,
-            metaStatus: campaign.template.metaStatus
-          },
-          recipientList: campaign.recipientList ? {
-            name: campaign.recipientList.name,
-            recipientCount: campaign.recipientList.recipientCount
-          } : null,
-          date: new Date(campaign.createdAt).toISOString().split('T')[0],
-          sendStatus: campaign.status === 'completed' ? 'completed' : 
-                     campaign.status === 'sending' ? 'in progress' : 
-                     campaign.status === 'failed' ? 'failed' : 
-                     campaign.status === 'cancelled' ? 'cancelled' : 'pending',
-          totalRecipients: campaign.progress.total,
-          sentCount: campaign.progress.sent,
-          failedCount: campaign.progress.failed,
-          successRate: campaign.progress.successRate,
-          status: campaign.status
-        }));
+        const transformedCampaigns = campaignsData.map((campaign: Campaign) => {
+          console.log('Processing campaign:', campaign);
+          
+          return {
+            id: campaign.id,
+            campaignName: campaign.name,
+            campaignId: campaign.campaignId,
+            template: campaign.template ? {
+              id: campaign.template.id,
+              name: campaign.template.name,
+              metaTemplateName: campaign.template.metaTemplateName,
+              isMetaTemplate: campaign.template.isMetaTemplate,
+              metaStatus: campaign.template.metaStatus
+            } : {
+              id: '',
+              name: 'Unknown Template',
+              metaTemplateName: undefined,
+              isMetaTemplate: false,
+              metaStatus: undefined
+            },
+            recipientList: campaign.recipientList ? {
+              name: campaign.recipientList.name,
+              recipientCount: campaign.recipientList.recipientCount
+            } : null,
+            date: new Date(campaign.createdAt).toISOString().split('T')[0],
+            sendStatus: campaign.status === 'completed' ? 'completed' : 
+                       campaign.status === 'sending' ? 'in progress' : 
+                       campaign.status === 'failed' ? 'failed' : 
+                       campaign.status === 'cancelled' ? 'cancelled' : 'pending',
+            totalRecipients: campaign.progress?.total || 0,
+            sentCount: campaign.progress?.sent || 0,
+            failedCount: campaign.progress?.failed || 0,
+            successRate: campaign.progress?.successRate || 0,
+            status: campaign.status
+          };
+        });
         
+        console.log('Transformed campaigns:', transformedCampaigns);
         setCampaigns(transformedCampaigns);
       } catch (error: any) {
         console.error('Failed to load campaigns:', error);
@@ -192,15 +208,91 @@ const Dashboard: React.FC = () => {
 
   const [showTemplatePreview, setShowTemplatePreview] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<any>(null);
+  
+  // Template details modal states
+  const [showTemplateDetails, setShowTemplateDetails] = useState(false);
+  const [templateDetails, setTemplateDetails] = useState<Template | null>(null);
+  const [templateLoading, setTemplateLoading] = useState(false);
 
-  const handleTemplatePreview = (campaign: CampaignRecord) => {
-    setPreviewTemplate({
-      name: campaign.template.name,
-      metaTemplateName: campaign.template.metaTemplateName,
-      isMetaTemplate: campaign.template.isMetaTemplate,
-      metaStatus: campaign.template.metaStatus
-    });
-    setShowTemplatePreview(true);
+  const handleTemplatePreview = async (campaign: CampaignRecord) => {
+    try {
+      setTemplateLoading(true);
+      console.log('Loading template preview for campaign:', campaign);
+      
+      // Get the template ID from the campaign data
+      const templateId = campaign.template?.id;
+      
+      if (!templateId) {
+        // Fallback to basic template info if no ID available
+        setPreviewTemplate({
+          name: campaign.template.name,
+          metaTemplateName: campaign.template.metaTemplateName,
+          isMetaTemplate: campaign.template.isMetaTemplate,
+          metaStatus: campaign.template.metaStatus
+        });
+        setShowTemplatePreview(true);
+        return;
+      }
+      
+      console.log('Fetching template for preview with ID:', templateId);
+      const template = await templateAPI.getTemplateById(templateId);
+      console.log('Template for preview:', template);
+      
+      // Set the full template data for preview
+      setPreviewTemplate({
+        name: template.name,
+        metaTemplateName: template.metaTemplateName,
+        isMetaTemplate: template.isMetaTemplate,
+        metaStatus: template.metaStatus,
+        content: template.content,
+        type: template.type,
+        imageUrl: template.imageUrl,
+        footerImageUrl: template.footerImageUrl,
+        parameters: template.parameters,
+        metaCategory: template.metaCategory,
+        metaLanguage: template.metaLanguage
+      });
+      setShowTemplatePreview(true);
+    } catch (error) {
+      console.error('Failed to load template preview:', error);
+      // Fallback to basic template info on error
+      setPreviewTemplate({
+        name: campaign.template.name,
+        metaTemplateName: campaign.template.metaTemplateName,
+        isMetaTemplate: campaign.template.isMetaTemplate,
+        metaStatus: campaign.template.metaStatus
+      });
+      setShowTemplatePreview(true);
+    } finally {
+      setTemplateLoading(false);
+    }
+  };
+
+  const handleViewTemplate = async (campaign: CampaignRecord) => {
+    try {
+      setTemplateLoading(true);
+      console.log('Loading template details for campaign:', campaign);
+      
+      // Get the template ID from the campaign data
+      // The template ID should be available in the campaign data
+      const templateId = campaign.template?.id;
+      
+      if (!templateId) {
+        throw new Error('Template ID not found in campaign data');
+      }
+      
+      console.log('Fetching template with ID:', templateId);
+      const template = await templateAPI.getTemplateById(templateId);
+      console.log('Template details:', template);
+      
+      setTemplateDetails(template);
+      setShowTemplateDetails(true);
+    } catch (error) {
+      console.error('Failed to load template details:', error);
+      toast.error('Failed to load template details');
+    } finally {
+      setTemplateLoading(false);
+    }
   };
 
   // Recipient list popup states
@@ -356,12 +448,6 @@ const Dashboard: React.FC = () => {
     console.log('Exporting to PDF...');
   };
 
-  const summaryItems = [
-    { label: 'Total Campaigns', value: campaigns.length },
-    { label: 'Active Campaigns', value: campaigns.filter(c => c.status === 'sending' || c.status === 'pending').length },
-    { label: 'Completed Campaigns', value: campaigns.filter(c => c.status === 'completed').length },
-    { label: 'Success Rate', value: `${Math.round(campaigns.reduce((acc, c) => acc + c.successRate, 0) / campaigns.length || 0)}%` }
-  ];
 
   if (loading) {
     return (
@@ -414,10 +500,12 @@ const Dashboard: React.FC = () => {
           campaigns={sortedCampaigns}
           onRecipientListClick={handleRecipientListClick}
           onTemplatePreview={handleTemplatePreview}
+          onViewTemplate={handleViewTemplate}
           sortField={sortField}
           sortDirection={sortDirection}
           onSort={handleSort}
           loading={loading}
+          templateLoading={templateLoading}
         />
 
         {/* Template Preview Modal */}

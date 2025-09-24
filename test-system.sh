@@ -206,7 +206,7 @@ echo "mongosh 'mongodb://localhost:27017/mr_communication_tool'"
 echo ""
 echo "# Test WhatsApp API:"
 echo "curl -H 'Authorization: Bearer YOUR_TOKEN' \\"
-echo "  'https://graph.facebook.com/v18.0/me'"
+echo "  'https://graph.facebook.com/v19.0/me'"
 
 echo ""
 print_status "🚀 Your MR Communication Tool is ready!"

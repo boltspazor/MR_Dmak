@@ -22,7 +22,7 @@ const TemplateActions: React.FC<TemplateActionsProps> = ({
   onDuplicate
 }) => {
   const canEdit = userRole === 'super-admin' && !template.isMetaTemplate;
-  const canDelete = !template.isMetaTemplate;
+  const canDelete = true; // Allow deletion of both regular and Meta templates
 
   return (
     <div className="flex items-center space-x-1">

@@ -1,20 +1,35 @@
 import React from 'react';
 import { ExternalLink, RefreshCw, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { MetaTemplateStats } from '../../hooks/useMetaTemplates';
+import toast from 'react-hot-toast';
 
 interface MetaIntegrationProps {
   metaTemplateStats: MetaTemplateStats | null;
   syncingTemplates: boolean;
   onGetMetaTemplateCreationUrl: () => Promise<void>;
   onSyncTemplatesWithMeta: () => Promise<void>;
+  onRefreshTemplates: () => Promise<void>;
 }
 
 const MetaIntegration: React.FC<MetaIntegrationProps> = ({
   metaTemplateStats,
   syncingTemplates,
   onGetMetaTemplateCreationUrl,
-  onSyncTemplatesWithMeta
+  onSyncTemplatesWithMeta,
+  onRefreshTemplates
 }) => {
+  const handleSyncTemplates = async () => {
+    try {
+      await onSyncTemplatesWithMeta();
+      // Refresh the templates list after successful sync
+      await onRefreshTemplates();
+      toast.success('Templates synced and refreshed successfully!');
+    } catch (error) {
+      // Error handling is already done in the useMetaTemplates hook
+      console.error('Failed to sync templates:', error);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Meta Template Stats */}
@@ -32,7 +47,7 @@ const MetaIntegration: React.FC<MetaIntegrationProps> = ({
               </button>
 
               <button
-                onClick={onSyncTemplatesWithMeta}
+                onClick={handleSyncTemplates}
                 disabled={syncingTemplates}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 disabled:bg-gray-400 flex items-center space-x-2 transition-colors"
               >

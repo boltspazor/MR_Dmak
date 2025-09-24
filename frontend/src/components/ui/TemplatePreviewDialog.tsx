@@ -1,6 +1,8 @@
-import React from 'react';
-import { X, FileText, Download, Upload } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, FileText, Download, Upload, Edit3, Save, Loader, CheckCircle, Users } from 'lucide-react';
 import { Template } from '../../types';
+import { api } from '../../lib/api';
+import toast from 'react-hot-toast';
 
 interface TemplatePreviewDialogProps {
   isOpen: boolean;
@@ -11,6 +13,7 @@ interface TemplatePreviewDialogProps {
   showDownloadButton?: boolean;
   showBulkUploadButton?: boolean;
   variant?: 'full' | 'compact' | 'panel'; // full: Templates page style, compact: Campaigns/Dashboard style, panel: Fixed panel style
+  onUpdateTemplate?: (templateId: string, updates: Partial<Template>) => Promise<void>;
 }
 
 const TemplatePreviewDialog: React.FC<TemplatePreviewDialogProps> = ({
@@ -21,8 +24,70 @@ const TemplatePreviewDialog: React.FC<TemplatePreviewDialogProps> = ({
   onBulkUploadRecipients,
   showDownloadButton = true,
   showBulkUploadButton = true,
-  variant = 'full'
+  variant = 'full',
+  onUpdateTemplate
 }) => {
+  const [isEditingImage, setIsEditingImage] = useState(false);
+  const [imageUrl, setImageUrl] = useState(template?.imageUrl || '');
+  const [saving, setSaving] = useState(false);
+  
+  // Recipient list functionality
+  const [recipientLists, setRecipientLists] = useState<any[]>([]);
+  const [selectedRecipientList, setSelectedRecipientList] = useState<any>(null);
+  const [loadingRecipientLists, setLoadingRecipientLists] = useState(false);
+  const [showRecipients, setShowRecipients] = useState(false);
+
+  // Load recipient lists when template changes
+  useEffect(() => {
+    const loadRecipientLists = async () => {
+      if (template && isOpen) {
+        try {
+          setLoadingRecipientLists(true);
+          console.log('Loading recipient lists for template:', template._id);
+          const response = await api.get(`/recipient-lists/template/${template._id}`);
+          const listsData = response.data.data || response.data || [];
+          console.log('Loaded recipient lists:', listsData);
+          setRecipientLists(listsData);
+          
+          // Auto-select the first recipient list if available
+          if (listsData.length > 0) {
+            console.log('Auto-selecting first recipient list:', listsData[0]);
+            setSelectedRecipientList(listsData[0]);
+          } else {
+            setSelectedRecipientList(null);
+          }
+        } catch (error: any) {
+          console.error('Failed to load recipient lists:', error);
+          toast.error('Failed to load recipient lists');
+          setRecipientLists([]);
+          setSelectedRecipientList(null);
+        } finally {
+          setLoadingRecipientLists(false);
+        }
+      } else {
+        setRecipientLists([]);
+        setSelectedRecipientList(null);
+      }
+    };
+
+    loadRecipientLists();
+  }, [template, isOpen]);
+
+  const handleSaveImageUrl = async () => {
+    if (!template || !onUpdateTemplate) return;
+
+    setSaving(true);
+    try {
+      await onUpdateTemplate(template._id, { imageUrl });
+      toast.success('Template image URL updated successfully!');
+      setIsEditingImage(false);
+    } catch (error) {
+      toast.error('Failed to update template image URL');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (!isOpen || !template) return null;
 
   try {
@@ -649,8 +714,168 @@ const TemplatePreviewDialog: React.FC<TemplatePreviewDialogProps> = ({
                         </span>
                       </div>
                     )}
+                    
+                    {/* Image URL Section */}
+                    <div className="border-t border-gray-200 pt-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm font-medium text-gray-600">Image URL:</span>
+                        {onUpdateTemplate && (
+                          <button
+                            onClick={() => setIsEditingImage(!isEditingImage)}
+                            className="flex items-center space-x-1 text-indigo-600 hover:text-indigo-700 text-sm"
+                          >
+                            <Edit3 className="h-4 w-4" />
+                            <span>{isEditingImage ? 'Cancel' : 'Edit'}</span>
+                          </button>
+                        )}
+                      </div>
+                      
+                      {isEditingImage ? (
+                        <div className="space-y-3">
+                          <input
+                            type="url"
+                            value={imageUrl}
+                            onChange={(e) => setImageUrl(e.target.value)}
+                            placeholder="https://example.com/image.jpg"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                          />
+                          
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={handleSaveImageUrl}
+                              disabled={saving}
+                              className="flex items-center space-x-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm"
+                            >
+                              {saving ? (
+                                <Loader className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Save className="h-4 w-4" />
+                              )}
+                              <span>{saving ? 'Saving...' : 'Save'}</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setIsEditingImage(false);
+                                setImageUrl(template?.imageUrl || '');
+                              }}
+                              className="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-sm">
+                          {template.imageUrl && template.imageUrl.trim() !== '' ? (
+                            <div className="space-y-2">
+                              <p className="text-gray-900 font-medium break-all">{template.imageUrl}</p>
+                              <p className="text-green-600 flex items-center space-x-1">
+                                <CheckCircle className="h-3 w-3" />
+                                <span>Image URL configured</span>
+                              </p>
+                            </div>
+                          ) : (
+                            <p className="text-gray-500 italic">No image URL configured</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
+
+                {/* Recipient Lists Section */}
+                {template.parameters && template.parameters.length > 0 && (
+                  <div className="bg-white border border-gray-200 rounded-xl p-6">
+                    <div className="flex items-center mb-4">
+                      <Users className="h-5 w-5 text-indigo-600 mr-2" />
+                      <h3 className="text-lg font-semibold text-gray-800">Recipient Lists</h3>
+                    </div>
+                    
+                    {loadingRecipientLists ? (
+                      <div className="space-y-3">
+                        <div className="animate-pulse bg-gray-200 h-10 rounded-lg"></div>
+                        <div className="animate-pulse bg-gray-200 h-4 rounded w-3/4"></div>
+                      </div>
+                    ) : recipientLists.length > 0 ? (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Select Recipient List
+                          </label>
+                          <select
+                            value={selectedRecipientList?._id || ''}
+                            onChange={(e) => {
+                              const list = recipientLists.find(l => l._id === e.target.value);
+                              setSelectedRecipientList(list);
+                            }}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                          >
+                            <option value="">Select a recipient list</option>
+                            {recipientLists.map((list) => {
+                              const recipientNames = list.recipients && list.recipients.length > 0 
+                                ? list.recipients.slice(0, 2).map((r: any) => `${r.firstName} ${r.lastName}`).join(', ') + 
+                                  (list.recipients.length > 2 ? ` +${list.recipients.length - 2} more` : '')
+                                : 'No recipients';
+                              
+                              return (
+                                <option key={list._id} value={list._id}>
+                                  {list.name} ({recipientNames})
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
+                        
+                        {selectedRecipientList && (
+                          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center space-x-2">
+                                <CheckCircle className="h-4 w-4 text-green-600" />
+                                <span className="text-sm font-medium text-green-800">
+                                  {selectedRecipientList.name}
+                                </span>
+                              </div>
+                              <button
+                                onClick={() => setShowRecipients(!showRecipients)}
+                                className="text-xs text-green-600 hover:text-green-700"
+                              >
+                                {showRecipients ? 'Hide' : 'Show'} Recipients
+                              </button>
+                            </div>
+                            <div className="text-xs text-green-600">
+                              {selectedRecipientList.recipients?.length || selectedRecipientList.data?.length || 0} recipients ready
+                            </div>
+                            
+                            {/* Show individual recipient names */}
+                            {showRecipients && selectedRecipientList.recipients && selectedRecipientList.recipients.length > 0 && (
+                              <div className="mt-3 border-t border-green-200 pt-3">
+                                <div className="text-xs text-green-700 font-medium mb-2">Recipients:</div>
+                                <div className="max-h-32 overflow-y-auto">
+                                  <div className="grid grid-cols-1 gap-1">
+                                    {selectedRecipientList.recipients.map((recipient: any, index: number) => (
+                                      <div key={recipient._id || index} className="text-xs text-green-600 bg-white rounded px-2 py-1">
+                                        {recipient.firstName} {recipient.lastName}
+                                        {recipient.phone && (
+                                          <span className="text-gray-500 ml-2">({recipient.phone})</span>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-center py-4 text-gray-500">
+                        <Users className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                        <p className="text-sm">No recipient lists found for this template.</p>
+                        <p className="text-xs">Create a recipient list to see recipients here.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -17,7 +17,7 @@ export const config: AppConfig = {
     accessToken: process.env.WHATSAPP_ACCESS_TOKEN || '',
     phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || '',
     verifyToken: process.env.WHATSAPP_VERIFY_TOKEN || '',
-    apiUrl: process.env.WHATSAPP_API_URL || 'https://graph.facebook.com/v18.0'
+    apiUrl: process.env.WHATSAPP_API_URL || 'https://graph.facebook.com/v19.0'
   },
   
   cors: {

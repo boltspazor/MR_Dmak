@@ -20,4 +20,8 @@ router.get('/status-summary', metaTemplateController.getTemplateStatusSummary);
 router.get('/all', metaTemplateController.getAllTemplates);
 router.get('/meta', metaTemplateController.getMetaTemplates);
 
+// Template management routes
+router.delete('/:id', metaTemplateController.deleteTemplate);
+router.post('/update-image-url', metaTemplateController.updateTemplateImageUrl);
+
 export default router;

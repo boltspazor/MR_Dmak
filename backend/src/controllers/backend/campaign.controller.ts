@@ -12,7 +12,7 @@ export class CampaignController {
   /**
    * Create a campaign with direct MR selection (for templates without parameters)
    */
-  static async createCampaignWithMRs(req: AuthenticatedRequest, res: Response): Promise<void> {
+  static async createCampaignWithMRs(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { name, description, templateId, mrIds, scheduledAt } = req.body;
       const userId = req.user?.userId;
@@ -81,13 +81,12 @@ export class CampaignController {
   /**
    * Create a new campaign
    */
-  static async createCampaign(req: AuthenticatedRequest, res: Response): Promise<void> {
+  static async createCampaign(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { name, description, templateId, recipientListId, scheduledAt } = req.body;
       const userId = req.user?.userId;
-
-      // Validate template exists and is active
       const template = await Template.findById(templateId);
+      logger.info('Template found', { template });
       if (!template || !template.isActive) {
         return res.status(404).json({
           success: false,
@@ -95,8 +94,8 @@ export class CampaignController {
         });
       }
 
-      // Validate recipient list exists and is active
       const recipientList = await TemplateRecipients.findById(recipientListId);
+      logger.info('Recipient list found', { recipientList });
       if (!recipientList || !recipientList.isActive) {
         return res.status(404).json({
           success: false,
@@ -134,7 +133,7 @@ export class CampaignController {
         recipientListId: campaign.recipientListId
       });
 
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         message: 'Campaign created successfully',
         data: campaign
@@ -142,7 +141,7 @@ export class CampaignController {
 
     } catch (error) {
       logger.error('Error creating campaign:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to create campaign',
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -153,7 +152,7 @@ export class CampaignController {
   /**
    * Get all campaigns with template and recipient list details
    */
-  static async getCampaigns(req: AuthenticatedRequest, res: Response): Promise<void> {
+  static async getCampaigns(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const userId = req.user?.userId;
       const { page = 1, limit = 10, status, search } = req.query;
@@ -175,7 +174,7 @@ export class CampaignController {
 
       // Get campaigns with populated data
       const campaigns = await Campaign.find(query)
-        .populate('templateId', 'name metaTemplateName metaStatus isMetaTemplate type')
+        .populate('templateId', 'name metaTemplateName metaStatus isMetaTemplate type imageUrl')
         .populate('recipientListId', 'name description recipients')
         .populate('createdBy', 'name email')
         .sort({ createdAt: -1 })
@@ -238,14 +237,14 @@ export class CampaignController {
             scheduledAt: campaign.scheduledAt,
             startedAt: campaign.startedAt,
             completedAt: campaign.completedAt,
-            template: {
+            template: campaign.templateId ? {
               id: campaign.templateId._id,
               name: (campaign.templateId as any).name,
               metaTemplateName: (campaign.templateId as any).metaTemplateName,
               metaStatus: (campaign.templateId as any).metaStatus,
               isMetaTemplate: (campaign.templateId as any).isMetaTemplate,
               type: (campaign.templateId as any).type
-            },
+            } : null,
             recipientList: campaign.recipientListId ? {
               id: campaign.recipientListId._id,
               name: (campaign.recipientListId as any).name,
@@ -259,16 +258,16 @@ export class CampaignController {
               pending: realTimePendingCount,
               successRate
             },
-            createdBy: {
+            createdBy: campaign.createdBy ? {
               id: campaign.createdBy._id,
               name: (campaign.createdBy as any).name,
               email: (campaign.createdBy as any).email
-            }
+            } : null
           };
         })
       );
 
-      res.json({
+      return res.json({
         success: true,
         data: {
           campaigns: campaignsWithProgress,
@@ -283,7 +282,7 @@ export class CampaignController {
 
     } catch (error) {
       logger.error('Error getting campaigns:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to get campaigns',
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -294,7 +293,7 @@ export class CampaignController {
   /**
    * Get campaign by ID with full details
    */
-  static async getCampaignById(req: AuthenticatedRequest, res: Response): Promise<void> {
+  static async getCampaignById(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { campaignId } = req.params;
       const userId = req.user?.userId;
@@ -362,7 +361,7 @@ export class CampaignController {
             });
           }
 
-          return {
+          return  {
             id: recipient._id || recipient.mrId,
             mrId: recipient.mrId,
             firstName: recipient.firstName,
@@ -389,7 +388,7 @@ export class CampaignController {
         ? Math.round((sentCount / campaign.totalRecipients) * 100) 
         : 0;
 
-      res.json({
+      return res.json({
         success: true,
         data: {
           campaign: {
@@ -403,7 +402,7 @@ export class CampaignController {
             startedAt: campaign.startedAt,
             completedAt: campaign.completedAt
           },
-          template: {
+          template: campaign.templateId ? {
             id: campaign.templateId._id,
             name: (campaign.templateId as any).name,
             metaTemplateName: (campaign.templateId as any).metaTemplateName,
@@ -411,7 +410,7 @@ export class CampaignController {
             isMetaTemplate: (campaign.templateId as any).isMetaTemplate,
             type: (campaign.templateId as any).type,
             metaLanguage: (campaign.templateId as any).metaLanguage
-          },
+          } : null,
           recipientList: campaign.recipientListId ? {
             id: campaign.recipientListId._id,
             name: (campaign.recipientListId as any).name,
@@ -432,7 +431,7 @@ export class CampaignController {
 
     } catch (error) {
       logger.error('Error getting campaign by ID:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to get campaign',
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -443,7 +442,7 @@ export class CampaignController {
   /**
    * Update campaign status
    */
-  static async updateCampaignStatus(req: AuthenticatedRequest, res: Response): Promise<void> {
+  static async updateCampaignStatus(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { campaignId } = req.params;
       const { status } = req.body;
@@ -451,11 +450,10 @@ export class CampaignController {
 
       const validStatuses = ['draft', 'pending', 'sending', 'completed', 'failed', 'cancelled'];
       if (!validStatuses.includes(status)) {
-        res.status(400).json({
+        return res.status(400).json({
           success: false,
           message: 'Invalid status'
         });
-        return;
       }
 
       // Find the campaign first to get full details
@@ -464,16 +462,15 @@ export class CampaignController {
         createdBy: userId, 
         isActive: true 
       })
-      .populate('templateId', 'name metaTemplateName metaLanguage metaStatus isMetaTemplate')
+      .populate('templateId', 'name metaTemplateName metaLanguage metaStatus isMetaTemplate imageUrl')
       .populate('recipientListId', 'name recipients')
       .populate('mrIds', 'mrId firstName lastName phone');
 
       if (!campaign) {
-        res.status(404).json({
+        return res.status(404).json({
           success: false,
           message: 'Campaign not found'
         });
-        return;
       }
 
       const updateData: any = { status };
@@ -481,7 +478,7 @@ export class CampaignController {
       if (status === 'sending') {
         // Check if campaign is already in sending state
         if (campaign.status === 'sending') {
-          res.status(400).json({
+          return res.status(400).json({
             success: false,
             message: 'Campaign is already being sent'
           });
@@ -489,7 +486,7 @@ export class CampaignController {
 
         // Check if campaign is already completed
         if (campaign.status === 'completed') {
-          res.status(400).json({
+          return res.status(400).json({
             success: false,
             message: 'Campaign has already been completed'
           });
@@ -565,7 +562,7 @@ export class CampaignController {
         // Check if messages have already been enqueued for this campaign
         const existingMessageLogs = await MessageLog.find({ campaignId: campaign._id });
         if (existingMessageLogs.length > 0) {
-          res.status(400).json({
+          return res.status(400).json({
             success: false,
             message: 'Messages have already been enqueued for this campaign'
           });
@@ -601,6 +598,7 @@ export class CampaignController {
               templateName: template.metaTemplateName,
               templateLanguage: template.metaLanguage,
               templateParameters: recipient.parameters || {},
+              imageUrl: template.imageUrl || '', // Pass template imageUrl to queue
               messageLogId: (messageLog._id as any).toString(),
             });
 
@@ -619,7 +617,7 @@ export class CampaignController {
           enqueuedCount
         });
 
-        res.json({
+        return res.json({
           success: true,
           message: `Campaign activated! ${enqueuedCount} messages enqueued for sending`,
           data: {
@@ -644,7 +642,7 @@ export class CampaignController {
           status: updatedCampaign?.status 
         });
 
-        res.json({
+        return res.json({
           success: true,
           message: 'Campaign status updated successfully',
           data: updatedCampaign
@@ -662,7 +660,7 @@ export class CampaignController {
           status: updatedCampaign?.status 
         });
 
-        res.json({
+        return res.json({
           success: true,
           message: 'Campaign status updated successfully',
           data: updatedCampaign
@@ -671,7 +669,7 @@ export class CampaignController {
 
     } catch (error) {
       logger.error('Error updating campaign status:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to update campaign status',
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -682,7 +680,7 @@ export class CampaignController {
   /**
    * Delete campaign (soft delete)
    */
-  static async deleteCampaign(req: AuthenticatedRequest, res: Response): Promise<void> {
+  static async deleteCampaign(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { campaignId } = req.params;
       const userId = req.user?.userId;
@@ -702,14 +700,14 @@ export class CampaignController {
 
       logger.info('Campaign deleted', { campaignId: campaign.campaignId });
 
-      res.json({
+      return res.json({
         success: true,
         message: 'Campaign deleted successfully'
       });
 
     } catch (error) {
       logger.error('Error deleting campaign:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to delete campaign',
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -720,7 +718,7 @@ export class CampaignController {
   /**
    * Get real-time message status from WhatsApp Cloud API
    */
-  static async getMessageStatus(req: AuthenticatedRequest, res: Response): Promise<void> {
+  static async getMessageStatus(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { messageId } = req.params;
 
@@ -747,18 +745,18 @@ export class CampaignController {
         status: messageLog.status,
         timestamp: (messageLog as any).lastUpdated || messageLog.updatedAt,
         recipient_id: messageLog.phoneNumber,
-        conversation: null, // Not stored in our database
-        pricing: null // Not stored in our database
+        conversation: null as any, // Not stored in our database
+        pricing: null as any // Not stored in our database
       };
 
-      res.json({
+      return res.json({
         success: true,
         data: transformedStatus
       });
 
     } catch (error) {
       logger.error('Error getting message status:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to get message status',
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -769,7 +767,7 @@ export class CampaignController {
   /**
    * Update message status from webhook
    */
-  static async updateMessageStatus(req: AuthenticatedRequest, res: Response): Promise<void> {
+  static async updateMessageStatus(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { messageId, status, timestamp, recipient_id } = req.body;
 
@@ -808,7 +806,7 @@ export class CampaignController {
         await this.checkAndUpdateCampaignCompletion(updatedLog.campaignId.toString());
       }
 
-      res.json({
+      return res.json({
         success: true,
         data: {
           messageId: updatedLog.messageId,
@@ -825,7 +823,7 @@ export class CampaignController {
 
     } catch (error) {
       logger.error('Error updating message status:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to update message status',
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -873,7 +871,7 @@ export class CampaignController {
   /**
    * Manually check and update campaign completion status
    */
-  static async checkCampaignCompletion(req: AuthenticatedRequest, res: Response): Promise<void> {
+  static async checkCampaignCompletion(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { campaignId } = req.params;
       const userId = req.user?.userId;
@@ -897,11 +895,11 @@ export class CampaignController {
 
       // Get updated campaign
       const updatedCampaign = await Campaign.findById(campaign._id)
-        .populate('templateId', 'name metaTemplateName metaLanguage metaStatus isMetaTemplate')
+        .populate('templateId', 'name metaTemplateName metaLanguage metaStatus isMetaTemplate imageUrl')
         .populate('recipientListId', 'name recipients')
         .populate('createdBy', 'name email');
 
-      res.json({
+      return res.json({
         success: true,
         message: 'Campaign completion status checked and updated',
         data: {
@@ -913,7 +911,7 @@ export class CampaignController {
 
     } catch (error) {
       logger.error('Error checking campaign completion:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to check campaign completion',
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -924,7 +922,7 @@ export class CampaignController {
   /**
    * Get real-time status for all messages in a campaign
    */
-  static async getCampaignRealTimeStatus(req: AuthenticatedRequest, res: Response): Promise<void> {
+  static async getCampaignRealTimeStatus(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { campaignId } = req.params;
       const userId = req.user?.userId;
@@ -1005,7 +1003,7 @@ export class CampaignController {
         })
       );
 
-      res.json({
+      return res.json({
         success: true,
         data: {
           campaignId: campaign._id,
@@ -1018,7 +1016,7 @@ export class CampaignController {
 
     } catch (error) {
       logger.error('Error getting campaign real-time status:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Failed to get campaign real-time status',
         error: error instanceof Error ? error.message : 'Unknown error'

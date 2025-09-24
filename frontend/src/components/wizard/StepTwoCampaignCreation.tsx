@@ -151,6 +151,7 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
     return template.parameters.length > 0;
   };
 
+
   // Get MRs to show based on template parameters
   const mrsToShow = useMemo(() => {
     // If template has parameters, show template recipients
@@ -287,12 +288,17 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
   };
 
   const isFormValid = () => {
+    // Basic validation
+    if (!selectedTemplate || selectedMRs.length === 0 || !campaignName.trim().length) {
+      return false;
+    }
+
     // For templates with parameters, we need a recipient list
     if (hasParameters(selectedTemplate)) {
-      return selectedTemplate && selectedMRs.length > 0 && campaignName.trim().length > 0 && selectedRecipientList;
+      if (!selectedRecipientList) return false;
     }
-    // For templates without parameters, we only need MRs selected
-    return selectedTemplate && selectedMRs.length > 0 && campaignName.trim().length > 0;
+
+    return true;
   };
 
   return (

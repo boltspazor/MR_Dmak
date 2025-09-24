@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Loader } from 'lucide-react';
 import { Template } from '../../types';
 
 interface DeleteConfirmationDialogProps {
@@ -7,13 +7,15 @@ interface DeleteConfirmationDialogProps {
   template: Template | null;
   onConfirm: () => void;
   onCancel: () => void;
+  isDeleting?: boolean;
 }
 
 const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
   isOpen,
   template,
   onConfirm,
-  onCancel
+  onCancel,
+  isDeleting = false
 }) => {
   if (!isOpen || !template) return null;
 
@@ -31,20 +33,41 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
               Delete Template
             </h3>
             <p className="text-sm text-gray-600 mb-6">
-              Are you sure you want to delete the template <span className="font-medium text-gray-900">"{template.name}"</span>? This action cannot be undone.
+              {template.isMetaTemplate ? (
+                <>
+                  Are you sure you want to delete the Meta template <span className="font-medium text-gray-900">"{template.name}"</span>? 
+                  <br /><br />
+                  <span className="text-orange-600 font-medium">⚠️ This will attempt to delete the template from Meta WhatsApp Business Platform first (if supported), then remove it from the local database.</span>
+                  <br /><br />
+                  This action cannot be undone.
+                </>
+              ) : (
+                <>
+                  Are you sure you want to delete the template <span className="font-medium text-gray-900">"{template.name}"</span>? This action cannot be undone.
+                </>
+              )}
             </p>
             <div className="flex space-x-3">
               <button
                 onClick={onCancel}
-                className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                disabled={isDeleting}
+                className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
                 onClick={onConfirm}
-                className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                disabled={isDeleting}
+                className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
-                Delete
+                {isDeleting ? (
+                  <>
+                    <Loader className="h-4 w-4 animate-spin mr-2" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete'
+                )}
               </button>
             </div>
           </div>

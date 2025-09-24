@@ -156,8 +156,9 @@ class WhatsAppCloudAPIService {
   async sendTemplateMessage(
     to: string, 
     templateName: string, 
-    parameters: string[] = [],
-    languageCode: string = 'en_US'
+    parameters: Array<{name: string, value: string}> = [],
+    languageCode: string = 'en_US',
+    imageUrl?: string
   ): Promise<WhatsAppResponse> {
     try {
       const messageData: TemplateMessage = {
@@ -172,23 +173,58 @@ class WhatsAppCloudAPIService {
         }
       };
 
-      // Add parameters if provided
+      // Add components (header and/or body) if provided
+      const components: any[] = [];
+      
+      // Check if template requires an image header
+      // Some templates like 'meeting_targets_utility' require an image header even if no imageUrl is provided
+      const templatesRequiringImage = ['meeting_targets_utility', 'meeting_target'];
+      const shouldIncludeImage = (imageUrl && imageUrl.trim() !== '' && !imageUrl.startsWith('meta://')) || 
+                               templatesRequiringImage.includes(templateName);
+      
+      if (shouldIncludeImage) {
+        let actualImageUrl = imageUrl;
+        
+        // If no imageUrl provided but template requires image, use a default placeholder
+        if (!actualImageUrl || actualImageUrl.startsWith('meta://')) {
+          actualImageUrl = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRzPLmPrFTA1XEvErYNaPHarrT1I0GXcK3MlQ&s';
+        }
+        
+        components.push({
+          type: 'header',
+          parameters: [
+            {
+              type: 'image',
+              image: {
+                link: actualImageUrl
+              }
+            }
+          ]
+        });
+      }
+      
+      // Add body component if parameters are provided
       if (parameters.length > 0) {
-        messageData.template.components = [
-          {
-            type: 'body',
-            parameters: parameters.map(param => ({
-              type: 'text',
-              text: param
-            }))
-          }
-        ];
+        components.push({
+          type: 'body',
+          parameters: parameters.map(param => ({
+            type: 'text',
+            parameter_name: param.name,
+            text: param.value
+          }))
+        });
+      }
+      
+      if (components.length > 0) {
+        messageData.template.components = components;
       }
 
       logger.info('Sending WhatsApp template message', {
         to: this.formatPhoneNumber(to),
         templateName,
-        parametersCount: parameters.length
+        parametersCount: parameters.length,
+        parameters: parameters,
+        messageData: JSON.stringify(messageData, null, 2)
       });
 
       const response: AxiosResponse<WhatsAppResponse> = await axios.post(
