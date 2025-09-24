@@ -10,12 +10,7 @@ let redisAvailable = false;
 // Check if Redis is available
 const checkRedisAvailability = async () => {
   try {
-    const testQueue = new Bull('test-queue', {
-      redis: {
-        port: parseInt(process.env.REDIS_PORT || '6379'),
-        host: process.env.REDIS_HOST || 'localhost',
-      },
-    });
+    const testQueue = new Bull('message queue', "rediss://default:ASmoAAIncDIwOGZhOGVhMDM0Zjg0OWU4YTk3ZjZhMzI3MWQ1MzM1YXAyMTA2NjQ@outgoing-glider-10664.upstash.io:6379")
     
     await testQueue.isReady();
     await testQueue.close();
@@ -32,11 +27,7 @@ const initializeQueue = async () => {
   
   if (redisAvailable) {
     try {
-      messageQueue = new Bull('message queue', {
-        redis: {
-          port: parseInt(process.env.REDIS_PORT || '6379'),
-          host: process.env.REDIS_HOST || 'localhost',
-        },
+      messageQueue = new Bull('message queue', "rediss://default:ASmoAAIncDIwOGZhOGVhMDM0Zjg0OWU4YTk3ZjZhMzI3MWQ1MzM1YXAyMTA2NjQ@outgoing-glider-10664.upstash.io:6379", {
         defaultJobOptions: {
           removeOnComplete: 100,
           removeOnFail: 50,

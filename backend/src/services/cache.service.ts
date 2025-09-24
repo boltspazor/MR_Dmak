@@ -11,12 +11,9 @@ class CacheService {
 
   private async initializeRedis() {
     try {
-      this.redis = new Redis({
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
-        maxRetriesPerRequest: 3,
-        lazyConnect: true,
-      });
+      this.redis = new Redis(
+        "rediss://default:ASmoAAIncDIwOGZhOGVhMDM0Zjg0OWU4YTk3ZjZhMzI3MWQ1MzM1YXAyMTA2NjQ@outgoing-glider-10664.upstash.io:6379"
+      );
 
       this.redis.on('connect', () => {
         logger.info('✅ Redis cache connected');
