@@ -29,6 +29,7 @@
     "ioredis": "^5.7.0",
     "joi": "^18.0.0",
     "jsonwebtoken": "^9.0.2",
+    "libphonenumber-js": "^1.12.22",
     "mongodb": "^6.18.0",
     "mongoose": "^8.18.0",
     "multer": "^2.0.2",

@@ -14,6 +14,7 @@ interface UploadProgressDialogProps {
   };
   status: 'uploading' | 'completed' | 'error';
   message?: string;
+  errors?: string[];
 }
 
 const UploadProgressDialog: React.FC<UploadProgressDialogProps> = ({
@@ -21,7 +22,8 @@ const UploadProgressDialog: React.FC<UploadProgressDialogProps> = ({
   onClose,
   progress,
   status,
-  message
+  message,
+  errors = []
 }) => {
   if (!isOpen) return null;
 
@@ -128,6 +130,30 @@ const UploadProgressDialog: React.FC<UploadProgressDialogProps> = ({
         {message && (
           <div className="mt-4 p-3 bg-gray-50 rounded-lg">
             <p className="text-sm text-gray-700">{message}</p>
+          </div>
+        )}
+
+        {/* Error Details */}
+        {errors && errors.length > 0 && (
+          <div className="mt-4">
+            <div className="flex items-center space-x-2 mb-2">
+              <AlertCircle className="w-4 h-4 text-red-600" />
+              <h4 className="text-sm font-semibold text-red-600">Error Details:</h4>
+            </div>
+            <div className="max-h-48 overflow-y-auto bg-red-50 border border-red-200 rounded-lg p-3">
+              <div className="space-y-1">
+                {errors.slice(0, 20).map((error, index) => (
+                  <div key={index} className="text-xs text-red-700 font-mono">
+                    {error}
+                  </div>
+                ))}
+                {errors.length > 20 && (
+                  <div className="text-xs text-red-600 font-semibold mt-2">
+                    ... and {errors.length - 20} more errors
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
 

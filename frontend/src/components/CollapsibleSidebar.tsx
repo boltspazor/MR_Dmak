@@ -2,15 +2,12 @@ import React, { useState } from 'react';
 import { 
   Home, 
   Users, 
-  FileText, 
-  Settings, 
   LogOut, 
   User,
   ChevronLeft,
   ChevronRight,
   Menu,
   X,
-  Megaphone,
   Layout,
   UserCheck,
   ClipboardList,
@@ -42,7 +39,6 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
 
   const navigationItems = [
     { name: 'Dashboard', route: '/dashboard', icon: Home },
-    { name: 'Campaigns', route: '/campaigns', icon: Megaphone },
     { name: 'Campaign Wizard', route: '/campaign-wizard', icon: Wand2 },
     { name: 'Templates', route: '/templates', icon: Layout },
     { name: 'Medical Reps', route: '/mrs', icon: UserCheck },
@@ -141,6 +137,21 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
 
         {/* Footer */}
         <div className="p-4 border-t border-gray-200">
+          {/* DVK Logo */}
+          <div className={`
+            flex justify-center mb-4
+            ${isCollapsed ? 'px-2' : 'px-4'}
+          `}>
+            <img 
+              src="/dvk.svg" 
+              alt="DVK Logo" 
+              className={`
+                ${isCollapsed ? 'w-8 h-8' : 'w-12 h-12'}
+                object-contain
+              `}
+            />
+          </div>
+
           {/* User Info */}
           <div className={`
             flex items-center gap-3 mb-3

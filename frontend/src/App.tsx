@@ -11,7 +11,6 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import SimpleMRTool from './pages/SimpleMRTool';
 import MedicalReps from './pages/SimpleMRTool';
-import Campaigns from './pages/Campaigns';
 import Templates from './pages/Templates';
 import SuperAdmin from './pages/SuperAdmin';
 import CampaignWizard from './pages/CampaignWizard';
@@ -92,16 +91,6 @@ function App() {
                 <RoleProtectedRoute requiredRoles={['admin', 'marketing_manager', 'super_admin']}>
                   <RouteWrapper>
                     <CampaignWizard />
-                  </RouteWrapper>
-                </RoleProtectedRoute>
-              }
-            />
-            <Route
-              path="/campaigns"
-              element={
-                <RoleProtectedRoute requiredRoles={['admin', 'marketing_manager', 'super_admin']}>
-                  <RouteWrapper>
-                    <Campaigns />
                   </RouteWrapper>
                 </RoleProtectedRoute>
               }

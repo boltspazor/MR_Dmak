@@ -83,9 +83,6 @@ const WizardTemplateTable: React.FC<WizardTemplateTableProps> = ({
               <th className="text-left py-3 px-6 text-sm font-medium text-gray-700">
                 Status
               </th>
-              <th className="text-left py-3 px-6 text-sm font-medium text-gray-700">
-                Actions
-              </th>
             </tr>
           </thead>
           <tbody>
@@ -111,7 +108,7 @@ const WizardTemplateTable: React.FC<WizardTemplateTableProps> = ({
                 </td>
                 <td className="py-3 px-6 text-sm text-gray-900">
                   <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
-                    {template.type.toUpperCase()}
+                    {template.metaCategory.toUpperCase()}
                   </span>
                 </td>
                 <td className="py-3 px-6 text-sm text-gray-900">
@@ -119,27 +116,10 @@ const WizardTemplateTable: React.FC<WizardTemplateTableProps> = ({
                 </td>
                 <td className="py-3 px-6 text-sm">
                   <div className="flex items-center space-x-2">
-                    {getStatusIcon(template.metaStatus)}
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(template.metaStatus)}`}>
+                    {getStatusIcon(template.metaStatus ?? 'UNKNOWN')}
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(template.metaStatus ?? 'UNKNOWN')}`}>
                       {template.metaStatus || 'UNKNOWN'}
                     </span>
-                  </div>
-                </td>
-                <td className="py-3 px-6 text-sm">
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onPreview(template);
-                      }}
-                      className="text-indigo-600 hover:text-indigo-800 text-xs font-medium hover:underline flex items-center space-x-1"
-                    >
-                      <Eye className="h-3 w-3" />
-                      <span>Preview</span>
-                    </button>
-                    {selectedTemplate?._id === template._id && (
-                      <CheckCircle className="h-4 w-4 text-indigo-600" />
-                    )}
                   </div>
                 </td>
               </tr>

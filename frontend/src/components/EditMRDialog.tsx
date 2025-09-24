@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
+import { parsePhoneNumber, isValidPhoneNumber } from 'libphonenumber-js';
 
 interface Contact {
   id: string;
@@ -42,6 +43,82 @@ const EditMRDialog: React.FC<EditMRDialogProps> = ({
   });
 
   const [errorMessage, setErrorMessage] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [normalizedPhone, setNormalizedPhone] = useState('');
+
+  // Function to normalize and validate phone number
+  const normalizePhoneNumber = (phone: string): { normalized: string; country: string; isValid: boolean; error?: string } => {
+    try {
+      // First, try to parse the phone number as-is
+      if (isValidPhoneNumber(phone)) {
+        const parsed = parsePhoneNumber(phone);
+        return {
+          normalized: parsed.format('E.164'),
+          country: parsed.country || 'Unknown',
+          isValid: true
+        };
+      }
+      
+      // If not valid, try common country codes
+      const commonCountries = ['US', 'IN', 'GB', 'CA', 'AU', 'DE', 'FR', 'IT', 'ES', 'BR', 'MX', 'JP', 'CN', 'KR'];
+      
+      for (const country of commonCountries) {
+        const phoneWithCountry = phone.startsWith('+') ? phone : `+${phone}`;
+        if (isValidPhoneNumber(phoneWithCountry)) {
+          const parsed = parsePhoneNumber(phoneWithCountry);
+          return {
+            normalized: parsed.format('E.164'),
+            country: parsed.country || country,
+            isValid: true
+          };
+        }
+      }
+      
+      // Try adding country codes for common patterns
+      if (phone.length === 10 && !phone.startsWith('0')) {
+        // US/Canada format
+        const usPhone = `+1${phone}`;
+        if (isValidPhoneNumber(usPhone)) {
+          const parsed = parsePhoneNumber(usPhone);
+          return {
+            normalized: parsed.format('E.164'),
+            country: parsed.country || 'US',
+            isValid: true
+          };
+        }
+      }
+      
+      if (phone.length === 11 && phone.startsWith('0')) {
+        // Remove leading 0 and try with country codes
+        const withoutZero = phone.substring(1);
+        for (const country of ['IN', 'GB', 'AU', 'DE', 'FR', 'IT', 'ES', 'BR', 'MX']) {
+          const phoneWithCountry = `+${withoutZero}`;
+          if (isValidPhoneNumber(phoneWithCountry)) {
+            const parsed = parsePhoneNumber(phoneWithCountry);
+            return {
+              normalized: parsed.format('E.164'),
+              country: parsed.country || country,
+              isValid: true
+            };
+          }
+        }
+      }
+      
+      return {
+        normalized: phone,
+        country: 'Unknown',
+        isValid: false,
+        error: 'Invalid phone number format'
+      };
+    } catch (error) {
+      return {
+        normalized: phone,
+        country: 'Unknown',
+        isValid: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  };
 
   useEffect(() => {
     if (contact) {
@@ -65,9 +142,19 @@ const EditMRDialog: React.FC<EditMRDialogProps> = ({
       setErrorMessage('❌ Please fill in all required fields');
       return;
     }
+
+    // Validate and normalize phone number
+    const phoneResult = normalizePhoneNumber(formData.phone.trim());
+    if (!phoneResult.isValid) {
+      setErrorMessage(`❌ Invalid phone number: ${phoneResult.error || 'Please enter a valid international phone number'}`);
+      return;
+    }
     
     try {
-      onUpdate(formData);
+      onUpdate({
+        ...formData,
+        phone: phoneResult.normalized
+      });
       // Only close and reset if successful
       setErrorMessage('');
       onClose();
@@ -96,6 +183,18 @@ const EditMRDialog: React.FC<EditMRDialogProps> = ({
       ...formData,
       [e.target.name]: e.target.value
     });
+
+    // Real-time phone validation
+    if (e.target.name === 'phone') {
+      if (e.target.value.trim()) {
+        const phoneResult = normalizePhoneNumber(e.target.value.trim());
+        setPhoneError(phoneResult.isValid ? '' : phoneResult.error || 'Invalid phone number format');
+        setNormalizedPhone(phoneResult.isValid ? phoneResult.normalized : '');
+      } else {
+        setPhoneError('');
+        setNormalizedPhone('');
+      }
+    }
   };
 
   if (!isOpen || !contact) return null;
@@ -159,9 +258,25 @@ const EditMRDialog: React.FC<EditMRDialogProps> = ({
               name="phone"
               value={formData.phone}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                phoneError ? 'border-red-300 bg-red-50' : 
+                normalizedPhone ? 'border-green-300 bg-green-50' : 
+                'border-gray-300'
+              }`}
+              placeholder="+1-555-123-4567, +91-98765-43210, 5551234567, etc."
               required
             />
+            {phoneError && (
+              <p className="text-red-600 text-xs mt-1">{phoneError}</p>
+            )}
+            {normalizedPhone && !phoneError && (
+              <p className="text-green-600 text-xs mt-1">
+                ✓ Valid: {normalizedPhone}
+              </p>
+            )}
+            <p className="text-gray-500 text-xs mt-1">
+              Supports international formats: US (+1), India (+91), UK (+44), Germany (+49), etc.
+            </p>
           </div>
 
           <div>

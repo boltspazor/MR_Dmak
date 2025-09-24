@@ -3,7 +3,6 @@ import { FileText, Plus, ExternalLink, CheckCircle, ArrowRight } from 'lucide-re
 import { api } from '../../api/config';
 import toast from 'react-hot-toast';
 import { WizardTemplate } from '../../pages/CampaignWizard';
-import { useNavigate } from 'react-router-dom';
 import WizardTemplateTable from './WizardTemplateTable';
 import TemplatePreviewDialog from '../ui/TemplatePreviewDialog';
 import { SkeletonTable } from '../ui/SkeletonLoader';
@@ -29,7 +28,6 @@ const StepOneTemplateSelection: React.FC<StepOneTemplateSelectionProps> = ({
   selectedTemplate,
   setSelectedTemplate
 }) => {
-  const navigate = useNavigate();
   const [templates, setTemplates] = useState<WizardTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [showTemplatePreview, setShowTemplatePreview] = useState(false);
@@ -149,48 +147,6 @@ const StepOneTemplateSelection: React.FC<StepOneTemplateSelectionProps> = ({
           />
         )}
       </div>
-
-      {/* Selected Template Summary */}
-      {selectedTemplate && (
-        <div className="mt-6 p-6 bg-indigo-50 rounded-lg border border-indigo-200">
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="font-medium text-indigo-900 text-lg">Selected Template</h4>
-            <CheckCircle className="w-6 h-6 text-indigo-600" />
-          </div>
-          
-          <div className="space-y-4">
-            <div>
-              <p className="text-indigo-800 font-medium text-lg">{selectedTemplate.name}</p>
-              <p className="text-sm text-indigo-600">
-                {selectedTemplate.type.toUpperCase()} • {selectedTemplate.parameters.length} parameters
-              </p>
-            </div>
-            
-            {selectedTemplate.parameters.length > 0 && (
-              <div>
-                <h5 className="font-medium text-indigo-900 mb-2">Template Parameters:</h5>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {selectedTemplate.parameters.map((param, index) => (
-                    <div key={index} className="bg-white bg-opacity-50 rounded px-3 py-2">
-                      <span className="text-sm font-medium text-indigo-800">{param.name}</span>
-                      <span className="text-xs text-indigo-600 ml-2">({param.type})</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            <div>
-              <h5 className="font-medium text-indigo-900 mb-2">Template Preview:</h5>
-              <div className="bg-white bg-opacity-50 rounded p-3">
-                <p className="text-sm text-indigo-800 whitespace-pre-wrap">
-                  {selectedTemplate.content}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Step Instructions */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">

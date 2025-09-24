@@ -11,6 +11,7 @@ interface AdvancedSearchProps {
   onClearFilters: () => void;
   filteredCount: number;
   totalCount: number;
+  onDownloadCSV?: () => void;
 }
 
 const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
@@ -21,7 +22,8 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
   onGroupChange,
   onClearFilters,
   filteredCount,
-  totalCount
+  totalCount,
+  onDownloadCSV
 }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [searchInput, setSearchInput] = useState(searchTerm);
@@ -101,14 +103,26 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
               </select>
             </div>
 
-            {/* Results Summary */}
-            <div className="flex items-center justify-end">
+            {/* Results Summary and Download */}
+            <div className="flex items-center justify-end space-x-4">
               <div className="bg-gradient-to-r from-indigo-50 to-blue-50 px-4 py-3 rounded-xl border border-indigo-100">
                 <div className="text-sm text-gray-700">
                   Showing <span className="font-bold text-indigo-600">{filteredCount}</span> of{' '}
                   <span className="font-bold text-gray-900">{totalCount}</span> MRs
                 </div>
               </div>
+              
+              {onDownloadCSV && (
+                <button
+                  onClick={onDownloadCSV}
+                  className="flex items-center space-x-2 px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-200 font-medium shadow-sm hover:shadow-md"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <span>Download CSV</span>
+                </button>
+              )}
             </div>
           </div>
 

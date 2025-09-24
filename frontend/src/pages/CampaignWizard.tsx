@@ -14,6 +14,7 @@ import TemplatePreviewDialog from '../components/ui/TemplatePreviewDialog';
 
 // Types
 export interface WizardTemplate {
+  metaCategory: any;
   _id: string;
   name: string;
   content: string;

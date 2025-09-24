@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { parsePhoneNumber, isValidPhoneNumber, AsYouType } from 'libphonenumber-js';
 import { api } from '../lib/api';
 import { Contact, Group, UploadProgress, UploadStatus } from '../types/mr.types';
 
@@ -20,6 +21,7 @@ export const useCSVImport = ({ contacts, groups, onSuccess }: UseCSVImportProps)
   });
   const [uploadStatus, setUploadStatus] = useState<UploadStatus['status']>('uploading');
   const [uploadMessage, setUploadMessage] = useState('');
+  const [uploadErrors, setUploadErrors] = useState<string[]>([]);
 
   const handleCSVImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -35,6 +37,7 @@ export const useCSVImport = ({ contacts, groups, onSuccess }: UseCSVImportProps)
       if (dataRows.length === 0) {
         setUploadStatus('error');
         setUploadMessage('No data rows found in the uploaded file');
+        setUploadErrors(['No data rows found in the uploaded file']);
         setShowUploadProgress(true);
         event.target.value = '';
         return;
@@ -56,6 +59,7 @@ export const useCSVImport = ({ contacts, groups, onSuccess }: UseCSVImportProps)
       
       setUploadStatus('uploading');
       setUploadMessage(`Starting upload of ${totalRows} MRs in ${totalBatches} batches...`);
+      setUploadErrors([]);
       setShowUploadProgress(true);
 
       let totalSuccessful = 0;
@@ -86,7 +90,39 @@ export const useCSVImport = ({ contacts, groups, onSuccess }: UseCSVImportProps)
             continue;
           }
           
-          const values = line.split(',');
+          // Parse CSV line properly handling quoted values
+          const parseCSVLine = (line: string): string[] => {
+            const result: string[] = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+              const char = line[i];
+              
+              if (char === '"') {
+                if (inQuotes && line[i + 1] === '"') {
+                  // Escaped quote
+                  current += '"';
+                  i++; // Skip next quote
+                } else {
+                  // Toggle quote state
+                  inQuotes = !inQuotes;
+                }
+              } else if (char === ',' && !inQuotes) {
+                // End of field
+                result.push(current.trim());
+                current = '';
+              } else {
+                current += char;
+              }
+            }
+            
+            // Add the last field
+            result.push(current.trim());
+            return result;
+          };
+          
+          const values = parseCSVLine(line);
           
           // Validate required columns
           if (values.length < 5) {
@@ -114,19 +150,97 @@ export const useCSVImport = ({ contacts, groups, onSuccess }: UseCSVImportProps)
             continue;
           }
 
-          // Validate phone number
+          // Validate and normalize phone number
           if (!values[3] || !values[3].trim()) {
             allErrors.push(`❌ Row ${actualRowIndex}: Phone number is required`);
             totalFailed++;
             continue;
           }
-          if (!values[3].startsWith('+91')) {
-            allErrors.push(`❌ Row ${actualRowIndex}: Phone number must start with +91 (found: ${values[3]})`);
-            totalFailed++;
-            continue;
-          }
-          if (values[3].length !== 13) {
-            allErrors.push(`❌ Row ${actualRowIndex}: Phone number must be 13 digits including +91 (found: ${values[3]})`);
+          
+          // Clean phone number (remove quotes and extra spaces)
+          let phoneNumber = values[3].replace(/['"]/g, '').trim();
+          
+          // Normalize and validate phone number using libphonenumber-js
+          const normalizePhoneNumber = (phone: string): { normalized: string; country: string; isValid: boolean; error?: string } => {
+            try {
+              // First, try to parse the phone number as-is
+              if (isValidPhoneNumber(phone)) {
+                const parsed = parsePhoneNumber(phone);
+                return {
+                  normalized: parsed.format('E.164'),
+                  country: parsed.country || 'Unknown',
+                  isValid: true
+                };
+              }
+              
+              // If not valid, try common country codes
+              const commonCountries = ['US', 'IN', 'GB', 'CA', 'AU', 'DE', 'FR', 'IT', 'ES', 'BR', 'MX', 'JP', 'CN', 'KR'];
+              
+              for (const country of commonCountries) {
+                const phoneWithCountry = phone.startsWith('+') ? phone : `+${phone}`;
+                if (isValidPhoneNumber(phoneWithCountry)) {
+                  const parsed = parsePhoneNumber(phoneWithCountry);
+                  return {
+                    normalized: parsed.format('E.164'),
+                    country: parsed.country || country,
+                    isValid: true
+                  };
+                }
+              }
+              
+              // Try adding country codes for common patterns
+              if (phone.length === 10 && !phone.startsWith('0')) {
+                // US/Canada format
+                const usPhone = `+1${phone}`;
+                if (isValidPhoneNumber(usPhone)) {
+                  const parsed = parsePhoneNumber(usPhone);
+                  return {
+                    normalized: parsed.format('E.164'),
+                    country: parsed.country || 'US',
+                    isValid: true
+                  };
+                }
+              }
+              
+              if (phone.length === 11 && phone.startsWith('0')) {
+                // Remove leading 0 and try with country codes
+                const withoutZero = phone.substring(1);
+                for (const country of ['IN', 'GB', 'AU', 'DE', 'FR', 'IT', 'ES', 'BR', 'MX']) {
+                  const phoneWithCountry = `+${withoutZero}`;
+                  if (isValidPhoneNumber(phoneWithCountry)) {
+                    const parsed = parsePhoneNumber(phoneWithCountry);
+                    return {
+                      normalized: parsed.format('E.164'),
+                      country: parsed.country || country,
+                      isValid: true
+                    };
+                  }
+                }
+              }
+              
+              return {
+                normalized: phone,
+                country: 'Unknown',
+                isValid: false,
+                error: 'Invalid phone number format'
+              };
+            } catch (error) {
+              return {
+                normalized: phone,
+                country: 'Unknown',
+                isValid: false,
+                error: error instanceof Error ? error.message : 'Unknown error'
+              };
+            }
+          };
+          
+          const phoneResult = normalizePhoneNumber(phoneNumber);
+          
+          console.log(`Row ${actualRowIndex}: Original phone: "${phoneNumber}" -> Normalized: "${phoneResult.normalized}" (${phoneResult.country})`);
+          
+          // Validate phone number
+          if (!phoneResult.isValid) {
+            allErrors.push(`❌ Row ${actualRowIndex}: Invalid phone number format (found: ${phoneNumber}, error: ${phoneResult.error || 'Unknown error'})`);
             totalFailed++;
             continue;
           }
@@ -153,7 +267,7 @@ export const useCSVImport = ({ contacts, groups, onSuccess }: UseCSVImportProps)
               mrId: values[0].trim(),
               firstName: values[1].trim(),
               lastName: values[2].trim(),
-              phone: values[3].trim(),
+              phone: phoneResult.normalized,
               groupId: groupId,
               comments: values[5] ? values[5].trim() : ''
             });
@@ -197,12 +311,15 @@ export const useCSVImport = ({ contacts, groups, onSuccess }: UseCSVImportProps)
       if (allErrors.length > 0) {
         setUploadStatus('error');
         setUploadMessage(`Upload completed with ${allErrors.length} errors. ${totalSuccessful} MRs were successfully created.`);
+        setUploadErrors(allErrors);
       } else if (totalSuccessful === 0) {
         setUploadStatus('error');
         setUploadMessage('No MRs were successfully created. Please check your file format.');
+        setUploadErrors(['No MRs were successfully created. Please check your file format.']);
       } else {
         setUploadStatus('completed');
         setUploadMessage(`Successfully uploaded ${totalSuccessful} MRs!`);
+        setUploadErrors([]);
       }
 
       // Reset file input
@@ -211,6 +328,7 @@ export const useCSVImport = ({ contacts, groups, onSuccess }: UseCSVImportProps)
       console.error('Error uploading file:', error);
       setUploadStatus('error');
       setUploadMessage('Failed to upload file: ' + (error.message || 'Unknown error'));
+      setUploadErrors(['Failed to upload file: ' + (error.message || 'Unknown error')]);
     }
   };
 
@@ -220,6 +338,7 @@ export const useCSVImport = ({ contacts, groups, onSuccess }: UseCSVImportProps)
     uploadProgress,
     uploadStatus,
     uploadMessage,
+    uploadErrors,
     handleCSVImport
   };
 };

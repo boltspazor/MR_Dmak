@@ -15,6 +15,7 @@ interface MRListProps {
   sortField: keyof Contact;
   sortDirection: 'asc' | 'desc';
   loading?: boolean;
+  onDownloadCSV?: () => void;
 }
 
 const MRList: React.FC<MRListProps> = ({
@@ -25,7 +26,8 @@ const MRList: React.FC<MRListProps> = ({
   onSort,
   sortField,
   sortDirection,
-  loading = false
+  loading = false,
+  onDownloadCSV
 }) => {
   const {
     filters,
@@ -73,6 +75,7 @@ const MRList: React.FC<MRListProps> = ({
         onClearFilters={clearFilters}
         filteredCount={filteredContacts.length}
         totalCount={contacts.length}
+        onDownloadCSV={onDownloadCSV}
       />
 
       {/* MR Table */}

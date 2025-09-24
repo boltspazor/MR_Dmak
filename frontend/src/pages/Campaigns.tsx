@@ -10,7 +10,6 @@ import TemplateRecipientUploadV2 from '../components/ui/TemplateRecipientUploadV
 import { useTemplateRecipients } from '../hooks/useTemplateRecipients';
 import { useCampaigns } from '../hooks/useCampaigns';
 import { useCampaignActions } from '../hooks/useCampaignActions';
-import { Campaign } from '../api/campaigns-new';
 import { downloadTemplateCSV, cleanErrorMessage } from '../utils/campaignUtils';
 import TemplateMessagesTab from '../components/campaigns/TemplateMessagesTab';
 import CustomMessagesTab from '../components/campaigns/CustomMessagesTab';
@@ -19,8 +18,6 @@ import SendConfirmationModal from '../components/campaigns/SendConfirmationModal
 import ErrorPopup from '../components/campaigns/ErrorPopup';
 
 const Campaigns: React.FC = () => {
-  const navigate = useNavigate();
-  const { user } = useAuth();
   const { campaigns = [], templates = [], mrs = [], loading } = useCampaigns();
   const { createWithTemplateCampaign, createCustomMessageCampaign, createRecipientList } = useCampaignActions();
   

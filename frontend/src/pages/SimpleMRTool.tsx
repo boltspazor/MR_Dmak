@@ -41,6 +41,7 @@ const SimpleMRTool: React.FC = () => {
     uploadProgress,
     uploadStatus,
     uploadMessage,
+    uploadErrors,
     handleCSVImport
   } = useCSVImport({
     contacts,
@@ -77,6 +78,7 @@ const SimpleMRTool: React.FC = () => {
 
   // UI state
   const [isAddMRDialogOpen, setIsAddMRDialogOpen] = useState(false);
+  const [showErrorAlert, setShowErrorAlert] = useState(false);
 
 
 
@@ -103,8 +105,54 @@ const SimpleMRTool: React.FC = () => {
     downloadCSVTemplate();
   };
 
+  // Show error alert when there are upload errors
+  useEffect(() => {
+    if (uploadErrors && uploadErrors.length > 0 && uploadStatus === 'error') {
+      setShowErrorAlert(true);
+    }
+  }, [uploadErrors, uploadStatus]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50">
+      {/* Error Alert */}
+      {showErrorAlert && uploadErrors && uploadErrors.length > 0 && (
+        <div className="fixed top-4 right-4 z-50 max-w-md">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 shadow-lg">
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0">
+                <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-red-800">Bulk Import Failed</h3>
+                <p className="text-sm text-red-700 mt-1">
+                  {uploadErrors.length} error{uploadErrors.length > 1 ? 's' : ''} occurred during import. 
+                  Check the upload dialog for details.
+                </p>
+                <div className="mt-2 flex space-x-2">
+                  <button
+                    onClick={() => setShowErrorAlert(false)}
+                    className="text-xs text-red-600 hover:text-red-800 underline"
+                  >
+                    Dismiss
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowErrorAlert(false);
+                      setShowUploadProgress(true);
+                    }}
+                    className="text-xs text-red-600 hover:text-red-800 underline"
+                  >
+                    View Details
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <div className="p-8">
         {/* Header and Stats */}
@@ -123,6 +171,7 @@ const SimpleMRTool: React.FC = () => {
               onAddIndividual={() => setIsAddMRDialogOpen(true)}
               onCSVImport={handleCSVImport}
               onDownloadTemplate={handleTemplateDownload}
+              onDownloadCSV={exportContactsToCSV}
             />
           </div>
 
@@ -136,6 +185,7 @@ const SimpleMRTool: React.FC = () => {
             sortField={sortField}
             sortDirection={sortDirection}
             loading={loading}
+            onDownloadCSV={exportContactsToCSV}
           />
         </div>
 
@@ -146,6 +196,7 @@ const SimpleMRTool: React.FC = () => {
           isOpen={isAddMRDialogOpen}
           onClose={() => setIsAddMRDialogOpen(false)}
           onSuccess={handleAddMRSuccess}
+          contacts={contacts}
         />
 
         {/* Edit MR Dialog */}
@@ -173,6 +224,7 @@ const SimpleMRTool: React.FC = () => {
           progress={uploadProgress}
           status={uploadStatus}
           message={uploadMessage}
+          errors={uploadErrors}
         />
 
       </div>

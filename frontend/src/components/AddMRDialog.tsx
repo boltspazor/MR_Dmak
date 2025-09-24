@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { X, ChevronDown, Loader2 } from 'lucide-react';
+import { parsePhoneNumber, isValidPhoneNumber } from 'libphonenumber-js';
 import { api } from '../lib/api';
 import { useConfirm } from '../contexts/ConfirmContext';
+import { Contact } from '../types/mr.types';
 
 interface Group {
   id: string;
@@ -14,9 +16,10 @@ interface AddMRDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void; // Callback when MR is successfully added
+  contacts: Contact[]; // Pass contacts to determine next MR ID
 }
 
-const AddMRDialog: React.FC<AddMRDialogProps> = ({ isOpen, onClose, onSuccess }) => {
+const AddMRDialog: React.FC<AddMRDialogProps> = ({ isOpen, onClose, onSuccess, contacts }) => {
   const { alert } = useConfirm();
   const [formData, setFormData] = useState({
     mrId: '',
@@ -32,13 +35,120 @@ const AddMRDialog: React.FC<AddMRDialogProps> = ({ isOpen, onClose, onSuccess })
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [showGroupDropdown, setShowGroupDropdown] = useState(false);
+  const [phoneError, setPhoneError] = useState('');
+  const [normalizedPhone, setNormalizedPhone] = useState('');
 
-  // Fetch groups when dialog opens
+  // Function to normalize and validate phone number
+  const normalizePhoneNumber = (phone: string): { normalized: string; country: string; isValid: boolean; error?: string } => {
+    try {
+      // First, try to parse the phone number as-is
+      if (isValidPhoneNumber(phone)) {
+        const parsed = parsePhoneNumber(phone);
+        return {
+          normalized: parsed.format('E.164'),
+          country: parsed.country || 'Unknown',
+          isValid: true
+        };
+      }
+      
+      // If not valid, try common country codes
+      const commonCountries = ['US', 'IN', 'GB', 'CA', 'AU', 'DE', 'FR', 'IT', 'ES', 'BR', 'MX', 'JP', 'CN', 'KR'];
+      
+      for (const country of commonCountries) {
+        const phoneWithCountry = phone.startsWith('+') ? phone : `+${phone}`;
+        if (isValidPhoneNumber(phoneWithCountry)) {
+          const parsed = parsePhoneNumber(phoneWithCountry);
+          return {
+            normalized: parsed.format('E.164'),
+            country: parsed.country || country,
+            isValid: true
+          };
+        }
+      }
+      
+      // Try adding country codes for common patterns
+      if (phone.length === 10 && !phone.startsWith('0')) {
+        // US/Canada format
+        const usPhone = `+1${phone}`;
+        if (isValidPhoneNumber(usPhone)) {
+          const parsed = parsePhoneNumber(usPhone);
+          return {
+            normalized: parsed.format('E.164'),
+            country: parsed.country || 'US',
+            isValid: true
+          };
+        }
+      }
+      
+      if (phone.length === 11 && phone.startsWith('0')) {
+        // Remove leading 0 and try with country codes
+        const withoutZero = phone.substring(1);
+        for (const country of ['IN', 'GB', 'AU', 'DE', 'FR', 'IT', 'ES', 'BR', 'MX']) {
+          const phoneWithCountry = `+${withoutZero}`;
+          if (isValidPhoneNumber(phoneWithCountry)) {
+            const parsed = parsePhoneNumber(phoneWithCountry);
+            return {
+              normalized: parsed.format('E.164'),
+              country: parsed.country || country,
+              isValid: true
+            };
+          }
+        }
+      }
+      
+      return {
+        normalized: phone,
+        country: 'Unknown',
+        isValid: false,
+        error: 'Invalid phone number format'
+      };
+    } catch (error) {
+      return {
+        normalized: phone,
+        country: 'Unknown',
+        isValid: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  };
+
+  // Function to generate next MR ID
+  const generateNextMRId = (): string => {
+    if (!contacts || contacts.length === 0) {
+      return 'MR001'; // Start with MR001 if no contacts exist
+    }
+
+    // Extract numeric part from existing MR IDs and find the highest
+    const mrNumbers = contacts
+      .map(contact => {
+        const match = contact.mrId.match(/MR(\d+)/i);
+        return match ? parseInt(match[1], 10) : 0;
+      })
+      .filter(num => num > 0);
+
+    if (mrNumbers.length === 0) {
+      return 'MR001'; // Fallback if no valid MR numbers found
+    }
+
+    const highestNumber = Math.max(...mrNumbers);
+    const nextNumber = highestNumber + 1;
+    
+    // Format with leading zeros (e.g., MR001, MR002, etc.)
+    return `MR${nextNumber.toString().padStart(3, '0')}`;
+  };
+
+  // Fetch groups when dialog opens and auto-fill MR ID
   useEffect(() => {
     if (isOpen) {
       fetchGroups();
+      // Auto-fill the MR ID with the next available ID
+      const nextMRId = generateNextMRId();
+      setFormData(prev => ({
+        ...prev,
+        mrId: nextMRId
+      }));
     }
-  }, [isOpen]);
+  }, [isOpen, contacts]);
 
   const fetchGroups = async () => {
     setLoading(true);
@@ -88,8 +198,11 @@ const AddMRDialog: React.FC<AddMRDialogProps> = ({ isOpen, onClose, onSuccess })
       setSubmitting(false);
       return;
     }
-    if (!formData.phone.startsWith('+91') || formData.phone.length !== 13) {
-      setErrorMessage('❌ Phone number must be 13 digits starting with +91');
+
+    // Validate and normalize phone number
+    const phoneResult = normalizePhoneNumber(formData.phone.trim());
+    if (!phoneResult.isValid) {
+      setErrorMessage(`❌ Invalid phone number: ${phoneResult.error || 'Please enter a valid international phone number'}`);
       setSubmitting(false);
       return;
     }
@@ -100,7 +213,7 @@ const AddMRDialog: React.FC<AddMRDialogProps> = ({ isOpen, onClose, onSuccess })
         mrId: formData.mrId.trim(),
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
-        phone: formData.phone.trim(),
+        phone: phoneResult.normalized,
         groupId: formData.groupId || undefined,
         comments: formData.comments.trim() || undefined
       };
@@ -153,6 +266,18 @@ const AddMRDialog: React.FC<AddMRDialogProps> = ({ isOpen, onClose, onSuccess })
       ...prev,
       [field]: value
     }));
+
+    // Real-time phone validation
+    if (field === 'phone') {
+      if (value.trim()) {
+        const phoneResult = normalizePhoneNumber(value.trim());
+        setPhoneError(phoneResult.isValid ? '' : phoneResult.error || 'Invalid phone number format');
+        setNormalizedPhone(phoneResult.isValid ? phoneResult.normalized : '');
+      } else {
+        setPhoneError('');
+        setNormalizedPhone('');
+      }
+    }
   };
 
   const handleClose = () => {
@@ -199,8 +324,12 @@ const AddMRDialog: React.FC<AddMRDialogProps> = ({ isOpen, onClose, onSuccess })
               value={formData.mrId}
               onChange={(e) => handleChange('mrId', e.target.value)}
               className="w-full px-3 py-3 rounded-lg border-0 bg-gray-100"
-              placeholder="Enter MR ID"
+              placeholder="Auto-generated MR ID"
+              title="MR ID is auto-generated. You can modify it if needed."
             />
+            <p className="text-xs text-gray-500 mt-1">
+              Auto-generated from existing MRs. You can modify if needed.
+            </p>
           </div>
 
           <div>
@@ -231,9 +360,21 @@ const AddMRDialog: React.FC<AddMRDialogProps> = ({ isOpen, onClose, onSuccess })
               type="tel"
               value={formData.phone}
               onChange={(e) => handleChange('phone', e.target.value)}
-              className="w-full px-3 py-3 rounded-lg border-0 bg-gray-100"
-              placeholder="+919876543210"
+              className={`w-full px-3 py-3 rounded-lg border-0 ${
+                phoneError ? 'bg-red-50 border border-red-200' : 
+                normalizedPhone ? 'bg-green-50 border border-green-200' : 
+                'bg-gray-100'
+              }`}
+              placeholder="+91-98765-43210"
             />
+            {phoneError && (
+              <p className="text-red-600 text-xs mt-1">{phoneError}</p>
+            )}
+            {normalizedPhone && !phoneError && (
+              <p className="text-green-600 text-xs mt-1">
+                ✓ Valid: {normalizedPhone}
+              </p>
+            )}
           </div>
 
           <div>
