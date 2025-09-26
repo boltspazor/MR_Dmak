@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, CheckCircle, Clock, AlertCircle, Users, Send, RefreshCw } from 'lucide-react';
+import { CheckCircle, Clock, AlertCircle, Users, RefreshCw } from 'lucide-react';
 import { WizardCampaign } from '../../pages/CampaignWizard';
+import { campaignProgressAPI, CampaignProgress } from '../../api/campaign-progress';
+import toast from 'react-hot-toast';
 
 interface StepThreeProgressCheckProps {
   stepNumber: number;
@@ -25,63 +27,77 @@ const StepThreeProgressCheck: React.FC<StepThreeProgressCheckProps> = ({
   stepNumber,
   stepTitle,
   stepDescription,
+  onComplete,
+  onNext,
+  onPrev,
+  canGoNext,
+  canGoPrev,
   createdCampaign,
   campaignProgress,
   setCampaignProgress
 }) => {
-  const [isSimulating, setIsSimulating] = useState(false);
-  const [simulationComplete, setSimulationComplete] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [realTimeProgress, setRealTimeProgress] = useState<CampaignProgress | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [autoRefresh, setAutoRefresh] = useState(true);
 
-  // Simulate campaign progress
+  // Fetch real-time campaign progress from webhook data
   useEffect(() => {
-    if (createdCampaign && campaignProgress.total > 0 && !simulationComplete) {
-      simulateProgress();
-    }
-  }, [createdCampaign, campaignProgress.total, simulationComplete]);
-
-  const simulateProgress = async () => {
-    setIsSimulating(true);
-    
-    // Simulate sending messages over time
-    for (let i = 0; i < campaignProgress.total; i++) {
-      await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay per message
+    if (createdCampaign?.id) {
+      fetchRealTimeProgress();
       
-      setCampaignProgress(prev => {
-        const newProgress = { ...prev };
-        
-        // Ensure we don't exceed total
-        if (newProgress.sent + newProgress.failed >= newProgress.total) {
-          return newProgress;
+      // Set up auto-refresh every 5 seconds
+      const interval = setInterval(() => {
+        if (autoRefresh) {
+          fetchRealTimeProgress();
         }
-        
-        newProgress.pending = Math.max(0, newProgress.pending - 1);
-        
-        // 80% success rate simulation
-        if (Math.random() > 0.2) {
-          newProgress.sent += 1;
-        } else {
-          newProgress.failed += 1;
-        }
-        
-        return newProgress;
-      });
+      }, 5000);
+
+      return () => clearInterval(interval);
     }
-    
-    setIsSimulating(false);
-    setSimulationComplete(true);
+  }, [createdCampaign?.id, autoRefresh]);
+
+  const fetchRealTimeProgress = async () => {
+    if (!createdCampaign?.id) return;
+
+    try {
+      setIsLoading(true);
+      const progressData = await campaignProgressAPI.getCampaignProgress(createdCampaign.id);
+      
+      setRealTimeProgress(progressData);
+      setLastUpdated(new Date());
+      
+      // Update the campaign progress state with real data
+      setCampaignProgress({
+        total: progressData.progress.total,
+        sent: progressData.progress.sent,
+        failed: progressData.progress.failed,
+        pending: progressData.progress.pending
+      });
+
+    } catch (error: any) {
+      console.error('Failed to fetch campaign progress:', error);
+      
+      // Don't show error toast on first load to avoid spamming
+      if (lastUpdated) {
+        toast.error(`Failed to fetch campaign progress: ${error.message || 'Unknown error'}`);
+      }
+      
+      // Fallback: keep existing progress data if API fails
+      // This ensures the component still works even if the API is down
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleRefresh = () => {
-    if (createdCampaign) {
-      // Reset and restart simulation
-      setCampaignProgress({
-        total: campaignProgress.total, // Keep the original total
-        sent: 0,
-        failed: 0,
-        pending: campaignProgress.total
-      });
-      setSimulationComplete(false);
+    if (createdCampaign?.id) {
+      fetchRealTimeProgress();
     }
+  };
+
+  const toggleAutoRefresh = () => {
+    setAutoRefresh(!autoRefresh);
   };
 
   const getProgressPercentage = () => {
@@ -91,27 +107,19 @@ const StepThreeProgressCheck: React.FC<StepThreeProgressCheckProps> = ({
   };
 
   const getStatusColor = () => {
-    if (simulationComplete) {
+    if (campaignProgress.pending === 0) {
       return campaignProgress.failed === 0 ? 'text-green-600' : 'text-yellow-600';
     }
     return 'text-blue-600';
   };
 
   const getStatusText = () => {
-    if (simulationComplete) {
+    if (campaignProgress.pending === 0) {
       return campaignProgress.failed === 0 ? 'Completed Successfully' : 'Completed with Issues';
     }
-    return isSimulating ? 'Sending Messages...' : 'Sending';
+    return isLoading ? 'Loading Status...' : 'In Progress';
   };
 
-  const getStatusIcon = () => {
-    if (simulationComplete) {
-      return campaignProgress.failed === 0 ? CheckCircle : AlertCircle;
-    }
-    return isSimulating ? RefreshCw : Send;
-  };
-
-  const StatusIcon = getStatusIcon();
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -151,15 +159,34 @@ const StepThreeProgressCheck: React.FC<StepThreeProgressCheckProps> = ({
       {/* Progress Overview */}
       <div className="bg-white border border-gray-200 rounded-lg p-6">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gray-900">Progress Overview</h3>
-          <button
-            onClick={handleRefresh}
-            disabled={isSimulating}
-            className="text-indigo-600 hover:text-indigo-700 disabled:text-gray-400 disabled:cursor-not-allowed flex items-center space-x-1"
-          >
-            <RefreshCw className={`w-4 h-4 ${isSimulating ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
-          </button>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Progress Overview</h3>
+            {lastUpdated && (
+              <p className="text-sm text-gray-500 mt-1">
+                Last updated: {lastUpdated.toLocaleTimeString()}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={toggleAutoRefresh}
+              className={`text-sm px-3 py-1 rounded-full border transition-colors ${
+                autoRefresh 
+                  ? 'bg-green-100 text-green-700 border-green-200' 
+                  : 'bg-gray-100 text-gray-700 border-gray-200'
+              }`}
+            >
+              {autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF'}
+            </button>
+            <button
+              onClick={handleRefresh}
+              disabled={isLoading}
+              className="text-indigo-600 hover:text-indigo-700 disabled:text-gray-400 disabled:cursor-not-allowed flex items-center space-x-1"
+            >
+              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <span>Refresh</span>
+            </button>
+          </div>
         </div>
 
         {/* Progress Bar */}
@@ -231,16 +258,38 @@ const StepThreeProgressCheck: React.FC<StepThreeProgressCheckProps> = ({
 
 
       {/* Completion Message */}
-      {simulationComplete && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+      {campaignProgress.pending === 0 && campaignProgress.total > 0 && (
+        <div className={`border rounded-lg p-6 ${
+          campaignProgress.failed === 0 
+            ? 'bg-green-50 border-green-200' 
+            : 'bg-yellow-50 border-yellow-200'
+        }`}>
           <div className="flex items-center space-x-3">
-            <CheckCircle className="w-8 h-8 text-green-600" />
+            {campaignProgress.failed === 0 ? (
+              <CheckCircle className="w-8 h-8 text-green-600" />
+            ) : (
+              <AlertCircle className="w-8 h-8 text-yellow-600" />
+            )}
             <div>
-              <h4 className="font-medium text-green-900">Campaign Completed!</h4>
-              <p className="text-sm text-green-800 mt-1">
-                Your campaign has been successfully processed. 
-                {campaignProgress.failed > 0 && ` ${campaignProgress.failed} messages failed to send.`}
+              <h4 className={`font-medium ${
+                campaignProgress.failed === 0 ? 'text-green-900' : 'text-yellow-900'
+              }`}>
+                Campaign Completed!
+              </h4>
+              <p className={`text-sm mt-1 ${
+                campaignProgress.failed === 0 ? 'text-green-800' : 'text-yellow-800'
+              }`}>
+                Your campaign has been processed. 
+                {campaignProgress.failed > 0 
+                  ? ` ${campaignProgress.failed} messages failed to send.` 
+                  : ' All messages sent successfully!'
+                }
               </p>
+              {realTimeProgress && (
+                <p className="text-xs text-gray-600 mt-2">
+                  Success rate: {realTimeProgress.progress.successRate}%
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -248,15 +297,22 @@ const StepThreeProgressCheck: React.FC<StepThreeProgressCheckProps> = ({
 
       {/* Step Instructions */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="font-medium text-blue-900 mb-2">💡 What's Next?</h4>
+        <h4 className="font-medium text-blue-900 mb-2">💡 Real-time Status Updates</h4>
         <p className="text-sm text-blue-800">
-          {simulationComplete 
+          {campaignProgress.pending === 0 && campaignProgress.total > 0
             ? "Your campaign is complete! You can now go to the dashboard to view detailed reports and create new campaigns."
-            : isSimulating
-            ? "Your campaign is being processed. You can monitor the progress in real-time above."
-            : "Click 'Refresh' to start the campaign simulation, or proceed to the dashboard to manage your campaigns."
+            : campaignProgress.total > 0
+            ? "Your campaign is being processed. Status updates are received in real-time from WhatsApp webhooks. You can monitor the progress above."
+            : "Campaign data is being loaded. Once your campaign starts sending messages, you'll see real-time status updates here."
           }
         </p>
+        {campaignProgress.total > 0 && (
+          <div className="mt-3 text-xs text-blue-700">
+            <p>• Status updates are received from WhatsApp Business API webhooks</p>
+            <p>• Auto-refresh is enabled to show real-time progress</p>
+            <p>• Data includes sent, delivered, read, and failed message statuses</p>
+          </div>
+        )}
       </div>
     </div>
   );

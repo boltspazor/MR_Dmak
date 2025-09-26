@@ -18,6 +18,7 @@ import {
   recipientListRoutes,
   templateCampaignRoutes,
   campaignRoutes,
+  campaignProgressRoutes,
   cacheRoutes,
   consentRoutes
 } from './routes/backend';
@@ -103,6 +104,7 @@ app.use('/api/whatsapp-cloud', whatsappCloudRoutes);
 app.use('/api/meta-templates', metaTemplateRoutes);
 app.use('/api/template-campaigns', templateCampaignRoutes);
 app.use('/api/campaigns', campaignRoutes);
+app.use('/api/campaign-progress', campaignProgressRoutes);
 app.use('/api/cache', cacheRoutes);
 app.use('/api/consent', consentRoutes);
 app.use('/api/webhook', webhookRoutes);

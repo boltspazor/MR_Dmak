@@ -63,7 +63,7 @@ export const campaignProgressAPI = {
    * Get campaign progress with real-time status
    */
   getCampaignProgress: async (campaignId: string): Promise<CampaignProgress> => {
-    const response = await api.get(`/campaigns/${campaignId}`);
+    const response = await api.get(`/campaign-progress/${campaignId}`);
     return response.data.data;
   },
 

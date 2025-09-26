@@ -51,11 +51,11 @@ export class CampaignProgressController {
             createdBy: campaign.createdBy
           },
           progress: {
-            totalMessages,
-            sentCount,
-            failedCount,
-            pendingCount,
-            completionPercentage: totalMessages > 0 ? Math.round((sentCount / totalMessages) * 100) : 0
+            total: totalMessages,
+            sent: sentCount,
+            failed: failedCount,
+            pending: pendingCount,
+            successRate: totalMessages > 0 ? Math.round((sentCount / totalMessages) * 100) : 0
           },
           messageLogs
         }

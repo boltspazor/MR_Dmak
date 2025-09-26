@@ -2,6 +2,7 @@
 export { default as authRoutes } from './auth.routes';
 export { default as cacheRoutes } from './cache.routes';
 export { default as campaignRoutes } from './campaign.routes';
+export { default as campaignProgressRoutes } from '../campaign-progress.routes';
 export { default as consentRoutes } from './consent.routes';
 export { default as groupRoutes } from './group.routes';
 export { default as messageRoutes } from './message.routes';
