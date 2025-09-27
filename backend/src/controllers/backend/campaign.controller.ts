@@ -836,7 +836,7 @@ export class CampaignController {
    */
   static async checkAndUpdateCampaignCompletion(campaignId: string) {
     try {
-      const campaign = await Campaign.findById(campaignId);
+      const campaign = await Campaign.findOne({ campaignId: campaignId });
       if (!campaign) {
         logger.warn('Campaign not found for completion check', { campaignId });
         return;

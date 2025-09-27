@@ -12,7 +12,7 @@ export class CampaignController {
    * Get MRs for a campaign (for campaigns created with direct MR selection)
    */
   private static async getCampaignMRs(campaignId: any): Promise<string[]> {
-    const campaign = await Campaign.findById(campaignId);
+    const campaign = await Campaign.findOne({ campaignId: campaignId });
     if (!campaign || !campaign.mrIds) {
       return [];
     }

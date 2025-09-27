@@ -151,7 +151,7 @@ const initializeQueue = async () => {
             const status = stats.pendingCount > 0 ? 'sending' : 
                           stats.failedCount === stats.totalCount ? 'failed' : 'completed';
 
-            await Campaign.findByIdAndUpdate(campaignId, {
+            await Campaign.findOneAndUpdate({ campaignId: campaignId }, {
               sentCount: stats.sentCount,
               failedCount: stats.failedCount,
               pendingCount: stats.pendingCount,
@@ -334,7 +334,7 @@ async function processMessageDirectly(data: MessageJobData) {
       const status = stats.pendingCount > 0 ? 'sending' : 
                     stats.failedCount === stats.totalCount ? 'failed' : 'completed';
 
-      await Campaign.findByIdAndUpdate(campaignId, {
+      await Campaign.findOneAndUpdate({ campaignId: campaignId }, {
         sentCount: stats.sentCount,
         failedCount: stats.failedCount,
         pendingCount: stats.pendingCount,

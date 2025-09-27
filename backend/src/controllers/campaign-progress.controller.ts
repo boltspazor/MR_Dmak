@@ -15,7 +15,7 @@ export class CampaignProgressController {
       }
 
       const campaign = await Campaign.findOne({
-        _id: campaignId,
+        campaignId: campaignId,
         createdBy: userId
       })
         .populate('templateId')
@@ -28,7 +28,7 @@ export class CampaignProgressController {
       }
 
       // Get message logs for this campaign
-      const messageLogs = await MessageLog.find({ campaignId: campaignId });
+      const messageLogs = await MessageLog.find({ campaignId: campaign._id });
 
       // Calculate progress statistics
       const totalMessages = messageLogs.length;

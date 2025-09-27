@@ -296,7 +296,7 @@ export class TemplateCampaignController {
     try {
       const { campaignId } = req.params;
 
-      const campaign = await MessageCampaign.findById(campaignId)
+      const campaign = await MessageCampaign.findOne({ campaignId: campaignId })
         .populate('templateId', 'name language status')
         .populate('recipientListId', 'name description');
 
@@ -307,7 +307,7 @@ export class TemplateCampaignController {
         });
       }
 
-      const messageLogs = await MessageLog.find({ campaignId });
+      const messageLogs = await MessageLog.find({ campaignId: campaign._id });
 
       const stats = {
         total: messageLogs.length,

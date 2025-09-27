@@ -140,7 +140,7 @@ export class MessageService {
 
   async getCampaignReport(campaignId: string) {
     try {
-      const campaign = await MessageCampaign.findById(campaignId)
+      const campaign = await MessageCampaign.findOne({ campaignId: campaignId })
         .populate('messageId')
         .populate('createdBy', 'name email');
 
@@ -148,7 +148,7 @@ export class MessageService {
         throw new Error('Campaign not found');
       }
 
-      const messageLogs = await MessageLog.find({ campaignId })
+      const messageLogs = await MessageLog.find({ campaignId: campaign._id })
         .populate('mrId')
         .populate({
           path: 'mrId',
