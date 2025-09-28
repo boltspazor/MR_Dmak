@@ -51,4 +51,11 @@ router.get('/status', (req, res) => {
  */
 router.get('/data', authenticateToken, WebhookController.getWebhookData);
 
+/**
+ * @route POST /api/webhook/test
+ * @desc Test webhook logging for message sending
+ * @access Private
+ */
+router.post('/test', authenticateToken, WebhookController.testWebhookLogging);
+
 export default router;

@@ -19,4 +19,7 @@ router.post('/webhook/status', CampaignProgressController.updateMessageStatus);
 // Get all campaigns with progress summary
 router.get('/', CampaignProgressController.getAllCampaignsProgress);
 
+// Get detailed message list by status for a campaign
+router.get('/:campaignId/messages', CampaignProgressController.getCampaignMessageDetails);
+
 export default router;

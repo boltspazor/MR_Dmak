@@ -194,4 +194,129 @@ export class CampaignProgressController {
       });
     }
   }
+
+  /**
+   * Get detailed message list by status for a campaign
+   */
+  static async getCampaignMessageDetails(req: Request, res: Response): Promise<void> {
+    try {
+      const { campaignId } = req.params;
+      const { status, limit = 100, page = 1 } = req.query;
+      const userId = (req as AuthenticatedRequest).user?.userId;
+
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          error: 'User not authenticated'
+        });
+        return;
+      }
+
+      // Get campaign to verify ownership
+      const campaign = await Campaign.findOne({
+        campaignId: campaignId,
+        createdBy: userId
+      });
+
+      if (!campaign) {
+        res.status(404).json({
+          success: false,
+          error: 'Campaign not found'
+        });
+        return;
+      }
+
+      // Build query for MessageLog
+      const query: any = { campaignId: campaign._id };
+      
+      if (status && status !== 'all') {
+        query.status = status;
+      }
+
+      // Calculate pagination
+      const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+      const limitNum = parseInt(limit as string);
+
+      // Get message logs with pagination
+      const messageLogs = await MessageLog.find(query)
+        .populate('campaignId', 'campaignId name status')
+        .sort({ updatedAt: -1 })
+        .skip(skip)
+        .limit(limitNum);
+
+      // Get total count for pagination
+      const totalCount = await MessageLog.countDocuments(query);
+
+      // Format data for display
+      const messageDetails = messageLogs.map(log => ({
+        id: log._id,
+        mrId: log.mrId,
+        phoneNumber: log.phoneNumber,
+        status: log.status,
+        sentAt: log.sentAt,
+        deliveredAt: log.deliveredAt,
+        readAt: log.readAt,
+        failedAt: log.failedAt,
+        errorMessage: log.errorMessage,
+        errorCode: log.errorCode,
+        errorTitle: log.errorTitle,
+        messageId: log.messageId,
+        templateName: log.templateName,
+        templateLanguage: log.templateLanguage,
+        conversationId: log.conversationId,
+        pricingCategory: log.pricingCategory,
+        lastUpdated: log.updatedAt
+      }));
+
+      // Get status counts
+      const statusCounts = await MessageLog.aggregate([
+        { $match: { campaignId: campaign._id } },
+        { $group: { _id: '$status', count: { $sum: 1 } } }
+      ]);
+
+      const counts = statusCounts.reduce((acc, item) => {
+        acc[item._id] = item.count;
+        return acc;
+      }, {} as Record<string, number>);
+
+      res.json({
+        success: true,
+        data: {
+          campaign: {
+            id: campaign._id,
+            campaignId: campaign.campaignId,
+            name: campaign.name,
+            status: campaign.status
+          },
+          messages: messageDetails,
+          pagination: {
+            page: parseInt(page as string),
+            limit: limitNum,
+            total: totalCount,
+            totalPages: Math.ceil(totalCount / limitNum)
+          },
+          statusCounts: {
+            total: totalCount,
+            sent: counts.sent || 0,
+            delivered: counts.delivered || 0,
+            read: counts.read || 0,
+            failed: counts.failed || 0,
+            pending: counts.pending || 0,
+            queued: counts.queued || 0
+          }
+        }
+      });
+
+    } catch (error: any) {
+      console.error('Error getting campaign message details:', {
+        error: error.message,
+        campaignId: req.params.campaignId,
+        userId: (req as AuthenticatedRequest).user?.userId
+      });
+      res.status(500).json({
+        success: false,
+        error: 'Failed to get campaign message details'
+      });
+    }
+  }
 }

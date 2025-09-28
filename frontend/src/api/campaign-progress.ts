@@ -106,5 +106,58 @@ export const campaignProgressAPI = {
   }): Promise<any> => {
     const response = await api.post('/campaigns/webhook/status', data);
     return response.data.data;
+  },
+
+  /**
+   * Get detailed message list by status for a campaign
+   */
+  getCampaignMessageDetails: async (campaignId: string, params?: {
+    status?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    campaign: {
+      id: string;
+      campaignId: string;
+      name: string;
+      status: string;
+    };
+    messages: Array<{
+      id: string;
+      mrId: string;
+      phoneNumber: string;
+      status: string;
+      sentAt?: string;
+      deliveredAt?: string;
+      readAt?: string;
+      failedAt?: string;
+      errorMessage?: string;
+      errorCode?: number;
+      errorTitle?: string;
+      messageId?: string;
+      templateName?: string;
+      templateLanguage?: string;
+      conversationId?: string;
+      pricingCategory?: string;
+      lastUpdated: string;
+    }>;
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+    statusCounts: {
+      total: number;
+      sent: number;
+      delivered: number;
+      read: number;
+      failed: number;
+      pending: number;
+      queued: number;
+    };
+  }> => {
+    const response = await api.get(`/campaign-progress/${campaignId}/messages`, { params });
+    return response.data.data;
   }
 };

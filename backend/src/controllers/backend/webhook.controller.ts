@@ -261,7 +261,12 @@ export class WebhookController {
           timestamp: timestamp ? new Date(parseInt(timestamp) * 1000) : null,
           conversation: conversation?.id,
           pricing: pricing?.category,
-          hasErrors: !!(errors && errors.length > 0)
+          hasErrors: !!(errors && errors.length > 0),
+          errorDetails: errors?.map(err => ({
+            code: err.code,
+            title: err.title,
+            message: err.message
+          }))
         });
 
         // Update message log with new status
@@ -432,6 +437,89 @@ export class WebhookController {
 
       return displayData;
     });
+  }
+
+  /**
+   * Test webhook logging for message sending
+   * This endpoint helps test the webhook functionality
+   */
+  static async testWebhookLogging(req: Request, res: Response): Promise<void> {
+    try {
+      const { campaignId, messageId, phoneNumber, status } = req.body;
+
+      if (!campaignId || !messageId || !phoneNumber || !status) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required fields: campaignId, messageId, phoneNumber, status'
+        });
+        return;
+      }
+
+      // Log the test message
+      logger.info('TEST WEBHOOK LOGGING - Message Status Update', {
+        campaignId,
+        messageId,
+        phoneNumber,
+        status,
+        timestamp: new Date().toISOString(),
+        testMode: true
+      });
+
+      // Create a test webhook payload
+      const testWebhookPayload = {
+        object: 'whatsapp_business_account',
+        entry: [{
+          id: 'test-entry',
+          changes: [{
+            field: 'messages',
+            value: {
+              messaging_product: 'whatsapp',
+              metadata: {
+                display_phone_number: '+1234567890',
+                phone_number_id: 'test-phone-id'
+              },
+              statuses: [{
+                id: messageId,
+                status: status,
+                timestamp: Math.floor(Date.now() / 1000).toString(),
+                recipient_id: phoneNumber,
+                conversation: {
+                  id: 'test-conversation',
+                  origin: { type: 'marketing' }
+                },
+                pricing: {
+                  billable: true,
+                  pricing_model: 'CBP',
+                  category: 'marketing'
+                }
+              }]
+            }
+          }]
+        }]
+      };
+
+      // Process the test webhook
+      await this.processMessageStatuses(testWebhookPayload.entry[0].changes[0].value.statuses);
+
+      res.json({
+        success: true,
+        message: 'Test webhook logging completed',
+        data: {
+          campaignId,
+          messageId,
+          phoneNumber,
+          status,
+          timestamp: new Date().toISOString()
+        }
+      });
+
+    } catch (error: any) {
+      logger.error('Error in test webhook logging:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to process test webhook logging'
+      });
+    }
   }
 
   /**

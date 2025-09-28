@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, Clock, AlertCircle, Users, RefreshCw } from 'lucide-react';
+import { CheckCircle, Clock, AlertCircle, Users, RefreshCw, Eye } from 'lucide-react';
 import { WizardCampaign } from '../../pages/CampaignWizard';
 import { campaignProgressAPI, CampaignProgress } from '../../api/campaign-progress';
+import MessageDetailsModal from './MessageDetailsModal';
 import toast from 'react-hot-toast';
 
 interface StepThreeProgressCheckProps {
@@ -24,14 +25,8 @@ interface StepThreeProgressCheckProps {
 }
 
 const StepThreeProgressCheck: React.FC<StepThreeProgressCheckProps> = ({
-  stepNumber,
   stepTitle,
   stepDescription,
-  onComplete,
-  onNext,
-  onPrev,
-  canGoNext,
-  canGoPrev,
   createdCampaign,
   campaignProgress,
   setCampaignProgress
@@ -40,6 +35,9 @@ const StepThreeProgressCheck: React.FC<StepThreeProgressCheckProps> = ({
   const [realTimeProgress, setRealTimeProgress] = useState<CampaignProgress | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalStatus, setModalStatus] = useState<'sent' | 'failed' | 'delivered' | 'read' | 'pending' | 'queued'>('sent');
+  const [modalTitle, setModalTitle] = useState('');
 
   // Fetch real-time campaign progress from webhook data
   useEffect(() => {
@@ -98,6 +96,16 @@ const StepThreeProgressCheck: React.FC<StepThreeProgressCheckProps> = ({
 
   const toggleAutoRefresh = () => {
     setAutoRefresh(!autoRefresh);
+  };
+
+  const openModal = (status: 'sent' | 'failed' | 'delivered' | 'read' | 'pending' | 'queued') => {
+    setModalStatus(status);
+    setModalTitle(`${status.charAt(0).toUpperCase() + status.slice(1)} Messages`);
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
   };
 
   const getProgressPercentage = () => {
@@ -217,41 +225,68 @@ const StepThreeProgressCheck: React.FC<StepThreeProgressCheckProps> = ({
             </div>
           </div>
 
-          <div className="bg-green-50 p-4 rounded-lg">
-            <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <CheckCircle className="w-6 h-6 text-green-600" />
+          <button
+            onClick={() => openModal('sent')}
+            disabled={campaignProgress.sent === 0}
+            className="bg-green-50 p-4 rounded-lg hover:bg-green-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-green-50"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <CheckCircle className="w-6 h-6 text-green-600" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-green-900">Sent</p>
+                  <p className="text-2xl font-bold text-green-600">{campaignProgress.sent}</p>
+                </div>
               </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-green-900">Sent</p>
-                <p className="text-2xl font-bold text-green-600">{campaignProgress.sent}</p>
-              </div>
+              {campaignProgress.sent > 0 && (
+                <Eye className="w-4 h-4 text-green-600" />
+              )}
             </div>
-          </div>
+          </button>
 
-          <div className="bg-red-50 p-4 rounded-lg">
-            <div className="flex items-center">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <AlertCircle className="w-6 h-6 text-red-600" />
+          <button
+            onClick={() => openModal('failed')}
+            disabled={campaignProgress.failed === 0}
+            className="bg-red-50 p-4 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-50"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="p-2 bg-red-100 rounded-lg">
+                  <AlertCircle className="w-6 h-6 text-red-600" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-red-900">Failed</p>
+                  <p className="text-2xl font-bold text-red-600">{campaignProgress.failed}</p>
+                </div>
               </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-red-900">Failed</p>
-                <p className="text-2xl font-bold text-red-600">{campaignProgress.failed}</p>
-              </div>
+              {campaignProgress.failed > 0 && (
+                <Eye className="w-4 h-4 text-red-600" />
+              )}
             </div>
-          </div>
+          </button>
 
-          <div className="bg-yellow-50 p-4 rounded-lg">
-            <div className="flex items-center">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <Clock className="w-6 h-6 text-yellow-600" />
+          <button
+            onClick={() => openModal('pending')}
+            disabled={campaignProgress.pending === 0}
+            className="bg-yellow-50 p-4 rounded-lg hover:bg-yellow-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-yellow-50"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="p-2 bg-yellow-100 rounded-lg">
+                  <Clock className="w-6 h-6 text-yellow-600" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-yellow-900">Pending</p>
+                  <p className="text-2xl font-bold text-yellow-600">{campaignProgress.pending}</p>
+                </div>
               </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-yellow-900">Pending</p>
-                <p className="text-2xl font-bold text-yellow-600">{campaignProgress.pending}</p>
-              </div>
+              {campaignProgress.pending > 0 && (
+                <Eye className="w-4 h-4 text-yellow-600" />
+              )}
             </div>
-          </div>
+          </button>
         </div>
       </div>
 
@@ -314,6 +349,17 @@ const StepThreeProgressCheck: React.FC<StepThreeProgressCheckProps> = ({
           </div>
         )}
       </div>
+
+      {/* Message Details Modal */}
+      {createdCampaign && (
+        <MessageDetailsModal
+          isOpen={modalOpen}
+          onClose={closeModal}
+          campaignId={createdCampaign.id}
+          status={modalStatus}
+          title={modalTitle}
+        />
+      )}
     </div>
   );
 };
