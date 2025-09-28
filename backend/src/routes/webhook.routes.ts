@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { WebhookController } from '../controllers/backend/webhook.controller';
+import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
 
@@ -42,5 +43,12 @@ router.get('/status', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+/**
+ * @route GET /api/webhook/data
+ * @desc Get webhook data for display with filtering options
+ * @access Private
+ */
+router.get('/data', authenticateToken, WebhookController.getWebhookData);
 
 export default router;

@@ -185,4 +185,51 @@ export interface WhatsAppStatus {
     pricing_model: string;
     category: string;
   };
+  errors?: Array<{
+    code: number;
+    title: string;
+    message: string;
+    href?: string;
+    error_data?: {
+      messaging_product: string;
+      details: string;
+    };
+  }>;
+}
+
+// Enhanced interface for user-readable webhook data display
+export interface WhatsAppWebhookDisplayData {
+  messageId: string;
+  phoneNumber: string;
+  status: string;
+  timestamp: Date;
+  error?: {
+    code: number;
+    title: string;
+    message: string;
+    href?: string;
+  };
+  conversation?: {
+    id: string;
+    origin: string;
+    expiration?: Date;
+  };
+  pricing?: {
+    billable: boolean;
+    model: string;
+    category: string;
+  };
+  metadata?: {
+    phoneNumberId: string;
+    displayPhoneNumber: string;
+  };
+}
+
+// Interface for webhook processing result
+export interface WebhookProcessingResult {
+  success: boolean;
+  processedCount: number;
+  failedCount: number;
+  data: WhatsAppWebhookDisplayData[];
+  timestamp: Date;
 }

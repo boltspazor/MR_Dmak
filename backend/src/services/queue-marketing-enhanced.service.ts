@@ -14,13 +14,13 @@ export class QueueMarketingEnhancedService {
    * This replaces the existing template message processing with improved error handling and compliance
    */
   static async processMarketingTemplateJob(jobData: {
-    campaignId: string;
-    mrId: string;
-    phoneNumber: string;
-    templateName: string;
-    templateLanguage: string;
-    templateParameters: Array<{name: string, value: string}>;
-    imageUrl?: string;
+    campaignId: string,
+    mrId: string,
+    phoneNumber: string,
+    templateName: string,
+    templateLanguage: string,
+    templateParameters: Array<{name: string, value: string}>,
+    imageUrl?: string,
   }): Promise<{
     success: boolean;
     messageId?: string;

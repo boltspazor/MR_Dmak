@@ -2,7 +2,14 @@ import { Request, Response } from 'express';
 import MessageLog from '../../models/MessageLog';
 import Campaign from '../../models/Campaign';
 import logger from '../../utils/logger';
-import { WhatsAppWebhookEvent, WhatsAppWebhookChange, WhatsAppStatus, WhatsAppMessage } from '../../types/communication';
+import { 
+  WhatsAppWebhookEvent, 
+  WhatsAppWebhookChange, 
+  WhatsAppStatus, 
+  WhatsAppMessage,
+  WhatsAppWebhookDisplayData,
+  WebhookProcessingResult
+} from '../../types/communication';
 
 export class WebhookController {
   /**
@@ -227,12 +234,20 @@ export class WebhookController {
 
   /**
    * Process message statuses array
-   * Enhanced with comprehensive status handling
+   * Enhanced with comprehensive status handling and error details
    */
   private static async processMessageStatuses(statuses: WhatsAppStatus[]): Promise<void> {
     try {
       for (const status of statuses) {
-        const { id: messageId, status: messageStatus, timestamp, recipient_id, conversation, pricing } = status;
+        const { 
+          id: messageId, 
+          status: messageStatus, 
+          timestamp, 
+          recipient_id, 
+          conversation, 
+          pricing,
+          errors 
+        } = status;
 
         if (!messageId || !messageStatus) {
           logger.warn('Invalid status data received', { messageId, messageStatus });
@@ -245,7 +260,8 @@ export class WebhookController {
           recipient: recipient_id,
           timestamp: timestamp ? new Date(parseInt(timestamp) * 1000) : null,
           conversation: conversation?.id,
-          pricing: pricing?.category
+          pricing: pricing?.category,
+          hasErrors: !!(errors && errors.length > 0)
         });
 
         // Update message log with new status
@@ -276,8 +292,20 @@ export class WebhookController {
               updateData.sentAt = statusTime;
               break;
             case 'failed':
-              updateData.errorMessage = 'Message failed to deliver';
               updateData.failedAt = statusTime;
+              // Enhanced error handling with detailed error information
+              if (errors && errors.length > 0) {
+                const primaryError = errors[0];
+                updateData.errorMessage = primaryError.message || 'Message failed to deliver';
+                updateData.errorCode = primaryError.code;
+                updateData.errorTitle = primaryError.title;
+                updateData.errorHref = primaryError.href;
+                if (primaryError.error_data) {
+                  updateData.errorDetails = primaryError.error_data.details;
+                }
+              } else {
+                updateData.errorMessage = 'Message failed to deliver';
+              }
               break;
             default:
               logger.warn('Unknown message status', { messageStatus });
@@ -316,7 +344,8 @@ export class WebhookController {
             phoneNumber: updatedLog.phoneNumber,
             timestamp: timestamp ? new Date(parseInt(timestamp) * 1000) : null,
             conversationId: conversation?.id,
-            pricingCategory: pricing?.category
+            pricingCategory: pricing?.category,
+            hasErrors: !!(errors && errors.length > 0)
           });
 
           // Update campaign status if all messages are processed
@@ -334,6 +363,166 @@ export class WebhookController {
       }
     } catch (error) {
       logger.error('Error processing message statuses:', error);
+    }
+  }
+
+  /**
+   * Format webhook data for user display
+   * Converts raw webhook data into user-readable format
+   */
+  private static formatWebhookDataForDisplay(
+    statuses: WhatsAppStatus[], 
+    metadata: any
+  ): WhatsAppWebhookDisplayData[] {
+    return statuses.map(status => {
+      const { 
+        id: messageId, 
+        status: messageStatus, 
+        timestamp, 
+        recipient_id, 
+        conversation, 
+        pricing,
+        errors 
+      } = status;
+
+      const displayData: WhatsAppWebhookDisplayData = {
+        messageId,
+        phoneNumber: recipient_id,
+        status: messageStatus,
+        timestamp: timestamp ? new Date(parseInt(timestamp) * 1000) : new Date(),
+      };
+
+      // Add error information if present
+      if (errors && errors.length > 0) {
+        const primaryError = errors[0];
+        displayData.error = {
+          code: primaryError.code,
+          title: primaryError.title,
+          message: primaryError.message,
+          href: primaryError.href
+        };
+      }
+
+      // Add conversation information if present
+      if (conversation) {
+        displayData.conversation = {
+          id: conversation.id,
+          origin: conversation.origin?.type || 'unknown',
+          expiration: conversation.expiration_timestamp ? 
+            new Date(parseInt(conversation.expiration_timestamp) * 1000) : undefined
+        };
+      }
+
+      // Add pricing information if present
+      if (pricing) {
+        displayData.pricing = {
+          billable: pricing.billable,
+          model: pricing.pricing_model,
+          category: pricing.category
+        };
+      }
+
+      // Add metadata if present
+      if (metadata) {
+        displayData.metadata = {
+          phoneNumberId: metadata.phone_number_id,
+          displayPhoneNumber: metadata.display_phone_number
+        };
+      }
+
+      return displayData;
+    });
+  }
+
+  /**
+   * Get webhook data for display
+   * Retrieves and formats recent webhook data for user display
+   */
+  static async getWebhookData(req: Request, res: Response): Promise<void> {
+    try {
+      const { 
+        limit = 50, 
+        status, 
+        startDate, 
+        endDate,
+        messageId 
+      } = req.query;
+
+      // Build query for MessageLog
+      const query: any = {};
+      
+      if (status) {
+        query.status = status;
+      }
+      
+      if (messageId) {
+        query.messageId = messageId;
+      }
+      
+      if (startDate || endDate) {
+        query.updatedAt = {};
+        if (startDate) {
+          query.updatedAt.$gte = new Date(startDate as string);
+        }
+        if (endDate) {
+          query.updatedAt.$lte = new Date(endDate as string);
+        }
+      }
+
+      // Get message logs with webhook updates
+      const messageLogs = await MessageLog.find(query)
+        .populate('campaignId', 'campaignId name status')
+        .sort({ updatedAt: -1 })
+        .limit(parseInt(limit as string) || 50);
+
+      // Format data for display
+      const displayData: WhatsAppWebhookDisplayData[] = messageLogs.map(log => ({
+        messageId: log.messageId || '',
+        phoneNumber: log.phoneNumber || '',
+        status: log.status || 'unknown',
+        timestamp: log.updatedAt || new Date(),
+        error: log.errorMessage ? {
+          code: log.errorCode || 0,
+          title: log.errorTitle || 'Error',
+          message: log.errorMessage,
+          href: log.errorHref
+        } : undefined,
+        conversation: log.conversationId ? {
+          id: log.conversationId,
+          origin: log.conversationOrigin || 'unknown',
+          expiration: log.conversationExpiration
+        } : undefined,
+        pricing: log.pricingCategory ? {
+          billable: log.billable || false,
+          model: log.pricingModel || 'unknown',
+          category: log.pricingCategory
+        } : undefined,
+        metadata: {
+          phoneNumberId: 'unknown',
+          displayPhoneNumber: 'unknown'
+        }
+      }));
+
+      const result: WebhookProcessingResult = {
+        success: true,
+        processedCount: displayData.length,
+        failedCount: displayData.filter(d => d.status === 'failed').length,
+        data: displayData,
+        timestamp: new Date()
+      };
+
+      res.json({
+        success: true,
+        message: 'Webhook data retrieved successfully',
+        data: result
+      });
+
+    } catch (error) {
+      logger.error('Error retrieving webhook data:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve webhook data'
+      });
     }
   }
 

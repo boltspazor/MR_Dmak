@@ -8,12 +8,25 @@ export interface IMessageLog extends Document {
   status: string;
   sentAt?: Date;
   deliveredAt?: Date;
+  readAt?: Date;
+  failedAt?: Date;
   errorMessage?: string;
+  errorCode?: number;
+  errorTitle?: string;
+  errorHref?: string;
+  errorDetails?: string;
   messageId?: string; // WhatsApp message ID
   templateName?: string; // Template name for tracking
   templateLanguage?: string; // Template language
   templateParameters?: Record<string, string>; // Template parameters
   sentBy?: mongoose.Types.ObjectId; // User who sent the message
+  conversationId?: string;
+  conversationOrigin?: string;
+  conversationExpiration?: Date;
+  pricingModel?: string;
+  pricingCategory?: string;
+  billable?: boolean;
+  lastUpdated?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -37,7 +50,7 @@ const messageLogSchema = new Schema<IMessageLog>({
   status: {
     type: String,
     default: 'queued',
-    enum: ['queued', 'sent', 'delivered', 'failed', 'pending']
+    enum: ['queued', 'sent', 'delivered', 'read', 'failed', 'pending']
   },
   sentAt: {
     type: Date
@@ -45,7 +58,28 @@ const messageLogSchema = new Schema<IMessageLog>({
   deliveredAt: {
     type: Date
   },
+  readAt: {
+    type: Date
+  },
+  failedAt: {
+    type: Date
+  },
   errorMessage: {
+    type: String,
+    trim: true
+  },
+  errorCode: {
+    type: Number
+  },
+  errorTitle: {
+    type: String,
+    trim: true
+  },
+  errorHref: {
+    type: String,
+    trim: true
+  },
+  errorDetails: {
     type: String,
     trim: true
   },
@@ -68,6 +102,33 @@ const messageLogSchema = new Schema<IMessageLog>({
   sentBy: {
     type: Schema.Types.ObjectId,
     ref: 'User'
+  },
+  conversationId: {
+    type: String,
+    trim: true
+  },
+  conversationOrigin: {
+    type: String,
+    trim: true
+  },
+  conversationExpiration: {
+    type: Date
+  },
+  pricingModel: {
+    type: String,
+    trim: true
+  },
+  pricingCategory: {
+    type: String,
+    trim: true
+  },
+  billable: {
+    type: Boolean,
+    default: false
+  },
+  lastUpdated: {
+    type: Date,
+    default: Date.now
   }
 }, {
   timestamps: true,
