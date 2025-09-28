@@ -29,6 +29,9 @@ import {
   metaTemplateRoutes
 } from './routes/meta';
 
+// WhatsApp Marketing routes
+import whatsappMarketingRoutes from './routes/whatsapp-marketing.routes';
+
 // Webhook routes
 import webhookRoutes from './routes/webhook.routes';
 
@@ -108,6 +111,7 @@ app.use('/api/campaign-progress', campaignProgressRoutes);
 app.use('/api/cache', cacheRoutes);
 app.use('/api/consent', consentRoutes);
 app.use('/api/webhook', webhookRoutes);
+app.use('/api/whatsapp-marketing', whatsappMarketingRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
