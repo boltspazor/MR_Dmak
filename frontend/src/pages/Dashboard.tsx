@@ -1,7 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  RefreshCw
-} from 'lucide-react';
 import TemplatePreviewDialog from '../components/ui/TemplatePreviewDialog';
 import RecipientListModal from '../components/ui/RecipientListModal';
 import Header from '../components/Header';
@@ -56,8 +53,6 @@ const Dashboard: React.FC = () => {
   const [sortField, setSortField] = useState<keyof CampaignRecord>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [loading, setLoading] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [autoRefresh, setAutoRefresh] = useState(true);
 
   // Suppress all error popups on Dashboard page
   useEffect(() => {
@@ -158,7 +153,6 @@ const Dashboard: React.FC = () => {
       
       console.log('Transformed campaigns with real-time data:', transformedCampaigns);
       setCampaigns(transformedCampaigns);
-      setLastUpdated(new Date());
     } catch (error: any) {
       console.error('Failed to load campaigns:', error);
       setCampaigns([]);
@@ -171,18 +165,6 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     loadCampaigns();
   }, []);
-
-  // Auto-refresh campaigns every 10 seconds
-  useEffect(() => {
-    if (!autoRefresh) return;
-
-    const interval = setInterval(() => {
-      console.log('Auto-refreshing campaigns...');
-      loadCampaigns();
-    }, 10000); // Refresh every 10 seconds
-
-    return () => clearInterval(interval);
-  }, [autoRefresh]);
 
   // Sort campaigns
   const sortedCampaigns = React.useMemo(() => {
@@ -507,37 +489,6 @@ const Dashboard: React.FC = () => {
           </a>
         </div>
 
-        {/* Refresh Controls */}
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Campaign Dashboard</h2>
-            {lastUpdated && (
-              <p className="text-sm text-gray-500 mt-1">
-                Last updated: {lastUpdated.toLocaleTimeString()}
-              </p>
-            )}
-          </div>
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={() => setAutoRefresh(!autoRefresh)}
-              className={`text-sm px-3 py-1 rounded-full border transition-colors ${
-                autoRefresh 
-                  ? 'bg-green-100 text-green-700 border-green-200' 
-                  : 'bg-gray-100 text-gray-700 border-gray-200'
-              }`}
-            >
-              {autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF'}
-            </button>
-            <button
-              onClick={loadCampaigns}
-              disabled={loading}
-              className="text-indigo-600 hover:text-indigo-700 disabled:text-gray-400 disabled:cursor-not-allowed flex items-center space-x-1"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              <span>Refresh</span>
-            </button>
-          </div>
-        </div>
 
         {/* Campaign Stats */}
         <CampaignStats campaigns={sortedCampaigns} loading={loading} />
