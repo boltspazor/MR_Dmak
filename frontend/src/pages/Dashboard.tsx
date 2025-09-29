@@ -1,22 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import { 
-  MessageSquare, 
-  BarChart3,
-  Search,
-  CheckCircle,
-  Clock,
-  X,
-  FileText
+  RefreshCw
 } from 'lucide-react';
 import TemplatePreviewDialog from '../components/ui/TemplatePreviewDialog';
 import RecipientListModal from '../components/ui/RecipientListModal';
 import Header from '../components/Header';
-import CommonFeatures from '../components/CommonFeatures';
 import CampaignStats from '../components/dashboard/CampaignStats';
 import CampaignTabs from '../components/dashboard/CampaignTabs';
-import { campaignsAPI, templateAPI, Campaign, Template } from '../api/campaigns-new';
+import { campaignsAPI, templateAPI, Campaign } from '../api/campaigns-new';
+import { campaignProgressAPI } from '../api/campaign-progress';
 import { api } from '../api/config';
 import toast from 'react-hot-toast';
 
@@ -34,7 +26,7 @@ interface CampaignRecord {
   recipientList: {
     name: string;
     recipientCount: number;
-  };
+  } | null;
   date: string;
   sendStatus: 'completed' | 'in progress' | 'pending' | 'failed' | 'cancelled';
   totalRecipients: number;
@@ -60,12 +52,12 @@ interface GroupMember {
 }
 
 const Dashboard: React.FC = () => {
-  const navigate = useNavigate();
-  const { user } = useAuth();
   const [campaigns, setCampaigns] = useState<CampaignRecord[]>([]);
   const [sortField, setSortField] = useState<keyof CampaignRecord>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [autoRefresh, setAutoRefresh] = useState(true);
 
   // Suppress all error popups on Dashboard page
   useEffect(() => {
@@ -101,20 +93,33 @@ const Dashboard: React.FC = () => {
     };
   }, []);
 
-  // Load real campaign data from API
-  useEffect(() => {
-    const loadCampaigns = async () => {
-      try {
-        setLoading(true);
-        console.log('Loading campaigns...');
-        const response = await campaignsAPI.getCampaigns();
-        console.log('Campaigns API response:', response);
-        const campaignsData = response.campaigns || [];
-        console.log('Campaigns data:', campaignsData);
-        
-        // Transform the data to match the expected format
-        const transformedCampaigns = campaignsData.map((campaign: Campaign) => {
+  // Load real campaign data from API with real-time updates
+  const loadCampaigns = async () => {
+    try {
+      setLoading(true);
+      console.log('Loading campaigns with real-time data...');
+      
+      // Fetch campaigns with progress data
+      const response = await campaignsAPI.getCampaigns();
+      console.log('Campaigns API response:', response);
+      const campaignsData = response.campaigns || [];
+      console.log('Campaigns data:', campaignsData);
+      
+      // Transform the data to match the expected format with real-time progress
+      const transformedCampaigns = await Promise.all(
+        campaignsData.map(async (campaign: Campaign) => {
           console.log('Processing campaign:', campaign);
+          
+          // Get real-time progress data for each campaign
+          let realTimeProgress = campaign.progress;
+          try {
+            const progressResponse = await campaignProgressAPI.getCampaignProgress(campaign.campaignId);
+            realTimeProgress = progressResponse.progress;
+            console.log(`Real-time progress for ${campaign.campaignId}:`, realTimeProgress);
+          } catch (error) {
+            console.warn(`Could not fetch real-time progress for campaign ${campaign.campaignId}:`, error);
+            // Use the progress from the campaign data as fallback
+          }
           
           return {
             id: campaign.id,
@@ -138,31 +143,46 @@ const Dashboard: React.FC = () => {
               recipientCount: campaign.recipientList.recipientCount
             } : null,
             date: new Date(campaign.createdAt).toISOString().split('T')[0],
-            sendStatus: campaign.status === 'completed' ? 'completed' : 
+            sendStatus: (campaign.status === 'completed' ? 'completed' : 
                        campaign.status === 'sending' ? 'in progress' : 
                        campaign.status === 'failed' ? 'failed' : 
-                       campaign.status === 'cancelled' ? 'cancelled' : 'pending',
-            totalRecipients: campaign.progress?.total || 0,
-            sentCount: campaign.progress?.sent || 0,
-            failedCount: campaign.progress?.failed || 0,
-            successRate: campaign.progress?.successRate || 0,
+                       campaign.status === 'cancelled' ? 'cancelled' : 'pending') as 'completed' | 'in progress' | 'pending' | 'failed' | 'cancelled',
+            totalRecipients: realTimeProgress?.total || 0,
+            sentCount: realTimeProgress?.sent || 0,
+            failedCount: realTimeProgress?.failed || 0,
+            successRate: realTimeProgress?.successRate || 0,
             status: campaign.status
           };
-        });
-        
-        console.log('Transformed campaigns:', transformedCampaigns);
-        setCampaigns(transformedCampaigns);
-      } catch (error: any) {
-        console.error('Failed to load campaigns:', error);
-        // Set empty array on error
-        setCampaigns([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+        })
+      );
+      
+      console.log('Transformed campaigns with real-time data:', transformedCampaigns);
+      setCampaigns(transformedCampaigns);
+      setLastUpdated(new Date());
+    } catch (error: any) {
+      console.error('Failed to load campaigns:', error);
+      setCampaigns([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  // Load campaigns on component mount
+  useEffect(() => {
     loadCampaigns();
   }, []);
+
+  // Auto-refresh campaigns every 10 seconds
+  useEffect(() => {
+    if (!autoRefresh) return;
+
+    const interval = setInterval(() => {
+      console.log('Auto-refreshing campaigns...');
+      loadCampaigns();
+    }, 10000); // Refresh every 10 seconds
+
+    return () => clearInterval(interval);
+  }, [autoRefresh]);
 
   // Sort campaigns
   const sortedCampaigns = React.useMemo(() => {
@@ -210,8 +230,6 @@ const Dashboard: React.FC = () => {
   const [previewTemplate, setPreviewTemplate] = useState<any>(null);
   
   // Template details modal states
-  const [showTemplateDetails, setShowTemplateDetails] = useState(false);
-  const [templateDetails, setTemplateDetails] = useState<Template | null>(null);
   const [templateLoading, setTemplateLoading] = useState(false);
 
   const handleTemplatePreview = async (campaign: CampaignRecord) => {
@@ -284,9 +302,6 @@ const Dashboard: React.FC = () => {
       console.log('Fetching template with ID:', templateId);
       const template = await templateAPI.getTemplateById(templateId);
       console.log('Template details:', template);
-      
-      setTemplateDetails(template);
-      setShowTemplateDetails(true);
     } catch (error) {
       console.error('Failed to load template details:', error);
       toast.error('Failed to load template details');
@@ -490,6 +505,38 @@ const Dashboard: React.FC = () => {
             </svg>
             Meta Console
           </a>
+        </div>
+
+        {/* Refresh Controls */}
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Campaign Dashboard</h2>
+            {lastUpdated && (
+              <p className="text-sm text-gray-500 mt-1">
+                Last updated: {lastUpdated.toLocaleTimeString()}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setAutoRefresh(!autoRefresh)}
+              className={`text-sm px-3 py-1 rounded-full border transition-colors ${
+                autoRefresh 
+                  ? 'bg-green-100 text-green-700 border-green-200' 
+                  : 'bg-gray-100 text-gray-700 border-gray-200'
+              }`}
+            >
+              {autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF'}
+            </button>
+            <button
+              onClick={loadCampaigns}
+              disabled={loading}
+              className="text-indigo-600 hover:text-indigo-700 disabled:text-gray-400 disabled:cursor-not-allowed flex items-center space-x-1"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <span>Refresh</span>
+            </button>
+          </div>
         </div>
 
         {/* Campaign Stats */}

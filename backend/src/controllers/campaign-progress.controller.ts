@@ -38,13 +38,33 @@ export class CampaignProgressController {
       const failedCount = messageLogs.filter((log: any) => log.status === 'failed').length;
       const pendingCount = totalMessages - sentCount - failedCount;
 
+      // Update campaign status based on progress
+      let updatedStatus = campaign.status;
+      if (totalMessages > 0) {
+        if (pendingCount === 0) {
+          // All messages processed
+          updatedStatus = failedCount === totalMessages ? 'failed' : 'completed';
+        } else if (sentCount > 0 || failedCount > 0) {
+          // Some messages processed
+          updatedStatus = 'sending';
+        }
+        
+        // Update campaign status if it changed
+        if (updatedStatus !== campaign.status) {
+          await Campaign.findByIdAndUpdate(campaign._id, { 
+            status: updatedStatus,
+            ...(updatedStatus === 'completed' && { completedAt: new Date() })
+          });
+        }
+      }
+
       res.json({
         success: true,
         data: {
           campaign: {
             id: campaign._id,
             name: campaign.name,
-            status: campaign.status,
+            status: updatedStatus,
             createdAt: campaign.createdAt,
             template: campaign.templateId,
             recipientList: campaign.recipientListId,
