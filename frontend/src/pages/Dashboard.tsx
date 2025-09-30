@@ -8,6 +8,7 @@ import { campaignsAPI, templateAPI, Campaign } from '../api/campaigns-new';
 import { campaignProgressAPI } from '../api/campaign-progress';
 import { api } from '../api/config';
 import toast from 'react-hot-toast';
+import { useCampaigns } from '../hooks/useCampaigns';
 
 interface CampaignRecord {
   id: string;
@@ -54,6 +55,15 @@ const Dashboard: React.FC = () => {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [loading, setLoading] = useState(true);
 
+  // New: use campaigns hook for pagination
+  const {
+    campaigns: apiCampaigns,
+    loading: apiLoading,
+    page,
+    setPage,
+    totalPages,
+  } = useCampaigns();
+
   // Suppress all error popups on Dashboard page
   useEffect(() => {
     console.log('🔇 Dashboard: Suppressing all error notifications');
@@ -94,10 +104,8 @@ const Dashboard: React.FC = () => {
       setLoading(true);
       console.log('Loading campaigns with real-time data...');
       
-      // Fetch campaigns with progress data
-      const response = await campaignsAPI.getCampaigns();
-      console.log('Campaigns API response:', response);
-      const campaignsData = response.campaigns || [];
+      // Use data from hook (already paginated)
+      const campaignsData = apiCampaigns || [];
       console.log('Campaigns data:', campaignsData);
       
       // Transform the data to match the expected format with real-time progress
@@ -161,10 +169,10 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // Load campaigns on component mount
+  // Load campaigns whenever hook data changes (page changes or refetch)
   useEffect(() => {
     loadCampaigns();
-  }, []);
+  }, [apiCampaigns]);
 
   // Sort campaigns
   const sortedCampaigns = React.useMemo(() => {
@@ -335,102 +343,6 @@ const Dashboard: React.FC = () => {
       setCurrentCampaignId(campaign.id);
       setShowRecipientPopup(true);
     } catch (error) {
-      console.error('Failed to load campaign recipients:', error);
-      
-      // Fallback: Try to get template recipients if campaign data fails
-      try {
-        console.log('Fallback: Loading template recipients...');
-        
-        // Find the template ID from the campaign
-        const templateResponse = await api.get('/templates');
-        const templates = templateResponse.data.data || [];
-        const template = templates.find((t: any) => 
-          t.name === campaign.template.name || 
-          t.metaTemplateName === campaign.template.metaTemplateName
-        );
-        
-        if (template) {
-          const templateRecipientsResponse = await api.get(`/recipient-lists/template/${template._id}`);
-          const templateRecipients = templateRecipientsResponse.data.data || [];
-          
-          // Get the first recipient list for this template (or you could match by name)
-          const recipientList = campaign.recipientList ? templateRecipients.find((list: any) => 
-            list.name === campaign.recipientList?.name
-          ) : null;
-          
-          if (recipientList) {
-            const groupMembers: GroupMember[] = (recipientList.data || recipientList.recipients || []).map((recipient: any) => ({
-              id: recipient.mrId || recipient.id,
-              mrId: recipient.mrId,
-              firstName: recipient.firstName,
-              lastName: recipient.lastName,
-              name: `${recipient.firstName || ''} ${recipient.lastName || ''}`.trim() || 'Unknown',
-              phone: recipient.phone || 'N/A',
-              email: recipient.email || '',
-              group: recipient.group || recipient.groupId || 'Default Group',
-              status: 'pending', // Template recipients don't have campaign status yet
-              sentAt: undefined,
-              errorMessage: undefined,
-              messageId: undefined
-            }));
-            
-            setSelectedRecipients(groupMembers);
-            setCurrentCampaignId(campaign.id);
-            setShowRecipientPopup(true);
-            return;
-          }
-        }
-      } catch (fallbackError) {
-        console.error('Fallback also failed:', fallbackError);
-      }
-      
-      // Final fallback: Create sample data
-      const sampleRecipients: GroupMember[] = [
-        {
-          id: '1',
-          mrId: 'MR001',
-          firstName: 'John',
-          lastName: 'Doe',
-          name: 'John Doe',
-          phone: '+919876543210',
-          email: 'john@example.com',
-          group: 'North Zone',
-          status: 'sent',
-          sentAt: new Date().toISOString(),
-          errorMessage: undefined,
-          messageId: 'wamid.sample1'
-        },
-        {
-          id: '2',
-          mrId: 'MR002',
-          firstName: 'Jane',
-          lastName: 'Smith',
-          name: 'Jane Smith',
-          phone: '+919876543211',
-          email: 'jane@example.com',
-          group: 'South Zone',
-          status: 'failed',
-          sentAt: undefined,
-          errorMessage: 'Message failed to deliver',
-          messageId: 'wamid.sample2'
-        },
-        {
-          id: '3',
-          mrId: 'MR003',
-          firstName: 'Bob',
-          lastName: 'Johnson',
-          name: 'Bob Johnson',
-          phone: '+919876543212',
-          email: 'bob@example.com',
-          group: 'East Zone',
-          status: 'pending',
-          sentAt: undefined,
-          errorMessage: undefined,
-          messageId: undefined
-        }
-      ];
-      setSelectedRecipients(sampleRecipients);
-      setCurrentCampaignId(undefined); // No campaign ID for sample data
       setShowRecipientPopup(true);
     }
   };
@@ -502,8 +414,11 @@ const Dashboard: React.FC = () => {
           sortField={sortField}
           sortDirection={sortDirection}
           onSort={handleSort}
-          loading={loading}
+          loading={loading || apiLoading}
           templateLoading={templateLoading}
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
         />
 
         {/* Template Preview Modal */}

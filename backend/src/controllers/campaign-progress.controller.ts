@@ -14,12 +14,16 @@ export class CampaignProgressController {
         return;
       }
 
-      const campaign = await Campaign.findOne({
-        campaignId: campaignId,
-        createdBy: userId
-      })
+      // Support both Mongo _id and campaignId string
+      const query: any = { createdBy: userId };
+      if (campaignId && campaignId.match(/^[0-9a-fA-F]{24}$/)) {
+        query.$or = [{ _id: campaignId }, { campaignId }];
+      } else {
+        query.campaignId = campaignId;
+      }
+
+      const campaign = await Campaign.findOne(query)
         .populate('templateId')
-        .populate('recipientListId')
         .populate('createdBy', 'name email');
 
       if (!campaign) {
@@ -27,35 +31,51 @@ export class CampaignProgressController {
         return;
       }
 
-      // Get message logs for this campaign
-      const messageLogs = await MessageLog.find({ campaignId: campaign._id });
+      // Prefer campaign.recipients for per-recipient statuses, fallback to MessageLog
+      let recipients: any[] = (campaign as any).recipients || [];
+      let totalMessages = recipients.length;
+      let sentCount = 0; // delivered/read
+      let failedCount = 0;
+      let pendingCount = 0; // queued/pending/sent
 
-      // Calculate progress statistics
-      const totalMessages = messageLogs.length;
-      const sentCount = messageLogs.filter((log: any) => 
-        log.status === 'sent' || log.status === 'delivered' || log.status === 'read'
-      ).length;
-      const failedCount = messageLogs.filter((log: any) => log.status === 'failed').length;
-      const pendingCount = totalMessages - sentCount - failedCount;
+      if (recipients.length > 0) {
+        for (const r of recipients) {
+          const s = (r.status || '').toLowerCase();
+          if (s === 'delivered' || s === 'read') sentCount++;
+          else if (s === 'failed') failedCount++;
+          else pendingCount++;
+        }
+      } else {
+        const messageLogs = await MessageLog.find({ campaignId: campaign._id });
+        totalMessages = messageLogs.length;
+        messageLogs.forEach((log: any) => {
+          const s = (log.status || '').toLowerCase();
+          if (s === 'delivered' || s === 'read') sentCount++;
+          else if (s === 'failed') failedCount++;
+          else pendingCount++;
+        });
+        // Build recipients array from logs for output consistency
+        recipients = messageLogs.map((log: any) => ({
+          mrId: (log.mrId as any) || undefined,
+          firstName: (log as any).firstName,
+          lastName: (log as any).lastName,
+          phone: log.phoneNumber,
+          status: log.status,
+          sentAt: log.sentAt,
+          deliveredAt: log.deliveredAt,
+          readAt: log.readAt,
+          failedAt: log.failedAt,
+          errorMessage: log.errorMessage,
+          messageId: log.messageId
+        }));
+      }
 
-      // Update campaign status based on progress
+      // Derive API-facing status without mutating DB
       let updatedStatus = campaign.status;
       if (totalMessages > 0) {
-        if (pendingCount === 0) {
-          // All messages processed
-          updatedStatus = failedCount === totalMessages ? 'failed' : 'completed';
-        } else if (sentCount > 0 || failedCount > 0) {
-          // Some messages processed
-          updatedStatus = 'sending';
-        }
-        
-        // Update campaign status if it changed
-        if (updatedStatus !== campaign.status) {
-          await Campaign.findByIdAndUpdate(campaign._id, { 
-            status: updatedStatus,
-            ...(updatedStatus === 'completed' && { completedAt: new Date() })
-          });
-        }
+        if (sentCount === totalMessages) updatedStatus = 'completed';
+        else if (pendingCount > 0) updatedStatus = 'sending';
+        else if (sentCount === 0 && failedCount > 0) updatedStatus = 'failed';
       }
 
       res.json({
@@ -67,17 +87,28 @@ export class CampaignProgressController {
             status: updatedStatus,
             createdAt: campaign.createdAt,
             template: campaign.templateId,
-            recipientList: campaign.recipientListId,
             createdBy: campaign.createdBy
           },
           progress: {
             total: totalMessages,
-            sent: sentCount,
+            sent: sentCount, // delivered + read
             failed: failedCount,
             pending: pendingCount,
             successRate: totalMessages > 0 ? Math.round((sentCount / totalMessages) * 100) : 0
           },
-          messageLogs
+          recipients: recipients.map(r => ({
+            mrId: r.mrId,
+            firstName: r.firstName,
+            lastName: r.lastName,
+            phone: r.phone,
+            status: r.status,
+            sentAt: r.sentAt,
+            deliveredAt: r.deliveredAt,
+            readAt: r.readAt,
+            failedAt: r.failedAt,
+            errorMessage: r.errorMessage,
+            messageId: r.messageId
+          }))
         }
       });
     } catch (error) {

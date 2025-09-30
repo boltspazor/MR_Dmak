@@ -1,28 +1,6 @@
 import React from 'react';
 import { Search, Filter } from 'lucide-react';
-
-export interface CampaignRecord {
-  id: string;
-  campaignName: string;
-  campaignId: string;
-  template: {
-    name: string;
-    metaTemplateName?: string;
-    isMetaTemplate: boolean;
-    metaStatus?: string;
-  };
-  recipientList: {
-    name: string;
-    recipientCount: number;
-  };
-  date: string;
-  sendStatus: 'completed' | 'in progress' | 'pending' | 'failed' | 'cancelled';
-  totalRecipients: number;
-  sentCount: number;
-  failedCount: number;
-  successRate: number;
-  status: string;
-}
+import { CampaignRecord } from './CampaignTable';
 
 interface CampaignFiltersProps {
   searchTerm: string;

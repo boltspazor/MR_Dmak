@@ -31,6 +31,20 @@ export interface ICampaign extends Document {
   
   createdAt: Date;
   updatedAt: Date;
+  recipients?: Array<{
+    mrId?: string;
+    phone: string;
+    firstName?: string;
+    lastName?: string;
+    groupId?: string;
+    status: 'queued' | 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
+    messageId?: string;
+    sentAt?: Date;
+    deliveredAt?: Date;
+    readAt?: Date;
+    failedAt?: Date;
+    errorMessage?: string;
+  }>;
 }
 
 const campaignSchema = new Schema<ICampaign>({
@@ -89,6 +103,29 @@ const campaignSchema = new Schema<ICampaign>({
   pendingCount: {
     type: Number,
     default: 0
+  },
+  recipients: {
+    type: [
+      new Schema({
+        mrId: { type: String, required: false },
+        phone: { type: String, required: true },
+        firstName: { type: String },
+        lastName: { type: String },
+        groupId: { type: String },
+        status: { 
+          type: String, 
+          enum: ['queued', 'pending', 'sent', 'delivered', 'read', 'failed'],
+          default: 'pending'
+        },
+        messageId: { type: String },
+        sentAt: { type: Date },
+        deliveredAt: { type: Date },
+        readAt: { type: Date },
+        failedAt: { type: Date },
+        errorMessage: { type: String }
+      }, { _id: false })
+    ],
+    default: []
   },
   scheduledAt: {
     type: Date

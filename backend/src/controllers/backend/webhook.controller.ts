@@ -57,7 +57,7 @@ export class WebhookController {
 
         // Process each change
         for (const change of changes) {
-          await this.processWebhookChange(change);
+          await WebhookController.processWebhookChange(change);
         }
       }
 
@@ -125,17 +125,17 @@ export class WebhookController {
     try {
       // Handle message status updates
       if (value.statuses && Array.isArray(value.statuses)) {
-        await this.processMessageStatuses(value.statuses);
+        await WebhookController.processMessageStatuses(value.statuses);
       }
 
       // Handle incoming messages
       if (value.messages && Array.isArray(value.messages)) {
-        await this.processIncomingMessages(value.messages);
+        await WebhookController.processIncomingMessages(value.messages);
       }
 
       // Handle contacts
       if (value.contacts && Array.isArray(value.contacts)) {
-        await this.processContacts(value.contacts);
+        await WebhookController.processContacts(value.contacts);
       }
     } catch (error) {
       logger.error('Error processing message events:', error);
@@ -226,7 +226,7 @@ export class WebhookController {
         return;
       }
 
-      await this.processMessageStatuses(statuses);
+      await WebhookController.processMessageStatuses(statuses);
     } catch (error) {
       logger.error('Error processing message status:', error);
     }
@@ -353,10 +353,38 @@ export class WebhookController {
             hasErrors: !!(errors && errors.length > 0)
           });
 
-          // Update campaign status if all messages are processed
+          // Also update recipients array inside Campaign to reflect latest status counts
           if (updatedLog.campaignId) {
-            const { CampaignController } = await import('./campaign.controller');
-            await CampaignController.checkAndUpdateCampaignCompletion(updatedLog.campaignId.toString());
+            const campaignIdObj = updatedLog.campaignId as any;
+            const CampaignModel = (await import('../../models/Campaign')).default;
+
+            const recipientUpdate: any = {
+              'recipients.$.status': messageStatus.toLowerCase(),
+              updatedAt: new Date()
+            };
+
+            if (updateData.sentAt) recipientUpdate['recipients.$.sentAt'] = updateData.sentAt;
+            if (updateData.deliveredAt) recipientUpdate['recipients.$.deliveredAt'] = updateData.deliveredAt;
+            if (updateData.readAt) recipientUpdate['recipients.$.readAt'] = updateData.readAt;
+            if (updateData.failedAt) recipientUpdate['recipients.$.failedAt'] = updateData.failedAt;
+            if (updateData.errorMessage) recipientUpdate['recipients.$.errorMessage'] = updateData.errorMessage;
+            if (messageId) recipientUpdate['recipients.$.messageId'] = messageId;
+
+            await CampaignModel.updateOne(
+              { _id: campaignIdObj, 'recipients.phone': updatedLog.phoneNumber },
+              { $set: recipientUpdate }
+            );
+
+            // Recalculate counts efficiently
+            const campaignDoc = await CampaignModel.findById(campaignIdObj).select('recipients');
+            if (campaignDoc && campaignDoc.recipients) {
+              const sent = campaignDoc.recipients.filter((r: any) => r.status === 'sent' || r.status === 'delivered' || r.status === 'read').length;
+              const failed = campaignDoc.recipients.filter((r: any) => r.status === 'failed').length;
+              const pending = campaignDoc.recipients.filter((r: any) => r.status === 'pending' || r.status === 'queued').length;
+              await CampaignModel.updateOne({ _id: campaignIdObj }, {
+                $set: { sentCount: sent, failedCount: failed, pendingCount: pending }
+              });
+            }
           }
         } else {
           logger.warn('Message log not found for webhook update', { 

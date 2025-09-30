@@ -28,7 +28,7 @@ export interface CampaignProgress {
     lastName: string;
     phone: string;
     group: string;
-    status: 'sent' | 'failed' | 'pending' | 'queued';
+    status: 'sent' | 'failed' | 'pending' | 'queued' | 'delivered' | 'read';
     sentAt?: string;
     errorMessage?: string;
     messageId?: string;
@@ -64,6 +64,7 @@ export const campaignProgressAPI = {
    */
   getCampaignProgress: async (campaignId: string): Promise<CampaignProgress> => {
     const response = await api.get(`/campaign-progress/${campaignId}`);
+    console.log(response.data.data);
     return response.data.data;
   },
 

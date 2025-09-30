@@ -1,6 +1,8 @@
 import React from 'react';
 import { MessageSquare, BarChart3, Clock, CheckCircle, X } from 'lucide-react';
 import { SkeletonTable } from '../ui/SkeletonLoader';
+import { PaginationControls } from "../../components/PaginationControls";
+
 
 export interface CampaignRecord {
   id: string;
@@ -37,6 +39,9 @@ interface CampaignTableProps {
   onSort: (field: keyof CampaignRecord) => void;
   loading?: boolean;
   templateLoading?: boolean;
+  page?: number;
+  totalPages?: number;
+  onPageChange?: (page: number) => void;
 }
 
 const CampaignTable: React.FC<CampaignTableProps> = ({
@@ -49,21 +54,15 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
   sortDirection,
   onSort,
   loading = false,
-  templateLoading = false
+  templateLoading = false,
+  page,
+  totalPages,
+  onPageChange
 }) => {
   const getEffectiveStatus = (campaign: CampaignRecord): string => {
-    // Calculate how many recipients have been processed
-    const processed = campaign.sentCount + campaign.failedCount;
-    const isFullyProcessed = processed >= campaign.totalRecipients;
-    
-    // If all recipients have been processed, show as completed
-    if (isFullyProcessed) {
-      return 'completed';
-    }
-    
-    // If not all recipients have been processed, show as active
-    return 'active';
+    return campaign.status || "pending";
   };
+
 
   const getStatusIcon = (status: string) => {
     switch (status.toLowerCase()) {
@@ -292,6 +291,16 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
             ))}
           </tbody>
         </table>
+        {page !== undefined && totalPages !== undefined && onPageChange && (
+          <div className="mt-4">
+            <PaginationControls
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={onPageChange}
+            />
+          </div>
+        )}
+
       </div>
     </div>
   );

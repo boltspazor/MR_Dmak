@@ -33,8 +33,8 @@ export const useCampaignProgress = (options: UseCampaignProgressOptions = {}): U
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const intervalRef = useRef<any | null>(null);
   const isMountedRef = useRef(true);
 
   const refreshProgress = useCallback(async (showRefreshing = true) => {
@@ -43,18 +43,28 @@ export const useCampaignProgress = (options: UseCampaignProgressOptions = {}): U
     try {
       if (showRefreshing) setRefreshing(true);
       else setLoading(true);
-      
       setError(null);
+
       const data = await campaignProgressAPI.getCampaignProgress(campaignId);
-      
+
+      console.log(data);
+
+      // Ensure recipients array exists
+      const normalizedData: CampaignProgress = {
+        ...data,
+        recipients: data.recipients || []
+      };
+
+      console.log(normalizedData);
+
       if (isMountedRef.current) {
-        setProgress(data);
-        onProgressUpdate?.(data);
+        setProgress(normalizedData);
+        onProgressUpdate?.(normalizedData);
       }
     } catch (err: any) {
       console.error('Error fetching campaign progress:', err);
       const errorMessage = err.response?.data?.message || 'Failed to fetch campaign progress';
-      
+
       if (isMountedRef.current) {
         setError(errorMessage);
         toast.error(errorMessage);
@@ -72,14 +82,14 @@ export const useCampaignProgress = (options: UseCampaignProgressOptions = {}): U
       setLoading(true);
       setError(null);
       const data = await campaignProgressAPI.getAllCampaignsProgress();
-      
+
       if (isMountedRef.current) {
-        setCampaigns(data.campaigns);
+        setCampaigns(data.campaigns || []);
       }
     } catch (err: any) {
       console.error('Error fetching campaigns:', err);
       const errorMessage = err.response?.data?.message || 'Failed to fetch campaigns';
-      
+
       if (isMountedRef.current) {
         setError(errorMessage);
         toast.error(errorMessage);
@@ -94,7 +104,11 @@ export const useCampaignProgress = (options: UseCampaignProgressOptions = {}): U
   const getCampaignProgress = useCallback(async (id: string): Promise<CampaignProgress> => {
     try {
       const data = await campaignProgressAPI.getCampaignProgress(id);
-      return data;
+      console.log(data);
+      return {
+        ...data,
+        recipients: data.recipients || []
+      };
     } catch (err: any) {
       console.error('Error fetching campaign progress:', err);
       throw new Error(err.response?.data?.message || 'Failed to fetch campaign progress');
@@ -105,7 +119,7 @@ export const useCampaignProgress = (options: UseCampaignProgressOptions = {}): U
   useEffect(() => {
     if (campaignId) {
       refreshProgress(false);
-      
+
       if (autoRefresh) {
         intervalRef.current = setInterval(() => {
           refreshProgress(true);
@@ -114,9 +128,7 @@ export const useCampaignProgress = (options: UseCampaignProgressOptions = {}): U
     }
 
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+      if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [campaignId, autoRefresh, refreshInterval, refreshProgress]);
 
@@ -129,11 +141,11 @@ export const useCampaignProgress = (options: UseCampaignProgressOptions = {}): U
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+      if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, []);
+
+  console.log(progress);
 
   return {
     progress,

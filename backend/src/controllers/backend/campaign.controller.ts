@@ -186,53 +186,59 @@ export class CampaignController {
       // Calculate progress for each campaign
       const campaignsWithProgress = await Promise.all(
         campaigns.map(async (campaign) => {
-          // Get message logs for this campaign with real-time status
-          const messageLogs = await MessageLog.find({ 
-            campaignId: campaign._id 
-          });
+          // Prefer recipients stored on campaign
+          const recipients = (campaign as any).recipients && (campaign as any).recipients.length > 0
+            ? (campaign as any).recipients
+            : [];
 
-          // Get real-time status for messages with messageId (sample first 5 for performance)
-          const sampleLogs = messageLogs.slice(0, 5);
-          const realTimeStatuses = await Promise.all(
-            sampleLogs.map(async (log) => {
-              if (!log.messageId) return log.status;
-              
-              // Use webhook-updated status (most reliable source)
-              // WhatsApp API calls are no longer needed as webhook provides real-time updates
-              return log.status;
-            })
-          );
+          let total = recipients.length || campaign.totalRecipients || 0;
+          let receivedCount = 0; // delivered or read
+          let failedCount = 0;
+          let pendingCount = 0; // pending/queued/sent
 
-          // Calculate progress based on real-time status for sample + stored status for rest
-          let realTimeSentCount = 0;
-          let realTimeFailedCount = 0;
-          let realTimePendingCount = 0;
+          if (recipients.length > 0) {
+            for (const r of recipients as any[]) {
+              const status = (r.status || '').toLowerCase();
+              if (status === 'delivered' || status === 'read') receivedCount++;
+              else if (status === 'failed') failedCount++;
+              else pendingCount++;
+            }
+          } else {
+            // Fallback to MessageLog when recipients not yet seeded
+            const messageLogs = await MessageLog.find({ campaignId: campaign._id });
+            total = messageLogs.length || total;
+            messageLogs.forEach(log => {
+              const s = (log.status || '').toLowerCase();
+              if (s === 'delivered' || s === 'read') receivedCount++;
+              else if (s === 'failed') failedCount++;
+              else pendingCount++;
+            });
+          }
 
-          // Count real-time statuses from sample
-          realTimeStatuses.forEach(status => {
-            if (status === 'sent' || status === 'delivered' || status === 'read') realTimeSentCount++;
-            else if (status === 'failed') realTimeFailedCount++;
-            else realTimePendingCount++;
-          });
+          const successRate = total > 0 ? Math.round((receivedCount / total) * 100) : 0;
 
-          // Add remaining logs with stored status
-          const remainingLogs = messageLogs.slice(5);
-          remainingLogs.forEach(log => {
-            if (log.status === 'sent' || log.status === 'delivered' || log.status === 'read') realTimeSentCount++;
-            else if (log.status === 'failed') realTimeFailedCount++;
-            else realTimePendingCount++;
-          });
-
-          const successRate = campaign.totalRecipients > 0 
-            ? Math.round((realTimeSentCount / campaign.totalRecipients) * 100) 
-            : 0;
+          // Compute API-facing status strictly from recipient outcomes:
+          // - completed: ONLY if all recipients are delivered/read
+          // - sending: if any are still pending/queued/sent
+          // - failed: if none delivered/read and at least one failed (edge)
+          // - otherwise fall back to stored status
+          let apiStatus = campaign.status;
+          if (total > 0) {
+            if (receivedCount === total) {
+              apiStatus = 'completed';
+            } else if (pendingCount > 0) {
+              apiStatus = 'sending';
+            } else if (receivedCount === 0 && failedCount > 0) {
+              apiStatus = 'failed';
+            }
+          }
 
           return {
             id: campaign._id,
             campaignId: campaign.campaignId,
             name: campaign.name,
             description: campaign.description,
-            status: campaign.status,
+            status: apiStatus,
             createdAt: campaign.createdAt,
             scheduledAt: campaign.scheduledAt,
             startedAt: campaign.startedAt,
@@ -245,17 +251,12 @@ export class CampaignController {
               isMetaTemplate: (campaign.templateId as any).isMetaTemplate,
               type: (campaign.templateId as any).type
             } : null,
-            recipientList: campaign.recipientListId ? {
-              id: campaign.recipientListId._id,
-              name: (campaign.recipientListId as any).name,
-              description: (campaign.recipientListId as any).description,
-              recipientCount: (campaign.recipientListId as any).recipients?.length || 0
-            } : null,
+            // recipientList removed as requested
             progress: {
-              total: campaign.totalRecipients,
-              sent: realTimeSentCount,
-              failed: realTimeFailedCount,
-              pending: realTimePendingCount,
+              total,
+              sent: receivedCount, // treat delivered/read as successful sends
+              failed: failedCount,
+              pending: pendingCount,
               successRate
             },
             createdBy: campaign.createdBy ? {
@@ -315,8 +316,10 @@ export class CampaignController {
         });
       }
 
-      // Get the campaign's actual recipients from the recipient list
-      const campaignRecipients = (campaign.recipientListId as any).recipients || [];
+      // Prefer recipients stored on campaign; fallback to recipient list if missing
+      let campaignRecipients = (campaign as any).recipients && (campaign as any).recipients.length > 0
+        ? (campaign as any).recipients
+        : (campaign.recipientListId ? ((campaign.recipientListId as any).recipients || []) : []);
       
       // Get message logs for this campaign to find status
       const messageLogs = await MessageLog.find({ campaignId: campaign._id });
@@ -367,11 +370,11 @@ export class CampaignController {
             firstName: recipient.firstName,
             lastName: recipient.lastName,
             phone: recipient.phone,
-            group: recipient.groupId || 'Default Group', // Frontend expects 'group' field
-            status: realTimeStatus,
-            sentAt: realTimeTimestamp,
-            errorMessage: errorMessage,
-            messageId: messageId,
+            group: recipient.groupId || 'Default Group',
+            status: (recipient.status || realTimeStatus),
+            sentAt: recipient.sentAt || realTimeTimestamp,
+            errorMessage: recipient.errorMessage || errorMessage,
+            messageId: recipient.messageId || messageId,
             templateParameters: recipient.parameters || {}
           };
         })
@@ -410,12 +413,6 @@ export class CampaignController {
             isMetaTemplate: (campaign.templateId as any).isMetaTemplate,
             type: (campaign.templateId as any).type,
             metaLanguage: (campaign.templateId as any).metaLanguage
-          } : null,
-          recipientList: campaign.recipientListId ? {
-            id: campaign.recipientListId._id,
-            name: (campaign.recipientListId as any).name,
-            description: (campaign.recipientListId as any).description,
-            recipients: (campaign.recipientListId as any).recipients
           } : null,
           progress: {
             total: campaign.totalRecipients,
@@ -571,12 +568,22 @@ export class CampaignController {
         // Update campaign status to sending
         await Campaign.findByIdAndUpdate(campaign._id, updateData);
 
-        // Enqueue messages for all recipients
+        // Seed campaign recipients list and enqueue messages for all recipients
+        const seededRecipients: any[] = [];
         const { messageQueue } = await import('../../services/queue.service');
         let enqueuedCount = 0;
 
         for (const recipient of recipients) {
           try {
+            // Seed recipient into campaign document (pending/queued)
+            seededRecipients.push({
+              mrId: recipient.mrId,
+              phone: recipient.phone,
+              firstName: recipient.firstName,
+              lastName: recipient.lastName,
+              status: 'queued'
+            });
+
             // Create message log entry
             const messageLog = await MessageLog.create({
               campaignId: campaign._id,
@@ -609,6 +616,18 @@ export class CampaignController {
               error: error instanceof Error ? error.message : 'Unknown error'
             });
           }
+        }
+
+        // Persist seeded recipients to campaign document
+        if (seededRecipients.length > 0) {
+          await Campaign.findByIdAndUpdate(campaign._id, {
+            $set: {
+              recipients: seededRecipients,
+              pendingCount: seededRecipients.length,
+              sentCount: 0,
+              failedCount: 0
+            }
+          });
         }
 
         logger.info('Campaign messages enqueued', {
@@ -942,8 +961,10 @@ export class CampaignController {
         });
       }
 
-      // Get the campaign's actual recipients from the recipient list
-      const campaignRecipients = (campaign.recipientListId as any).recipients || [];
+      // Get the campaign's actual recipients from the recipient list (guard null)
+      const campaignRecipients = campaign.recipientListId
+        ? ((campaign.recipientListId as any).recipients || [])
+        : [];
       
       // Get message logs for this campaign to find status
       const messageLogs = await MessageLog.find({ campaignId: campaign._id });

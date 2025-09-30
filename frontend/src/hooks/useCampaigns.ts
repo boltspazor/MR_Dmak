@@ -9,13 +9,18 @@ export const useCampaigns = () => {
   const [mrs, setMrs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10); // you can make this configurable
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
-  const fetchData = async () => {
+  const fetchData = async (pageParam = page) => {
     try {
       const [campaignsRes, templatesRes, mrsRes] = await Promise.all([
-        campaignsAPI.getCampaigns().catch(err => {
+        campaignsAPI.getCampaigns({ page: pageParam, limit }).catch(err => {
           console.log('Campaigns not available (likely auth issue):', err.message);
-          return { campaigns: [] };
+          return { data: { campaigns: [], pagination: { page: 1, limit, total: 0, totalPages: 1 } } } as any;
         }),
         api.get('/meta-templates/all').catch(err => {
           console.log('Templates not available (likely auth issue):', err.message);
@@ -27,34 +32,47 @@ export const useCampaigns = () => {
         })
       ]);
 
-      // Handle different response structures safely
-      const campaigns = campaignsRes.campaigns || [];
-      const templates = templatesRes.data?.data || templatesRes.data || [];
-      const mrs = mrsRes.data?.data || mrsRes.data || [];
+      // Campaigns
+      const campaigns = (campaignsRes.data?.data?.campaigns || campaignsRes.campaigns || []) as Campaign[];
+      const pagination = (campaignsRes.data?.data?.pagination || campaignsRes.pagination || { page: 1, totalPages: 1, total: 0 });
+
+      console.log({campaigns})
 
       setCampaigns(campaigns);
+      setTotalPages(pagination.totalPages);
+      setTotal(pagination.total);
+
+      // Templates
+      const templates = templatesRes.data?.data || templatesRes.data || [];
       setTemplates(templates);
+
+      // MRs
+      const mrs = mrsRes.data?.data || mrsRes.data || [];
       setMrs(mrs);
     } catch (error) {
       console.error('Error fetching data:', error);
-      // Set empty arrays on error
       setCampaigns([]);
       setTemplates([]);
       setMrs([]);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    fetchData(page);
+  }, [page]);
 
   return {
     campaigns,
     templates,
     mrs,
     loading,
-    refetch: fetchData
+    page,
+    setPage,       // expose setter for UI
+    totalPages,
+    total,
+    refetch: () => fetchData(page)
   };
 };
