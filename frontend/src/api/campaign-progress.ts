@@ -31,6 +31,9 @@ export interface CampaignProgress {
     status: 'sent' | 'failed' | 'pending' | 'queued' | 'delivered' | 'read';
     sentAt?: string;
     errorMessage?: string;
+    errorCode?: number;
+    errorTitle?: string;
+    errorDetails?: string;
     messageId?: string;
   }>;
   lastUpdated: string;

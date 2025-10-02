@@ -197,7 +197,11 @@ export class WhatsAppWebhookEnhancedController {
               updateData.sentAt = statusTime;
               break;
             case 'failed':
-              updateData.errorMessage = errors?.[0]?.message || 'Message failed to deliver';
+              const error = errors?.[0];
+              updateData.errorMessage = error?.message || 'Message failed to deliver';
+              updateData.errorCode = error?.code;
+              updateData.errorTitle = error?.title;
+              updateData.errorDetails = error?.error_data?.details;
               updateData.failedAt = statusTime;
               break;
             default:

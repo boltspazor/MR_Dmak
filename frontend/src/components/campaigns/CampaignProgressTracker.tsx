@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { CheckCircle, XCircle, Clock, RefreshCw, Users, AlertCircle } from 'lucide-react';
 import { campaignProgressAPI, CampaignProgress } from '../../api/campaign-progress';
+import { formatErrorMessage, getErrorTooltip } from '../../utils/whatsappErrorCodes';
 import toast from 'react-hot-toast';
 
 interface CampaignProgressTrackerProps {
@@ -373,8 +374,29 @@ const CampaignProgressTracker: React.FC<CampaignProgressTrackerProps> = ({
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {recipient.sentAt ? new Date(recipient.sentAt).toLocaleString() : '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 max-w-xs truncate">
-                      {recipient.errorMessage || '-'}
+                    <td className="px-6 py-4 text-sm max-w-xs">
+                      {recipient.status === 'failed' && (recipient.errorMessage || recipient.errorCode) ? (
+                        <div className="flex items-start space-x-2">
+                          <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <div 
+                              className="text-red-700 text-xs cursor-help break-words" 
+                              title={getErrorTooltip(recipient.errorCode)}
+                            >
+                              {formatErrorMessage(recipient.errorMessage, recipient.errorCode, recipient.errorTitle)}
+                            </div>
+                            {recipient.errorDetails && (
+                              <div className="text-gray-500 text-xs mt-1 break-words">
+                                {recipient.errorDetails}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ) : recipient.status === 'failed' ? (
+                        <span className="text-red-600 text-xs">Failed (No details)</span>
+                      ) : (
+                        <span className="text-gray-400 text-xs">-</span>
+                      )}
                     </td>
                   </tr>
                 ))}

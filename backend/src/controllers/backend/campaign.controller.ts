@@ -374,6 +374,9 @@ export class CampaignController {
             status: (recipient.status || realTimeStatus),
             sentAt: recipient.sentAt || realTimeTimestamp,
             errorMessage: recipient.errorMessage || errorMessage,
+            errorCode: messageLog?.errorCode,
+            errorTitle: messageLog?.errorTitle,
+            errorDetails: messageLog?.errorDetails,
             messageId: recipient.messageId || messageId,
             templateParameters: recipient.parameters || {}
           };

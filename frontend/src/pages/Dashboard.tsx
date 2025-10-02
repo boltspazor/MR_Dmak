@@ -44,6 +44,9 @@ interface GroupMember {
   status: 'sent' | 'failed' | 'pending' | 'queued';
   sentAt?: string;
   errorMessage?: string;
+  errorCode?: number;
+  errorTitle?: string;
+  errorDetails?: string;
   messageId?: string;
 }
 
@@ -251,6 +254,9 @@ const Dashboard: React.FC = () => {
         status: recipient.status || 'pending',
         sentAt: recipient.sentAt,
         errorMessage: recipient.errorMessage,
+        errorCode: recipient.errorCode,
+        errorTitle: recipient.errorTitle,
+        errorDetails: recipient.errorDetails,
         messageId: recipient.messageId
       }));
 

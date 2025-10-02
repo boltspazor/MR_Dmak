@@ -66,6 +66,9 @@ export class CampaignProgressController {
           readAt: log.readAt,
           failedAt: log.failedAt,
           errorMessage: log.errorMessage,
+          errorCode: log.errorCode,
+          errorTitle: log.errorTitle,
+          errorDetails: log.errorDetails,
           messageId: log.messageId
         }));
       }

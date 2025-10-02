@@ -1,6 +1,7 @@
 
 import React, { useMemo } from 'react';
-import { X } from 'lucide-react';
+import { X, AlertCircle } from 'lucide-react';
+import { formatErrorMessage, getErrorTooltip } from '../../utils/whatsappErrorCodes';
 
 export interface GroupMember {
   id: string;
@@ -16,6 +17,9 @@ export interface GroupMember {
   deliveredAt?: string;
   readAt?: string;
   errorMessage?: string;
+  errorCode?: number;
+  errorTitle?: string;
+  errorDetails?: string;
   messageId?: string;
 }
 
@@ -114,10 +118,11 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
                     <th className="text-left py-3 px-6 text-sm font-medium text-gray-700">Name</th>
                     <th className="text-left py-3 px-6 text-sm font-medium text-gray-700">Phone</th>
                     <th className="text-left py-3 px-6 text-sm font-medium text-gray-700">Status</th>
+                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-700">Error Details</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {actualRecipients.map((recipient, index) => (
+                  {actualRecipients.map((recipient) => (
                     <tr key={recipient.mrId} className="border-b hover:bg-gray-50">
                       <td className="py-3 px-6 text-sm text-gray-900">{recipient.name}</td>
                       <td className="py-3 px-6 text-sm text-gray-900">{recipient.phone}</td>
@@ -131,6 +136,30 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
                         }`}>
                           {recipient.status}
                         </span>
+                      </td>
+                      <td className="py-3 px-6 text-sm max-w-xs">
+                        {recipient.status === 'failed' && (recipient.errorMessage || recipient.errorCode) ? (
+                          <div className="flex items-start space-x-2">
+                            <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                              <div 
+                                className="text-red-700 text-xs cursor-help" 
+                                title={getErrorTooltip(recipient.errorCode)}
+                              >
+                                {formatErrorMessage(recipient.errorMessage, recipient.errorCode, recipient.errorTitle)}
+                              </div>
+                              {recipient.errorDetails && (
+                                <div className="text-gray-500 text-xs mt-1">
+                                  {recipient.errorDetails}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ) : recipient.status === 'failed' ? (
+                          <span className="text-red-600 text-xs">Failed (No details)</span>
+                        ) : (
+                          <span className="text-gray-400 text-xs">-</span>
+                        )}
                       </td>
                     </tr>
                   ))}
