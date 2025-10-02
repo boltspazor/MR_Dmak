@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, CheckCircle, Clock, XCircle, Image } from 'lucide-react';
+import { FileText, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { Template } from '../../types';
 import TemplateActions from './TemplateActions';
 
@@ -22,31 +22,7 @@ const TemplateTable: React.FC<TemplateTableProps> = ({
   onExportPNG,
   onDelete,
 }) => {
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'APPROVED':
-        return <CheckCircle className="h-3 w-3 mr-1" />;
-      case 'PENDING':
-        return <Clock className="h-3 w-3 mr-1" />;
-      case 'REJECTED':
-        return <XCircle className="h-3 w-3 mr-1" />;
-      default:
-        return null;
-    }
-  };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'APPROVED':
-        return 'bg-green-100 text-green-800';
-      case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'REJECTED':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
 
   if (templates.length === 0) {
     return (
@@ -70,6 +46,48 @@ const TemplateTable: React.FC<TemplateTableProps> = ({
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      {/* Icon Descriptions */}
+      <div className="bg-gray-50 border-b border-gray-200 p-4">
+        <h4 className="text-sm font-medium text-gray-700 mb-3">Icon Legend:</h4>
+        <div className="flex flex-wrap gap-4 text-xs text-gray-600">
+          <div className="flex items-center space-x-2">
+            <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
+              <span className="text-blue-700 font-bold text-xs">M</span>
+            </div>
+            <span>Meta Template</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
+              <CheckCircle className="h-3 w-3 text-green-700" />
+            </div>
+            <span>Approved</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-5 h-5 bg-yellow-100 rounded-full flex items-center justify-center">
+              <Clock className="h-3 w-3 text-yellow-700" />
+            </div>
+            <span>Pending</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center">
+              <XCircle className="h-3 w-3 text-red-700" />
+            </div>
+            <span>Rejected</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-5 h-5 bg-purple-100 rounded-full flex items-center justify-center">
+              <span className="text-purple-700 font-bold text-xs">I</span>
+            </div>
+            <span>Has Image</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center">
+              <span className="text-orange-700 font-bold text-xs">P</span>
+            </div>
+            <span>Has Parameters</span>
+          </div>
+        </div>
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
@@ -113,24 +131,38 @@ const TemplateTable: React.FC<TemplateTableProps> = ({
                         {template.name}
                       </p>
                     </div>
-                    <div className="flex items-center space-x-2 flex-shrink-0">
+                    <div className="flex items-center space-x-1 flex-shrink-0">
                       {template.isMetaTemplate && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          Meta
-                        </span>
+                        <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center" title="Meta Template">
+                          <span className="text-blue-700 font-bold text-xs">M</span>
+                        </div>
+                      )}
+                      {template.metaStatus === 'APPROVED' && (
+                        <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center" title="Approved">
+                          <CheckCircle className="h-3 w-3 text-green-700" />
+                        </div>
+                      )}
+                      {template.metaStatus === 'PENDING' && (
+                        <div className="w-6 h-6 bg-yellow-100 rounded-full flex items-center justify-center" title="Pending">
+                          <Clock className="h-3 w-3 text-yellow-700" />
+                        </div>
+                      )}
+                      {template.metaStatus === 'REJECTED' && (
+                        <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center" title="Rejected">
+                          <XCircle className="h-3 w-3 text-red-700" />
+                        </div>
                       )}
                       {(template.imageUrl && template.imageUrl.trim() !== '') && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800" title="Has Image">
-                          <Image className="h-3 w-3 mr-1" />
-                          Image
-                        </span>
+                        <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center" title="Has Image">
+                          <span className="text-purple-700 font-bold text-xs">I</span>
+                        </div>
                       )}
-                      {template.metaStatus && (
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(template.metaStatus)}`}>
-                          {getStatusIcon(template.metaStatus)}
-                          {template.metaStatus}
-                        </span>
+                      {template.parameters && template.parameters.length > 0 && (
+                        <div className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center" title="Has Parameters">
+                          <span className="text-orange-700 font-bold text-xs">P</span>
+                        </div>
                       )}
+
                     </div>
                   </div>
                 </td>

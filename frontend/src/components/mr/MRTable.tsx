@@ -98,11 +98,6 @@ const MRTable: React.FC<MRTableProps> = ({ contacts, onEdit, onDelete, onSort, s
             >
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="flex items-center">
-                  <div className="h-10 w-10 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
-                    <span className="text-sm font-bold text-indigo-600">
-                      {contact.mrId.charAt(0)}
-                    </span>
-                  </div>
                   <div>
                     <div className="text-sm font-semibold text-gray-900">{contact.mrId}</div>
                   </div>

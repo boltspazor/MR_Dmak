@@ -1,13 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { FileText } from 'lucide-react';
-import { api } from '../lib/api';
 import { templateApi } from '../api/templates';
 import toast from 'react-hot-toast';
-import { Template, AvailableParameters } from '../types';
+import { Template } from '../types';
 import Header from '../components/Header';
 import CommonFeatures from '../components/CommonFeatures';
-import { useAuth } from '../contexts/AuthContext';
 import { useConfirm } from '../contexts/ConfirmContext';
 import TemplatePreviewDialog from '../components/ui/TemplatePreviewDialog';
 import TemplateRecipientUploadV2 from '../components/ui/TemplateRecipientUploadV2';
@@ -51,8 +48,7 @@ const Templates: React.FC = () => {
   const [contentSearchTerm, setContentSearchTerm] = useState('');
   const [sortField, setSortField] = useState<'name' | 'createdAt'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [availableParameters, setAvailableParameters] = useState<AvailableParameters | null>(null);
+
   const [showPreview, setShowPreview] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -67,20 +63,9 @@ const Templates: React.FC = () => {
   useEffect(() => {
     loadTemplates();
     loadMetaTemplateStats();
-    fetchAvailableParameters();
   }, [loadTemplates, loadMetaTemplateStats]);
 
-  const fetchAvailableParameters = async () => {
-    try {
-      const token = localStorage.getItem('authToken');
-      if (!token) return;
 
-      const response = await api.get('/recipient-lists/parameters');
-      setAvailableParameters(response.data.data);
-    } catch (error: unknown) {
-      console.error('Error fetching available parameters:', error);
-    }
-  };
 
   // Memoize filtered and sorted templates
   const filteredTemplates = useMemo(() => {
@@ -91,7 +76,13 @@ const Templates: React.FC = () => {
 
         const matchesContentSearch = !contentSearchTerm ||
           template.content.toLowerCase().includes(contentSearchTerm.toLowerCase()) ||
-          template.parameters.some(param => param.toLowerCase().includes(contentSearchTerm.toLowerCase()));
+          template.parameters.some(param => {
+            if (typeof param === 'string') {
+              return param.toLowerCase().includes(contentSearchTerm.toLowerCase());
+            } else {
+              return param.name.toLowerCase().includes(contentSearchTerm.toLowerCase());
+            }
+          });
 
         // Meta template filtering
         const matchesTemplateType = templateFilter === 'all' ||
@@ -168,13 +159,14 @@ const Templates: React.FC = () => {
       
       // Show success message with Meta deletion info if applicable
       let successMessage = 'Template deleted successfully!';
-      if (templateToDelete.isMetaTemplate && result.metaDeletion) {
-        if (result.metaDeletion.message.includes('cannot be deleted from Meta API (not supported)')) {
+      const resultWithMeta = result as any;
+      if (templateToDelete.isMetaTemplate && resultWithMeta.metaDeletion) {
+        if (resultWithMeta.metaDeletion.message?.includes('cannot be deleted from Meta API (not supported)')) {
           successMessage += ` Note: Template removed from local database. Meta API deletion is not supported by WhatsApp Business Platform.`;
-        } else if (result.metaDeletion.success) {
-          successMessage += ` Meta API: ${result.metaDeletion.message}`;
+        } else if (resultWithMeta.metaDeletion.success) {
+          successMessage += ` Meta API: ${resultWithMeta.metaDeletion.message}`;
         } else {
-          successMessage += ` Meta API warning: ${result.metaDeletion.message}`;
+          successMessage += ` Meta API warning: ${resultWithMeta.metaDeletion.message}`;
         }
       }
       
@@ -275,7 +267,7 @@ const Templates: React.FC = () => {
             showExportButtons={false}
           />
           <div className="border-b-2 border-indigo-500 my-6"></div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Templates Management</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Templates</h2>
 
           <div className="animate-pulse space-y-6">
             <div className="h-8 bg-gray-200 rounded w-1/4"></div>
@@ -306,8 +298,8 @@ const Templates: React.FC = () => {
         {/* Separator Line */}
         <div className="border-b-2 border-indigo-500 my-6"></div>
 
-        {/* Templates Management Header */}
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Templates Management</h2>
+        {/* Templates Header */}
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Templates</h2>
 
         {/* Main Content Area */}
         <CommonFeatures
