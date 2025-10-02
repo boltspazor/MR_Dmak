@@ -14,9 +14,8 @@ const StandardHeader: React.FC<StandardHeaderProps> = ({ pageTitle }) => {
             <img 
               src="/DVK_updated_logo.png" 
               alt="D-MAK Logo" 
-              className="h-10 object-contain mb-2"
+              className="h-16 object-contain mb-2"
             />
-            <p className="text-lg text-gray-600">Digital - Marketing, Automate & Konnect</p>
           </div>
           
           {/* Glenmark Logo */}

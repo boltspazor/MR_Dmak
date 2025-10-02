@@ -610,44 +610,7 @@ const TemplatePreviewDialog: React.FC<TemplatePreviewDialogProps> = ({
                   )}
                 </div>
 
-                {/* Template Actions */}
-                {(showDownloadButton && onDownloadRecipientList) || (showBulkUploadButton && onBulkUploadRecipients) ? (
-                  <div className="bg-white border border-gray-200 rounded-lg p-6">
-                    <h4 className="text-lg font-semibold text-gray-800 mb-4">Template Actions</h4>
-                    <div className="flex gap-3">
-                      {showDownloadButton && onDownloadRecipientList && (
-                        <button
-                          onClick={() => onDownloadRecipientList(template)}
-                          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                          title="Download Recipient List Template"
-                        >
-                          <Download className="h-4 w-4" />
-                          Download Template CSV
-                        </button>
-                      )}
-                      {showBulkUploadButton && onBulkUploadRecipients && (
-                        <button
-                          onClick={() => onBulkUploadRecipients(template)}
-                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                          title="Upload Recipients for this Template"
-                        >
-                          <Upload className="h-4 w-4" />
-                          Upload Recipients
-                        </button>
-                      )}
-                    </div>
-                    <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                      <p className="text-xs text-gray-600 mb-2">
-                        <strong>CSV Format:</strong>
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        • Row 1: Template Name in A1, template name in B1<br />
-                        • Row 2: MR ID, First Name, Last Name{extractedParams.length > 0 ? `, ${extractedParams.join(', ')}` : ''}<br />
-                        • Each parameter will have its own column in the recipient list
-                      </p>
-                    </div>
-                  </div>
-                ) : null}
+
 
 
 
@@ -746,6 +709,47 @@ const TemplatePreviewDialog: React.FC<TemplatePreviewDialogProps> = ({
                 )}
               </div>
             </div>
+            
+            {/* Template Actions - Moved to bottom right */}
+            {(showDownloadButton && onDownloadRecipientList) || (showBulkUploadButton && onBulkUploadRecipients) ? (
+              <div className="flex justify-end mt-6">
+                <div className="bg-white border border-gray-200 rounded-lg p-6 max-w-md">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4">Template Actions</h4>
+                  <div className="flex gap-3">
+                    {showDownloadButton && onDownloadRecipientList && (
+                      <button
+                        onClick={() => onDownloadRecipientList(template)}
+                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                        title="Download Recipient List Template"
+                      >
+                        <Download className="h-4 w-4" />
+                        Download Template CSV
+                      </button>
+                    )}
+                    {showBulkUploadButton && onBulkUploadRecipients && (
+                      <button
+                        onClick={() => onBulkUploadRecipients(template)}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        title="Upload Recipients for this Template"
+                      >
+                        <Upload className="h-4 w-4" />
+                        Upload Recipients
+                      </button>
+                    )}
+                  </div>
+                  <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                    <p className="text-xs text-gray-600 mb-2">
+                      <strong>CSV Format:</strong>
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      • Row 1: Template Name in A1, template name in B1<br />
+                      • Row 2: MR ID, First Name, Last Name{template ? extractParameters(template.content).map(p => p.name).join(', ') : ''}<br />
+                      • Each parameter will have its own column in the recipient list
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

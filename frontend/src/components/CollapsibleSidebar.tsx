@@ -130,7 +130,9 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
               >
                 <Icon size={isCollapsed ? 24 : 20} />
                 {!isCollapsed && (
-                  <span className="font-medium">{item.name}</span>
+                  <span className={`font-medium ${
+                    item.name === 'Super Admin' ? 'text-black' : 'text-white'
+                  }`}>{item.name}</span>
                 )}
               </button>
             );
@@ -139,20 +141,6 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
 
         {/* Footer */}
         <div className="p-4 border-t border-white/20">
-          {/* DVK Logo */}
-          <div className={`
-            flex justify-center mb-4
-            ${isCollapsed ? 'px-2' : 'px-4'}
-          `}>
-            <img 
-              src="/dvk.svg" 
-              alt="DVK Logo" 
-              className={`
-                ${isCollapsed ? 'w-8 h-8' : 'w-12 h-12'}
-                object-contain
-              `}
-            />
-          </div>
 
           {/* User Info */}
           <div className={`
@@ -163,9 +151,9 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
               <User size={isCollapsed ? 20 : 16} className="text-white" />
             </div>
             {!isCollapsed && (
-              <div className="text-white">
+              <div className="text-black">
                 <div className="text-sm font-medium">{userName}</div>
-                <div className="text-xs text-white/70 capitalize">{userRole}</div>
+                <div className="text-xs text-black/70 capitalize">{userRole}</div>
               </div>
             )}
           </div>
@@ -183,6 +171,21 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
             <LogOut size={isCollapsed ? 24 : 20} />
             {!isCollapsed && <span className="font-medium">Logout</span>}
           </button>
+          
+          {/* DVK Logo - Moved to bottom with larger size */}
+          <div className={`
+            flex justify-center mt-4 pt-4 border-t border-white/20
+            ${isCollapsed ? 'px-2' : 'px-4'}
+          `}>
+            <img 
+              src="/dvk.svg" 
+              alt="DVK Logo" 
+              className={`
+                ${isCollapsed ? 'w-10 h-10' : 'w-16 h-16'}
+                object-contain
+              `}
+            />
+          </div>
         </div>
       </div>
 
