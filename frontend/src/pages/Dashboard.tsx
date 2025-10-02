@@ -309,7 +309,7 @@ const Dashboard: React.FC = () => {
         <div className="border-b-2 border-indigo-500 my-6"></div>
 
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Campaigns Dashboard</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Dashboard</h2>
         </div>
 
         <CampaignStats campaigns={sortedCampaigns} loading={loading} />

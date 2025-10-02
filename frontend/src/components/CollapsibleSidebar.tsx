@@ -41,7 +41,7 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
     { name: 'Dashboard', route: '/dashboard', icon: Home },
     { name: 'Campaign Wizard', route: '/campaign-wizard', icon: Wand2 },
     { name: 'Templates', route: '/templates', icon: Layout },
-    { name: 'Medical Reps', route: '/mrs', icon: UserCheck },
+    { name: 'MR Management', route: '/mrs', icon: UserCheck },
     { name: 'Simple MR Tool', route: '/simple-mr-tool', icon: Users },
     { name: 'Consent Form', route: '/consent-form', icon: ClipboardList },
     { name: 'Super Admin', route: '/super-admin', icon: Shield },
@@ -73,16 +73,16 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
         ${isCollapsed ? 'w-16' : 'w-64'}
         ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         transition-all duration-300 ease-in-out
-        bg-white border-r border-gray-200 h-full flex flex-col shadow-sm
+        bg-gradient-to-b from-blue-500 to-white border-r border-gray-200 h-full flex flex-col shadow-sm
       `}>
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           {!isCollapsed && (
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-white/20 backdrop-blur rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-lg">D</span>
               </div>
-              <span className="text-lg font-bold text-gray-900">D-MAK</span>
+              <span className="text-lg font-bold text-white">D-MAK</span>
             </div>
           )}
           
@@ -119,8 +119,8 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
                 className={`
                   w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all
                   ${isActive 
-                    ? 'bg-purple-100 text-purple-700' 
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                    ? 'bg-white/20 backdrop-blur text-white font-semibold' 
+                    : 'text-white/80 hover:bg-white/10 hover:text-white'
                   }
                   ${isCollapsed ? 'justify-center' : 'justify-start'}
                 `}
@@ -136,7 +136,7 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-200">
+        <div className="p-4 border-t border-white/20">
           {/* DVK Logo */}
           <div className={`
             flex justify-center mb-4
@@ -157,13 +157,13 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
             flex items-center gap-3 mb-3
             ${isCollapsed ? 'justify-center' : 'justify-start'}
           `}>
-            <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-              <User size={isCollapsed ? 20 : 16} className="text-gray-600" />
+            <div className="w-8 h-8 bg-white/20 backdrop-blur rounded-full flex items-center justify-center">
+              <User size={isCollapsed ? 20 : 16} className="text-white" />
             </div>
             {!isCollapsed && (
-              <div className="text-gray-900">
+              <div className="text-white">
                 <div className="text-sm font-medium">{userName}</div>
-                <div className="text-xs text-gray-500 capitalize">{userRole}</div>
+                <div className="text-xs text-white/70 capitalize">{userRole}</div>
               </div>
             )}
           </div>
@@ -173,7 +173,7 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
             onClick={onLogout}
             className={`
               w-full flex items-center gap-3 px-3 py-2 rounded-lg
-              text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all
+              text-white/80 hover:bg-white/10 hover:text-white transition-all
               ${isCollapsed ? 'justify-center' : 'justify-start'}
             `}
             title={isCollapsed ? 'Logout' : undefined}
