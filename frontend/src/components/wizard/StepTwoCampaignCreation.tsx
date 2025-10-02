@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Send, Users, FileText, CheckCircle, AlertCircle, Eye } from 'lucide-react';
 import { WizardTemplate, WizardMR, WizardCampaign } from '../../pages/CampaignWizard';
 import TemplatePreviewDialog from '../ui/TemplatePreviewDialog';
-import ProgressStats from '../ui/ProgressStats';
 import { SkeletonLoader, SkeletonText } from '../ui/SkeletonLoader';
 import { api } from '../../api/config';
 import { campaignsAPI } from '../../api/campaigns-new';
@@ -599,24 +598,7 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
         </div>
       )}
 
-      {/* Campaign Progress Preview */}
-      {(selectedRecipientList || (selectedTemplate && !hasParameters(selectedTemplate) && selectedMRs.length > 0)) && (
-        <div className="mb-6">
-          <ProgressStats
-            totalRecipients={
-              hasParameters(selectedTemplate)
-                ? selectedRecipientList.recipients?.length || selectedRecipientList.data?.length || 0
-                : selectedMRs.length
-            }
-            sentCount={0}
-            pendingCount={
-              hasParameters(selectedTemplate)
-                ? selectedRecipientList.recipients?.length || selectedRecipientList.data?.length || 0
-                : selectedMRs.length
-            }
-          />
-        </div>
-      )}
+
 
       {/* Create Campaign Button */}
       <div className="text-center">

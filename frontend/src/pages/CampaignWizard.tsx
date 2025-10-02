@@ -204,7 +204,7 @@ const CampaignWizard: React.FC = () => {
       <div className="flex-1 flex flex-col px-4">
           <Header
             title="D-MAK"
-            subtitle="Create and send campaigns in 3 easy steps"
+            subtitle="Create campaigns in 2 easy steps"
             showExportButtons={false}
           />
 
@@ -213,7 +213,7 @@ const CampaignWizard: React.FC = () => {
           <div className={`max-w-7xl mx-auto ${selectedTemplate ? 'grid grid-cols-1 lg:grid-cols-2 gap-8' : ''}`}>
             {/* Progress Stepper */}
             <div className={`mb-8 ${selectedTemplate ? 'lg:col-span-2' : ''}`}>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-center gap-16">
                 {steps.map((step, index) => {
                   const isActive = currentStep === step.id;
                   const isCompleted = isStepCompleted(step.id);
