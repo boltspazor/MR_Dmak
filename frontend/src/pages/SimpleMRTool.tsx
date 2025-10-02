@@ -171,7 +171,6 @@ const SimpleMRTool: React.FC = () => {
               onAddIndividual={() => setIsAddMRDialogOpen(true)}
               onCSVImport={handleCSVImport}
               onDownloadTemplate={handleTemplateDownload}
-              onDownloadCSV={exportContactsToCSV}
             />
           </div>
 

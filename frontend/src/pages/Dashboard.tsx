@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import TemplatePreviewDialog from '../components/ui/TemplatePreviewDialog';
 import RecipientListModal from '../components/ui/RecipientListModal';
-import Header from '../components/Header';
+import StandardHeader from '../components/StandardHeader';
 import CampaignStats from '../components/dashboard/CampaignStats';
 import CampaignTable from '../components/dashboard/CampaignTable';
 import { campaignsAPI, templateAPI, Campaign } from '../api/campaigns-new';
@@ -299,18 +299,7 @@ const Dashboard: React.FC = () => {
     <div className="min-h-screen bg-gray-100">
 
       <div className="p-8">
-        {/* Header */}
-        <Header 
-          title="D-MAK"
-          subtitle="Digital - Marketing, Automate & Konnect"
-          showExportButtons={false}
-        />
-
-        <div className="border-b-2 border-indigo-500 my-6"></div>
-
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Dashboard</h2>
-        </div>
+        <StandardHeader pageTitle="Dashboard" />
 
         <CampaignStats campaigns={sortedCampaigns} loading={loading} />
 

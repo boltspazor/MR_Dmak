@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import StepOneTemplateSelection from '../components/wizard/StepOneTemplateSelection';
 import StepTwoCampaignCreation from '../components/wizard/StepTwoCampaignCreation';
 
-import Header from '../components/Header';
+import StandardHeader from '../components/StandardHeader';
 import TemplatePreviewDialog from '../components/ui/TemplatePreviewDialog';
 
 // Types
@@ -202,11 +202,7 @@ const CampaignWizard: React.FC = () => {
     <div className="min-h-screen bg-gray-100 flex flex-col pt-4">
       {/* Main Content */}
       <div className="flex-1 flex flex-col px-4">
-          <Header
-            title="D-MAK"
-            subtitle="Create campaigns in 2 easy steps"
-            showExportButtons={false}
-          />
+          <StandardHeader pageTitle="Create Campaign" />
 
         {/* Wizard Content */}
         <div className="flex-1 p-6">

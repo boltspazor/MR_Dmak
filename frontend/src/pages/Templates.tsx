@@ -3,7 +3,7 @@ import { FileText } from 'lucide-react';
 import { templateApi } from '../api/templates';
 import toast from 'react-hot-toast';
 import { Template } from '../types';
-import Header from '../components/Header';
+import StandardHeader from '../components/StandardHeader';
 import CommonFeatures from '../components/CommonFeatures';
 import { useConfirm } from '../contexts/ConfirmContext';
 import TemplatePreviewDialog from '../components/ui/TemplatePreviewDialog';
@@ -259,15 +259,7 @@ const Templates: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-100">
         <div className="p-8">
-          <Header
-            title="D-MAK"
-            subtitle="Digital - Marketing, Automate & Konnect"
-            onExportCSV={exportTemplatesToCSV}
-            onExportPDF={exportTemplatesToPDF}
-            showExportButtons={false}
-          />
-          <div className="border-b-2 border-indigo-500 my-6"></div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Templates</h2>
+          <StandardHeader pageTitle="Templates" />
 
           <div className="animate-pulse space-y-6">
             <div className="h-8 bg-gray-200 rounded w-1/4"></div>
@@ -286,20 +278,7 @@ const Templates: React.FC = () => {
     <div className="min-h-screen bg-gray-100">
       {/* Main Content */}
       <div className="p-8">
-        {/* Header */}
-        <Header
-          title="D-MAK"
-          subtitle="Digital - Marketing, Automate & Konnect"
-          onExportCSV={exportTemplatesToCSV}
-          onExportPDF={exportTemplatesToPDF}
-          showExportButtons={false}
-        />
-
-        {/* Separator Line */}
-        <div className="border-b-2 border-indigo-500 my-6"></div>
-
-        {/* Templates Header */}
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Templates</h2>
+        <StandardHeader pageTitle="Templates" />
 
         {/* Main Content Area */}
         <CommonFeatures

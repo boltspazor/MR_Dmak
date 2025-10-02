@@ -17,6 +17,7 @@ import { User } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfirm } from '../contexts/ConfirmContext';
 import { useNavigate } from 'react-router-dom';
+import StandardHeader from '../components/StandardHeader';
 
 interface SystemStats {
   totalUsers: number
@@ -185,12 +186,10 @@ const SuperAdmin: React.FC = () => {
     <div className="min-h-screen bg-gray-100">
       <div className="p-8">
       <div className="space-y-8">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Super Admin Dashboard</h1>
-            <p className="text-gray-600">System-wide management and monitoring</p>
-          </div>
+        <StandardHeader pageTitle="Super Admin Dashboard" />
+        
+        {/* Management Actions */}
+        <div className="flex justify-end mb-6">
           <Button
             onClick={() => {
               setShowCreateForm(true);

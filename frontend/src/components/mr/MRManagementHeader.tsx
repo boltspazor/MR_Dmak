@@ -1,5 +1,5 @@
 import React from 'react';
-import Header from '../Header';
+import StandardHeader from '../StandardHeader';
 import MRStatsCards from './MRStatsCards';
 
 interface StatCard {
@@ -25,26 +25,11 @@ const MRManagementHeader: React.FC<MRManagementHeaderProps> = ({
 }) => {
   return (
     <>
-      {/* Header */}
-      <div className="mb-8">
-        <Header
-          title="D-MAK"
-          subtitle="Digital - Marketing, Automate & Konnect"
-          onExportCSV={onExportCSV}
-          onExportPDF={onExportPDF}
-          showExportButtons={false}
-        />
-      </div>
+      {/* Standardized Header */}
+      <StandardHeader pageTitle="MR Management" />
 
-      {/* MR Management Header */}
+      {/* Stats Cards */}
       <div className="mb-8">
-        <div className="flex items-center space-x-4 mb-4">
-          <div>
-            <h2 className="text-3xl font-bold text-gray-900">MR Management</h2>
-          </div>
-        </div>
-        
-        {/* Stats Cards */}
         <MRStatsCards summaryItems={summaryItems} loading={loading} />
       </div>
     </>
