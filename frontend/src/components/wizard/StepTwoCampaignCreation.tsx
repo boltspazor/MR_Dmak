@@ -17,6 +17,7 @@ interface StepTwoCampaignCreationProps {
   onPrev: () => void;
   canGoNext: boolean;
   canGoPrev: boolean;
+  campaignName: string;
   selectedTemplate: WizardTemplate | null;
   allMRs: WizardMR[];
   selectedMRs: string[];
@@ -27,13 +28,12 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
   stepTitle,
   stepDescription,
   onComplete,
-  onNext,
+  campaignName,
   selectedTemplate,
   allMRs,
   selectedMRs,
   setSelectedMRs
 }) => {
-  const [campaignName, setCampaignName] = useState('');
   const [showTemplatePreview, setShowTemplatePreview] = useState(false);
   const [showMRSelection, setShowMRSelection] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -184,7 +184,7 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
     }
 
     try {
-      toast.loading('Creating and starting campaign...', { id: 'campaign-creation' });
+      toast.loading('Creating campaign...', { id: 'campaign-creation' });
 
       let result;
 
@@ -222,17 +222,13 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
         toast.error('Campaign created but no ID returned. Please check the campaign manually.');
         return;
       }
-      
-      // Automatically start sending messages
-      toast.loading('Starting message sending...', { id: 'campaign-creation' });
-      await campaignsAPI.updateCampaignStatus(campaignId, 'sending');
 
       const campaign: WizardCampaign = {
         id: campaignId,
         campaignName: campaignName.trim(),
         templateId: selectedTemplate._id,
         selectedMRs: selectedMRs,
-        status: 'sending',
+        status: 'draft',
         createdAt: new Date().toISOString()
       };
 
@@ -241,7 +237,7 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
         ? selectedRecipientList.recipients?.length || 0
         : selectedMRs.length;
 
-      toast.success(`Campaign created and activated! Messages are being sent to ${recipientCount} recipients.`, {
+      toast.success(`Campaign "${campaignName.trim()}" created successfully with ${recipientCount} recipients!`, {
         id: 'campaign-creation'
       });
 
@@ -251,29 +247,10 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
         campaignResult: result
       });
 
-      // Automatically move to the next step (Progress Check)
-      onNext();
-
     } catch (error: any) {
-      console.error('Template campaign creation error:', error);
-      toast.error(`Failed to create template campaign: ${error.response?.data?.error || error.message}`, {
+      console.error('Campaign creation error:', error);
+      toast.error(`Failed to create campaign: ${error.response?.data?.error || error.message}`, {
         id: 'campaign-creation'
-      });
-
-      // Still create the campaign record even if sending fails
-      const campaign: WizardCampaign = {
-        id: `campaign_${Date.now()}`,
-        campaignName: campaignName.trim(),
-        templateId: selectedTemplate._id,
-        selectedMRs: selectedMRs,
-        status: 'failed',
-        createdAt: new Date().toISOString()
-      };
-
-      onComplete({ 
-        campaign, 
-        selectedMRs,
-        campaignResult: { error: error.message }
       });
     }
   };
@@ -309,22 +286,10 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
         <p className="mt-2 text-gray-600">{stepDescription}</p>
       </div>
 
-      {/* Campaign Name Input */}
+      {/* Campaign Overview */}
       <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Campaign Details</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Campaign: {campaignName}</h3>
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Campaign Name *
-            </label>
-            <input
-              type="text"
-              value={campaignName}
-              onChange={(e) => setCampaignName(e.target.value)}
-              placeholder="Enter campaign name (e.g., Q1 Product Launch)"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            />
-          </div>
 
           {/* Recipient List Selection */}
           {selectedTemplate && (
@@ -666,7 +631,7 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
         >
           <div className="flex items-center space-x-2">
             <Send className="w-5 h-5" />
-            <span>Create & Start Campaign</span>
+            <span>Create Campaign</span>
           </div>
         </button>
       </div>
@@ -679,7 +644,7 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
             <div className="text-sm text-yellow-800">
               <p className="font-medium mb-1">Please complete the following:</p>
               <ul className="list-disc list-inside space-y-1">
-                {!campaignName.trim() && <li>Enter a campaign name</li>}
+
                 {!selectedTemplate && <li>Select a template</li>}
                 {hasParameters(selectedTemplate) && !selectedRecipientList && <li>Select a recipient list</li>}
                 {selectedMRs.length === 0 && <li>Select at least one medical representative</li>}
@@ -695,11 +660,11 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
         <p className="text-sm text-blue-800">
           {isFormValid() 
             ? hasParameters(selectedTemplate)
-              ? `Perfect! Your campaign "${campaignName}" is ready to be created and started with ${selectedRecipientList?.recipients?.length || 0} recipients from "${selectedRecipientList?.name}". Click "Create & Start Campaign" to proceed.`
-              : `Perfect! Your campaign "${campaignName}" is ready to be created and started with ${selectedMRs.length} medical representatives. Click "Create & Start Campaign" to proceed.`
+              ? `Perfect! Your campaign "${campaignName}" is ready to be created with ${selectedRecipientList?.recipients?.length || 0} recipients from "${selectedRecipientList?.name}". Click "Create Campaign" to proceed.`
+              : `Perfect! Your campaign "${campaignName}" is ready to be created with ${selectedMRs.length} medical representatives. Click "Create Campaign" to proceed.`
             : hasParameters(selectedTemplate)
-            ? "Complete the campaign details above. Make sure to enter a campaign name, select a template, and choose a recipient list. The template recipients will be automatically loaded."
-            : "Complete the campaign details above. Make sure to enter a campaign name, select a template, and select which medical representatives to include."
+            ? "Complete the recipient selection above. Choose a recipient list and the template recipients will be automatically loaded."
+            : "Complete the recipient selection above. Choose which medical representatives to include in your campaign."
           }
         </p>
         {/* Show recipient names in the preview */}

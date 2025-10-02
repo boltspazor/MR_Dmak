@@ -3,12 +3,10 @@ import {
   CheckCircle, 
   XCircle, 
   Clock, 
-  Users, 
-  TrendingUp, 
-  Eye,
+  Users,
+  Search,
   RefreshCw,
-  Filter,
-  Search
+  Eye
 } from 'lucide-react';
 import { useCampaignProgress } from '../../hooks/useCampaignProgress';
 import CampaignProgressTracker from './CampaignProgressTracker';

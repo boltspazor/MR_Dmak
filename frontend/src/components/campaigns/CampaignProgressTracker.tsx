@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, XCircle, Clock, RefreshCw, Users, TrendingUp, AlertCircle } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, RefreshCw, Users, AlertCircle } from 'lucide-react';
 import { campaignProgressAPI, CampaignProgress } from '../../api/campaign-progress';
 import toast from 'react-hot-toast';
 

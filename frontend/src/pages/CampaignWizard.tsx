@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, CheckCircle, Circle, ArrowRight, Users, FileText, Send, BarChart3 } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { ChevronLeft, ChevronRight, CheckCircle, Users, FileText } from 'lucide-react';
 import { api } from '../api/config';
 import toast from 'react-hot-toast';
 
 // Step Components
 import StepOneTemplateSelection from '../components/wizard/StepOneTemplateSelection';
 import StepTwoCampaignCreation from '../components/wizard/StepTwoCampaignCreation';
-import StepThreeProgressCheck from '../components/wizard/StepThreeProgressCheck';
+
 import Header from '../components/Header';
 import TemplatePreviewDialog from '../components/ui/TemplatePreviewDialog';
 
@@ -59,42 +58,31 @@ export interface WizardCampaign {
 const CampaignWizard: React.FC = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
-  const [loading, setLoading] = useState(false);
 
-  // Wizard state
+
+    // Wizard state
+  const [campaignName, setCampaignName] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<WizardTemplate | null>(null);
   const [allMRs, setAllMRs] = useState<WizardMR[]>([]);
   const [selectedMRs, setSelectedMRs] = useState<string[]>([]);
   const [createdCampaign, setCreatedCampaign] = useState<WizardCampaign | null>(null);
-  const [campaignProgress, setCampaignProgress] = useState({
-    total: 0,
-    sent: 0,
-    failed: 0,
-    pending: 0
-  });
+
   const [showTemplatePreview, setShowTemplatePreview] = useState(false);
 
   const steps = [
     {
       id: 1,
-      title: 'Template Selection',
-      description: 'Choose or create a template',
+      title: 'Campaign & Template',
+      description: 'Name your campaign and choose template',
       icon: FileText,
       component: StepOneTemplateSelection
     },
     {
       id: 2,
-      title: 'Campaign Creation',
-      description: 'Select recipients and create campaign',
-      icon: Send,
+      title: 'Select Recipients',
+      description: 'Choose recipient list or select MRs',
+      icon: Users,
       component: StepTwoCampaignCreation
-    },
-    {
-      id: 3,
-      title: 'Progress Check',
-      description: 'Monitor campaign progress',
-      icon: BarChart3,
-      component: StepThreeProgressCheck
     }
   ];
 
@@ -119,11 +107,9 @@ const CampaignWizard: React.FC = () => {
   const isStepValid = (step: number): boolean => {
     switch (step) {
       case 1:
-        return selectedTemplate !== null;
+        return campaignName.trim() !== '' && selectedTemplate !== null;
       case 2:
         return selectedMRs.length > 0;
-      case 3:
-        return createdCampaign !== null;
       default:
         return false;
     }
@@ -137,31 +123,30 @@ const CampaignWizard: React.FC = () => {
       case 2:
         return createdCampaign !== null;
       case 3:
-        return campaignProgress.total > 0 && campaignProgress.sent === campaignProgress.total;
+        return createdCampaign !== null;
       default:
         return false;
     }
   };
 
-  // Handle step completion
+    // Handle step completion
   const handleStepComplete = (stepData: any) => {
     switch (currentStep) {
       case 1:
-        setSelectedTemplate(stepData.template);
+        if (stepData.campaignName) {
+          setCampaignName(stepData.campaignName);
+        }
+        if (stepData.template) {
+          setSelectedTemplate(stepData.template);
+        }
         break;
       case 2:
         setCreatedCampaign(stepData.campaign);
         setSelectedMRs(stepData.selectedMRs);
-        // Simulate progress for demo
-        setCampaignProgress({
-          total: stepData.selectedMRs.length,
-          sent: 0,
-          failed: 0,
-          pending: stepData.selectedMRs.length
-        });
-        break;
-      case 3:
-        // Progress check - could update progress here
+        // Navigate to dashboard with recipient list popup
+        setTimeout(() => {
+          navigate('/dashboard?showRecipientList=true&campaignId=' + stepData.campaign.id);
+        }, 1000);
         break;
     }
   };
@@ -298,16 +283,14 @@ const CampaignWizard: React.FC = () => {
                     canGoNext={isStepValid(currentStep)}
                     canGoPrev={currentStep > 1}
                     // Pass wizard state
+                    campaignName={campaignName}
                     selectedTemplate={selectedTemplate}
                     allMRs={allMRs}
                     selectedMRs={selectedMRs}
-                    createdCampaign={createdCampaign}
-                    campaignProgress={campaignProgress}
                     // Pass state setters
+                    setCampaignName={setCampaignName}
                     setSelectedTemplate={setSelectedTemplate}
                     setSelectedMRs={setSelectedMRs}
-                    setCreatedCampaign={setCreatedCampaign}
-                    setCampaignProgress={setCampaignProgress}
                   />
                 </div>
               </div>
@@ -344,7 +327,7 @@ const CampaignWizard: React.FC = () => {
               </button>
 
               <div className="flex space-x-3">
-                {currentStep < steps.length && currentStep !== 2 ? (
+                {currentStep < steps.length ? (
                   <button
                     onClick={nextStep}
                     disabled={!isStepValid(currentStep)}
@@ -359,18 +342,7 @@ const CampaignWizard: React.FC = () => {
                       <ChevronRight className="w-4 h-4" />
                     </div>
                   </button>
-                ) : currentStep === steps.length ? (
-                  <button
-                    onClick={() => navigate('/dashboard')}
-                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <span>Finish & Go to Dashboard</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </div>
-                  </button>
-                )
-                : null}
+                ) : null}
               </div>
             </div>
           </div>

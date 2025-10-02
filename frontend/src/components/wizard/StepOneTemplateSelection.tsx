@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Plus, ExternalLink, CheckCircle, ArrowRight } from 'lucide-react';
+import { FileText, Plus, ArrowRight } from 'lucide-react';
 import { api } from '../../api/config';
 import toast from 'react-hot-toast';
 import { WizardTemplate } from '../../pages/CampaignWizard';
@@ -16,16 +16,19 @@ interface StepOneTemplateSelectionProps {
   onPrev: () => void;
   canGoNext: boolean;
   canGoPrev: boolean;
+  campaignName: string;
   selectedTemplate: WizardTemplate | null;
+  setCampaignName: (name: string) => void;
   setSelectedTemplate: (template: WizardTemplate | null) => void;
 }
 
 const StepOneTemplateSelection: React.FC<StepOneTemplateSelectionProps> = ({
-  stepNumber,
   stepTitle,
   stepDescription,
   onComplete,
+  campaignName,
   selectedTemplate,
+  setCampaignName,
   setSelectedTemplate
 }) => {
   const [templates, setTemplates] = useState<WizardTemplate[]>([]);
@@ -59,11 +62,7 @@ const StepOneTemplateSelection: React.FC<StepOneTemplateSelectionProps> = ({
     loadTemplates();
   }, []);
 
-  const handleTemplateSelect = (template: WizardTemplate) => {
-    setSelectedTemplate(template);
-    onComplete({ template });
-    toast.success(`Selected template: ${template.name}`);
-  };
+
 
   const handleTemplatePreview = (template: WizardTemplate) => {
     setPreviewTemplate(template);
@@ -103,12 +102,49 @@ const StepOneTemplateSelection: React.FC<StepOneTemplateSelectionProps> = ({
     );
   }
 
+  const handleCampaignNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const name = e.target.value;
+    setCampaignName(name);
+    // Update completion data whenever campaign name changes
+    if (name.trim() !== '' && selectedTemplate) {
+      onComplete({ campaignName: name, template: selectedTemplate });
+    }
+  };
+
+  const handleTemplateSelection = (template: WizardTemplate) => {
+    setSelectedTemplate(template);
+    // Update completion data whenever template changes
+    if (campaignName.trim() !== '' && template) {
+      onComplete({ campaignName, template });
+    }
+    toast.success(`Selected template: ${template.name}`);
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Step Header */}
       <div className="text-center">
         <h2 className="text-2xl font-bold text-gray-900">{stepTitle}</h2>
         <p className="mt-2 text-gray-600">{stepDescription}</p>
+      </div>
+
+      {/* Campaign Name Input */}
+      <div className="bg-gray-50 p-4 rounded-lg border">
+        <label htmlFor="campaignName" className="block text-sm font-medium text-gray-700 mb-2">
+          Campaign Name *
+        </label>
+        <input
+          type="text"
+          id="campaignName"
+          value={campaignName}
+          onChange={handleCampaignNameChange}
+          placeholder="Enter a name for your campaign"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          required
+        />
+        {campaignName.trim() === '' && (
+          <p className="mt-1 text-sm text-red-600">Campaign name is required</p>
+        )}
       </div>
 
       {/* Templates List */}
@@ -141,7 +177,7 @@ const StepOneTemplateSelection: React.FC<StepOneTemplateSelectionProps> = ({
           <WizardTemplateTable
             templates={templates}
             selectedTemplate={selectedTemplate}
-            onTemplateSelect={handleTemplateSelect}
+            onTemplateSelect={handleTemplateSelection}
             onPreview={handleTemplatePreview}
             loading={loading}
           />
