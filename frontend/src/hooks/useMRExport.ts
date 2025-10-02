@@ -141,11 +141,9 @@ export const useMRExport = ({ contacts }: UseMRExportProps) => {
   }, [contacts]);
 
   const downloadCSVTemplate = useCallback(() => {
-    // Create simple template without naming
+    // Create simple template without sample data
     const templateData = [
-      ['mrId', 'firstName', 'lastName', 'phone', 'Group', 'Comments'],
-      ['MR001', 'John', 'Doe', '"+919876543210"', 'Group A', 'Sample comment'],
-      ['MR002', 'Jane', 'Smith', '"+919876543211"', 'Group B', '']
+      ['mrId', 'firstName', 'lastName', 'phone', 'Group', 'Comments']
     ];
 
     const csvContent = templateData.map(row =>

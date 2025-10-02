@@ -221,17 +221,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleViewTemplate = async (campaign: CampaignRecord) => {
-    try {
-      setTemplateLoading(true);
-      const templateId = campaign.template?.id;
-      if (!templateId) return;
-      
-      await templateAPI.getTemplateById(templateId);
-    } finally {
-      setTemplateLoading(false);
-    }
-  };
+
 
   // Recipient list popup states
   const [showRecipientPopup, setShowRecipientPopup] = useState(false);
@@ -307,7 +297,6 @@ const Dashboard: React.FC = () => {
           campaigns={sortedCampaigns}
           onRecipientListClick={handleRecipientListClick}
           onTemplatePreview={handleTemplatePreview}
-          onViewTemplate={handleViewTemplate}
           sortField={sortField}
           sortDirection={sortDirection}
           onSort={handleSort}

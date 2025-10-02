@@ -12,7 +12,7 @@ const StandardHeader: React.FC<StandardHeaderProps> = ({ pageTitle }) => {
         <div className="flex justify-between items-start">
           <div>
             <img 
-              src="/finalDmacLogo.png" 
+              src="/DVK_updated_logo.png" 
               alt="D-MAK Logo" 
               className="h-10 object-contain mb-2"
             />

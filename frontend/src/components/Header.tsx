@@ -21,7 +21,7 @@ const Header: React.FC<HeaderProps> = ({
         <div>
           {title === "D-MAK" ? (
             <img 
-              src="/finalDmacLogo.png" 
+              src="/DVK_updated_logo.png" 
               alt="D-MAK Logo" 
               className="h-10 object-contain mb-2"
             />

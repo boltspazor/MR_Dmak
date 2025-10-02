@@ -32,8 +32,6 @@ interface CampaignTableProps {
   campaigns: CampaignRecord[];
   onRecipientListClick: (campaign: CampaignRecord) => void;
   onTemplatePreview: (campaign: CampaignRecord) => void;
-  onViewTemplate?: (campaign: CampaignRecord) => void;
-  onResendCampaign?: (campaign: CampaignRecord) => void;
   sortField: keyof CampaignRecord;
   sortDirection: 'asc' | 'desc';
   onSort: (field: keyof CampaignRecord) => void;
@@ -48,8 +46,6 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
   campaigns,
   onRecipientListClick,
   onTemplatePreview,
-  onViewTemplate,
-  onResendCampaign,
   sortField,
   sortDirection,
   onSort,
@@ -168,9 +164,6 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
               <th className="text-left py-3 px-6 text-sm font-medium text-gray-700">
                 Progress
               </th>
-              <th className="text-left py-3 px-6 text-sm font-medium text-gray-700">
-                Actions
-              </th>
             </tr>
           </thead>
           <tbody>
@@ -208,14 +201,24 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
                 <td className="py-3 px-6 text-sm text-gray-900">
                   {campaign.recipientList ? (
                     <>
-                      <div className="font-medium">{campaign.recipientList.name}</div>
+                      <button
+                        onClick={() => onRecipientListClick(campaign)}
+                        className="text-indigo-600 hover:text-indigo-800 font-medium hover:underline text-left"
+                      >
+                        {campaign.recipientList.name}
+                      </button>
                       <div className="text-xs text-gray-500">
                         {campaign.recipientList.recipientCount} recipients
                       </div>
                     </>
                   ) : (
                     <>
-                      <div className="font-medium text-gray-600">Direct MR Selection</div>
+                      <button
+                        onClick={() => onRecipientListClick(campaign)}
+                        className="text-indigo-600 hover:text-indigo-800 font-medium hover:underline text-left"
+                      >
+                        Direct MR Selection
+                      </button>
                       <div className="text-xs text-gray-500">
                         {campaign.totalRecipients} recipients
                       </div>
@@ -261,32 +264,7 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
                     ></div>
                   </div>
                 </td>
-                <td className="py-3 px-6 text-sm">
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => onRecipientListClick(campaign)}
-                      className="text-indigo-600 hover:text-indigo-800 text-xs font-medium hover:underline"
-                    >
-                      View Recipients
-                    </button>
-                    {onViewTemplate && campaign.template && (
-                      <button
-                        onClick={() => onViewTemplate(campaign)}
-                        className="text-purple-600 hover:text-purple-800 text-xs font-medium hover:underline"
-                      >
-                        View Template
-                      </button>
-                    )}
-                    {getEffectiveStatus(campaign) === 'pending' && onResendCampaign && (
-                      <button
-                        onClick={() => onResendCampaign(campaign)}
-                        className="text-green-600 hover:text-green-800 text-xs font-medium hover:underline"
-                      >
-                        Resend
-                      </button>
-                    )}
-                  </div>
-                </td>
+
               </tr>
             ))}
           </tbody>

@@ -200,38 +200,6 @@ const Templates: React.FC = () => {
     const row2 = ['mrId', 'firstName', 'lastName', ...parameters];
     csvRows.push(row2.map(escapeCSV).join(','));
 
-    const sampleData = {
-      'MR id': 'MR001',
-      'First Name': 'John',
-      'Last Name': 'Doe',
-      'FN': 'John',
-      'LN': 'Doe',
-      'Month': 'September',
-      'week': 'Week 2',
-      'Target': '1 crore',
-      'lastmonth': '50 lakhs',
-      'doctor': '30',
-      'Name': 'John Doe',
-      'Company': 'D-MAK',
-      'Product': 'New Product',
-      'Product Name': 'New Product',
-      'Date': new Date().toLocaleDateString(),
-      'Time': new Date().toLocaleTimeString(),
-      'Year': new Date().getFullYear().toString(),
-      'Achievement': '85',
-      'Location': 'Mumbai',
-      'City': 'Mumbai',
-      'State': 'Maharashtra',
-      'Country': 'India',
-      'Phone Number': '+919876543210',
-      'Group Name': 'North Zone',
-      'Target Amount': '100000',
-      'Sales Amount': '85000'
-    };
-
-    const row3 = ['MR001', 'John', 'Doe', ...parameters.map(param => (sampleData as Record<string, string>)[param] || `Sample ${param}`)];
-    csvRows.push(row3.map(escapeCSV).join(','));
-
     const csvContent = csvRows.join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
