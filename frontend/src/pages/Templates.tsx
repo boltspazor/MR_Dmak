@@ -18,17 +18,13 @@ import { extractTemplateParameters, escapeCSV } from '../utils/csvValidation';
 import TemplateFilters from '../components/templates/TemplateFilters';
 import MetaIntegration from '../components/templates/MetaIntegration';
 import TemplateTable from '../components/templates/TemplateTable';
-import TemplateForm from '../components/templates/TemplateForm';
 import DeleteConfirmationDialog from '../components/templates/DeleteConfirmationDialog';
 
 // Import custom hooks
 import { useTemplates } from '../hooks/useTemplates';
-import { useTemplateForm } from '../hooks/useTemplateForm';
 import { useMetaTemplates } from '../hooks/useMetaTemplates';
 
 const Templates: React.FC = () => {
-  const navigate = useNavigate();
-  const { user } = useAuth();
   const { alert } = useConfirm();
 
   // Custom hooks
@@ -36,10 +32,7 @@ const Templates: React.FC = () => {
     templates,
     loading,
     loadTemplates,
-    createTemplate,
     updateTemplate,
-    deleteTemplate,
-    duplicateTemplate,
     exportTemplateAsPNG,
     exportTemplatesToCSV,
     exportTemplatesToPDF
@@ -52,20 +45,6 @@ const Templates: React.FC = () => {
     syncTemplatesWithMeta,
     getMetaTemplateCreationUrl
   } = useMetaTemplates();
-
-  const {
-    formData,
-    setFormData,
-    imagePreview,
-    setImagePreview,
-    imagePlacement,
-    setImagePlacement,
-    editingTemplate,
-    setEditingTemplate,
-    resetForm,
-    handleImageUpload,
-    handleSubmit
-  } = useTemplateForm();
 
   // Local state
   const [nameSearchTerm, setNameSearchTerm] = useState('');
@@ -151,78 +130,6 @@ const Templates: React.FC = () => {
     } else {
       setSortField(field);
       setSortDirection('asc');
-    }
-  };
-
-  const handleCreateTemplate = () => {
-    resetForm();
-    setShowCreateForm(true);
-  };
-
-  const handleEditTemplate = (template: Template) => {
-    setEditingTemplate(template);
-    setFormData({
-      name: template.name,
-      content: template.content,
-      type: template.type,
-      imageUrl: template.imageUrl || '',
-      imageFileName: template.imageFileName || '',
-      footerImageUrl: template.footerImageUrl || '',
-      footerImageFileName: template.footerImageFileName || '',
-      parameters: template.parameters
-    });
-    // Set preview image and placement for editing
-    if (template.imageUrl) {
-      setImagePreview(template.imageUrl);
-      setImagePlacement('header');
-    } else if (template.footerImageUrl) {
-      setImagePreview(template.footerImageUrl);
-      setImagePlacement('footer');
-    } else {
-      setImagePreview('');
-      setImagePlacement('header');
-    }
-    setShowCreateForm(true);
-  };
-
-  const handleDuplicateTemplate = (template: Template) => {
-    const duplicatedTemplate = duplicateTemplate(template);
-    setFormData({
-      name: duplicatedTemplate.name,
-      content: duplicatedTemplate.content,
-      type: duplicatedTemplate.type,
-      imageUrl: duplicatedTemplate.imageUrl || '',
-      imageFileName: duplicatedTemplate.imageFileName || '',
-      footerImageUrl: duplicatedTemplate.footerImageUrl || '',
-      footerImageFileName: duplicatedTemplate.footerImageFileName || '',
-      parameters: duplicatedTemplate.parameters
-    });
-    setShowCreateForm(true);
-  };
-
-  const handleFormSubmit = async (e: React.FormEvent) => {
-    try {
-      await handleSubmit(e, createTemplate, updateTemplate);
-      setShowCreateForm(false);
-      await alert('Template saved successfully!', 'success');
-    } catch (error: unknown) {
-      console.error('Error saving template:', error);
-      let errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-
-      // Clean up error messages
-      errorMessage = errorMessage
-        .replace(/app\.railway\.app/gi, 'D-MAK')
-        .replace(/railway\.app/gi, 'D-MAK')
-        .replace(/\.railway\./gi, ' D-MAK ')
-        .replace(/mrbackend-production-[a-zA-Z0-9-]+\.up\.railway\.app/gi, 'D-MAK server')
-        .replace(/https?:\/\/[a-zA-Z0-9-]+\.up\.railway\.app/gi, 'D-MAK server')
-        .replace(/production-[a-zA-Z0-9-]+\.up/gi, 'D-MAK')
-        .replace(/\b[a-zA-Z0-9-]+\.up\.railway\.app\b/gi, 'D-MAK server')
-        .replace(/\s+/g, ' ')
-        .replace(/D-MAK\s+server/gi, 'D-MAK server')
-        .trim();
-
-      await alert(`Failed to save template: ${errorMessage}`, 'error');
     }
   };
 
@@ -409,17 +316,6 @@ const Templates: React.FC = () => {
           onExportPDF={exportTemplatesToPDF}
         >
           <div className="space-y-6">
-            {/* Action Buttons */}
-            <div className="flex justify-between items-center">
-              <button
-                onClick={handleCreateTemplate}
-                className="px-6 py-3 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors flex items-center space-x-2"
-              >
-                {/*<span>+</span>*/}
-                {/*<span>Create Template</span> */}
-              </button>
-            </div>
-
             {/* Meta Template Integration */}
             <MetaIntegration
               metaTemplateStats={metaTemplateStats}
@@ -446,36 +342,15 @@ const Templates: React.FC = () => {
             {/* Templates Table */}
             <TemplateTable
               templates={filteredTemplates}
-              userRole={user?.role}
               sortField={sortField}
               sortDirection={sortDirection}
               onSort={handleSort}
               onPreview={handlePreview}
               onExportPNG={exportTemplateAsPNG}
               onDelete={handleDeleteClick}
-              onEdit={handleEditTemplate}
-              onDuplicate={handleDuplicateTemplate}
             />
           </div>
         </CommonFeatures>
-
-        {/* Create/Edit Form Modal */}
-        <TemplateForm
-          isOpen={showCreateForm}
-          onClose={() => {
-            setShowCreateForm(false);
-            resetForm();
-          }}
-          onSubmit={handleFormSubmit}
-          availableParameters={availableParameters}
-          formData={formData}
-          setFormData={setFormData}
-          imagePreview={imagePreview}
-          imagePlacement={imagePlacement}
-          setImagePlacement={setImagePlacement}
-          editingTemplate={editingTemplate}
-          onImageUpload={handleImageUpload}
-        />
 
         {/* Template Preview Modal */}
         <TemplatePreviewDialog

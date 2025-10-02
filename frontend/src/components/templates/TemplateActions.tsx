@@ -1,27 +1,20 @@
 import React from 'react';
-import { Eye, Download, Trash2, Edit, Copy } from 'lucide-react';
+import { Eye, Download, Trash2 } from 'lucide-react';
 import { Template } from '../../types';
 
 interface TemplateActionsProps {
   template: Template;
-  userRole?: string;
   onPreview: (template: Template) => void;
   onExportPNG: (template: Template) => void;
   onDelete: (template: Template) => void;
-  onEdit: (template: Template) => void;
-  onDuplicate: (template: Template) => void;
 }
 
 const TemplateActions: React.FC<TemplateActionsProps> = ({
   template,
-  userRole,
   onPreview,
   onExportPNG,
   onDelete,
-  onEdit,
-  onDuplicate
 }) => {
-  const canEdit = userRole === 'super-admin' && !template.isMetaTemplate;
   const canDelete = true; // Allow deletion of both regular and Meta templates
 
   return (
@@ -41,25 +34,6 @@ const TemplateActions: React.FC<TemplateActionsProps> = ({
       >
         <Download className="h-4 w-4" />
       </button>
-      
-      {canEdit && (
-        <>
-          <button
-            onClick={() => onEdit(template)}
-            className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
-            title="Edit Template"
-          >
-            <Edit className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => onDuplicate(template)}
-            className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-            title="Duplicate Template"
-          >
-            <Copy className="h-4 w-4" />
-          </button>
-        </>
-      )}
       
       {canDelete && (
         <button

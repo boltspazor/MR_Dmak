@@ -5,28 +5,22 @@ import TemplateActions from './TemplateActions';
 
 interface TemplateTableProps {
   templates: Template[];
-  userRole?: string;
   sortField: 'name' | 'createdAt';
   sortDirection: 'asc' | 'desc';
   onSort: (field: 'name' | 'createdAt') => void;
   onPreview: (template: Template) => void;
   onExportPNG: (template: Template) => void;
   onDelete: (template: Template) => void;
-  onEdit: (template: Template) => void;
-  onDuplicate: (template: Template) => void;
 }
 
 const TemplateTable: React.FC<TemplateTableProps> = ({
   templates,
-  userRole,
   sortField,
   sortDirection,
   onSort,
   onPreview,
   onExportPNG,
   onDelete,
-  onEdit,
-  onDuplicate
 }) => {
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -150,12 +144,9 @@ const TemplateTable: React.FC<TemplateTableProps> = ({
                 <td className="py-4 px-6">
                   <TemplateActions
                     template={template}
-                    userRole={userRole}
                     onPreview={onPreview}
                     onExportPNG={onExportPNG}
                     onDelete={onDelete}
-                    onEdit={onEdit}
-                    onDuplicate={onDuplicate}
                   />
                 </td>
               </tr>
