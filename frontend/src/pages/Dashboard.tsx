@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import TemplatePreviewDialog from '../components/ui/TemplatePreviewDialog';
 import RecipientListModal from '../components/ui/RecipientListModal';
 import Header from '../components/Header';
@@ -47,10 +48,12 @@ interface GroupMember {
 }
 
 const Dashboard: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [campaigns, setCampaigns] = useState<CampaignRecord[]>([]);
   const [sortField, setSortField] = useState<keyof CampaignRecord>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [loading, setLoading] = useState(true);
+
 
   // New: use campaigns hook for pagination
   const {
@@ -110,6 +113,8 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     loadCampaigns();
   }, [apiCampaigns]);
+
+
 
   // Sort campaigns
   const sortedCampaigns = React.useMemo(() => {
@@ -229,7 +234,7 @@ const Dashboard: React.FC = () => {
   const [showRecipientPopup, setShowRecipientPopup] = useState(false);
   const [selectedRecipients, setSelectedRecipients] = useState<GroupMember[]>([]);
 
-  const handleRecipientListClick = async (campaign: CampaignRecord) => {
+  const handleRecipientListClick = useCallback(async (campaign: CampaignRecord) => {
     try {
       const campaignData = await campaignsAPI.getCampaignById(campaign.id);
       if (!campaignData) return;
@@ -254,7 +259,24 @@ const Dashboard: React.FC = () => {
     } catch (error) {
       setShowRecipientPopup(true);
     }
-  };
+  }, []);
+
+  // Handle URL parameters to auto-open recipient list modal
+  useEffect(() => {
+    const shouldShowRecipientList = searchParams.get('showRecipientList');
+    const campaignId = searchParams.get('campaignId');
+    
+    if (shouldShowRecipientList === 'true' && campaignId && campaigns.length > 0) {
+      // Find the campaign by ID
+      const campaign = campaigns.find(c => c.id === campaignId || c.campaignId === campaignId);
+      if (campaign) {
+        // Auto-open recipient list for this campaign
+        handleRecipientListClick(campaign);
+        // Clear the URL parameters after opening the modal
+        setSearchParams(new URLSearchParams());
+      }
+    }
+  }, [searchParams, campaigns, setSearchParams, handleRecipientListClick]);
 
   if (loading) {
     return (
