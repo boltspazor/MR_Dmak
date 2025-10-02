@@ -13,13 +13,12 @@ import { extractTemplateParameters, escapeCSV } from '../utils/csvValidation';
 
 // Import new components
 import TemplateFilters from '../components/templates/TemplateFilters';
-import MetaIntegration from '../components/templates/MetaIntegration';
 import TemplateTable from '../components/templates/TemplateTable';
 import DeleteConfirmationDialog from '../components/templates/DeleteConfirmationDialog';
 
 // Import custom hooks
 import { useTemplates } from '../hooks/useTemplates';
-import { useMetaTemplates } from '../hooks/useMetaTemplates';
+
 
 const Templates: React.FC = () => {
   const { alert } = useConfirm();
@@ -35,14 +34,6 @@ const Templates: React.FC = () => {
     exportTemplatesToPDF
   } = useTemplates();
 
-  const {
-    metaTemplateStats,
-    syncingTemplates,
-    loadMetaTemplateStats,
-    syncTemplatesWithMeta,
-    getMetaTemplateCreationUrl
-  } = useMetaTemplates();
-
   // Local state
   const [nameSearchTerm, setNameSearchTerm] = useState('');
   const [contentSearchTerm, setContentSearchTerm] = useState('');
@@ -56,14 +47,44 @@ const Templates: React.FC = () => {
   const [isDeletingTemplate, setIsDeletingTemplate] = useState(false);
   const [showRecipientUpload, setShowRecipientUpload] = useState(false);
   const [uploadTemplate, setUploadTemplate] = useState<Template | null>(null);
-  const [templateFilter, setTemplateFilter] = useState<'all' | 'custom' | 'meta'>('all');
-  const [metaStatusFilter, setMetaStatusFilter] = useState<'all' | 'APPROVED' | 'PENDING' | 'REJECTED'>('all');
+  const [templateFilter, setTemplateFilter] = useState<'all' | 'utility' | 'marketing'>('all');
+
+  // Helper functions to categorize templates
+  /**
+   * Determines if a template should be classified as a utility template
+   * Uses Meta platform category flags for accurate classification
+   */
+  const isUtilityTemplate = (template: Template): boolean => {
+    // For Meta templates, use the official Meta category flag
+    // UTILITY and AUTHENTICATION categories are considered utility templates
+    if (template.isMetaTemplate === true) {
+      return template.metaCategory === 'UTILITY' || template.metaCategory === 'AUTHENTICATION';
+    }
+    
+    // For non-Meta (custom) templates, default to utility
+    // This can be customized based on business requirements
+    return true;
+  };
+
+  /**
+   * Determines if a template should be classified as a marketing template
+   * Uses Meta platform category flags for accurate classification
+   */
+  const isMarketingTemplate = (template: Template): boolean => {
+    // For Meta templates, use the official Meta category flag
+    if (template.isMetaTemplate === true) {
+      return template.metaCategory === 'MARKETING';
+    }
+    
+    // For non-Meta (custom) templates, default behavior
+    // This can be customized based on business requirements
+    return false;
+  };
 
   // Load data on mount
   useEffect(() => {
     loadTemplates();
-    loadMetaTemplateStats();
-  }, [loadTemplates, loadMetaTemplateStats]);
+  }, [loadTemplates]);
 
 
 
@@ -84,15 +105,26 @@ const Templates: React.FC = () => {
             }
           });
 
-        // Meta template filtering
-        const matchesTemplateType = templateFilter === 'all' ||
-          (templateFilter === 'custom' && !template.isMetaTemplate) ||
-          (templateFilter === 'meta' && template.isMetaTemplate);
+        // Template category filtering
+        const isUtility = isUtilityTemplate(template);
+        const isMarketing = isMarketingTemplate(template);
+        
 
-        // Meta status filtering (only applies to Meta templates)
-        const matchesMetaStatus = metaStatusFilter === 'all' ||
-          !template.isMetaTemplate ||
-          template.metaStatus === metaStatusFilter;
+        
+        // For Meta templates, use strict Meta categorization
+        // For non-Meta templates, apply fallback logic
+        const finalIsUtility = template.isMetaTemplate === true 
+          ? (template.metaCategory === 'UTILITY' || template.metaCategory === 'AUTHENTICATION')
+          : isUtility || (!isUtility && !isMarketing);
+        const finalIsMarketing = template.isMetaTemplate === true 
+          ? template.metaCategory === 'MARKETING' 
+          : isMarketing;
+        
+        const matchesTemplateType = templateFilter === 'all' ||
+          (templateFilter === 'utility' && finalIsUtility) ||
+          (templateFilter === 'marketing' && finalIsMarketing);
+
+        const matchesMetaStatus = true; // No longer using meta status filtering
 
         return matchesNameSearch && matchesContentSearch && matchesTemplateType && matchesMetaStatus;
       })
@@ -112,7 +144,7 @@ const Templates: React.FC = () => {
         if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
         return 0;
       });
-  }, [templates, nameSearchTerm, contentSearchTerm, sortField, sortDirection, templateFilter, metaStatusFilter]);
+  }, [templates, nameSearchTerm, contentSearchTerm, sortField, sortDirection, templateFilter]);
 
   // Event handlers
   const handleSort = (field: 'name' | 'createdAt') => {
@@ -255,15 +287,6 @@ const Templates: React.FC = () => {
           onExportPDF={exportTemplatesToPDF}
         >
           <div className="space-y-6">
-            {/* Meta Template Integration */}
-            <MetaIntegration
-              metaTemplateStats={metaTemplateStats}
-              syncingTemplates={syncingTemplates}
-              onGetMetaTemplateCreationUrl={getMetaTemplateCreationUrl}
-              onSyncTemplatesWithMeta={syncTemplatesWithMeta}
-              onRefreshTemplates={loadTemplates}
-            />
-
             {/* Filters and Search */}
             <TemplateFilters
               nameSearchTerm={nameSearchTerm}
@@ -272,8 +295,6 @@ const Templates: React.FC = () => {
               setContentSearchTerm={setContentSearchTerm}
               templateFilter={templateFilter}
               setTemplateFilter={setTemplateFilter}
-              metaStatusFilter={metaStatusFilter}
-              setMetaStatusFilter={setMetaStatusFilter}
               filteredCount={filteredTemplates.length}
               totalCount={templates.length}
             />

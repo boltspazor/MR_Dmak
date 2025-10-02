@@ -707,12 +707,27 @@ const TemplatePreviewDialog: React.FC<TemplatePreviewDialogProps> = ({
                     )}
                   </div>
                 )}
+
+                {/* Information Section - Moved to right side */}
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4">Information</h4>
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="text-xs text-gray-600 mb-2">
+                      <strong>CSV Format:</strong>
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      • Row 1: Template Name in A1, template name in B1<br />
+                      • Row 2: MR ID, First Name, Last Name{template ? extractParameters(template.content).map(p => p.name).join(', ') : ''}<br />
+                      • Each parameter will have its own column in the recipient list
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
             
-            {/* Template Actions - Moved to bottom right */}
+            {/* Template Actions - Bottom left below WhatsApp preview */}
             {(showDownloadButton && onDownloadRecipientList) || (showBulkUploadButton && onBulkUploadRecipients) ? (
-              <div className="flex justify-end mt-6">
+              <div className="flex justify-start mt-6">
                 <div className="bg-white border border-gray-200 rounded-lg p-6 max-w-md">
                   <h4 className="text-lg font-semibold text-gray-800 mb-4">Template Actions</h4>
                   <div className="flex gap-3">
@@ -736,16 +751,6 @@ const TemplatePreviewDialog: React.FC<TemplatePreviewDialogProps> = ({
                         Upload Recipients
                       </button>
                     )}
-                  </div>
-                  <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                    <p className="text-xs text-gray-600 mb-2">
-                      <strong>CSV Format:</strong>
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      • Row 1: Template Name in A1, template name in B1<br />
-                      • Row 2: MR ID, First Name, Last Name{template ? extractParameters(template.content).map(p => p.name).join(', ') : ''}<br />
-                      • Each parameter will have its own column in the recipient list
-                    </p>
                   </div>
                 </div>
               </div>

@@ -122,7 +122,10 @@ export interface Template {
   updatedAt: string;
   // Meta template properties
   isMetaTemplate?: boolean;
-  metaStatus?: 'APPROVED' | 'PENDING' | 'REJECTED';
+  metaStatus?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'DISABLED' | 'PAUSED' | 'PENDING_DELETION';
+  metaCategory?: 'AUTHENTICATION' | 'MARKETING' | 'UTILITY';
+  metaTemplateId?: string;
+  metaTemplateName?: string;
 }
 
 export interface TemplateRecipients {

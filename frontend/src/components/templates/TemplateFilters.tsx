@@ -6,10 +6,8 @@ interface TemplateFiltersProps {
   setNameSearchTerm: (term: string) => void;
   contentSearchTerm: string;
   setContentSearchTerm: (term: string) => void;
-  templateFilter: 'all' | 'custom' | 'meta';
-  setTemplateFilter: (filter: 'all' | 'custom' | 'meta') => void;
-  metaStatusFilter: 'all' | 'APPROVED' | 'PENDING' | 'REJECTED';
-  setMetaStatusFilter: (filter: 'all' | 'APPROVED' | 'PENDING' | 'REJECTED') => void;
+  templateFilter: 'all' | 'utility' | 'marketing';
+  setTemplateFilter: (filter: 'all' | 'utility' | 'marketing') => void;
   filteredCount: number;
   totalCount: number;
 }
@@ -21,8 +19,6 @@ const TemplateFilters: React.FC<TemplateFiltersProps> = ({
   setContentSearchTerm,
   templateFilter,
   setTemplateFilter,
-  metaStatusFilter,
-  setMetaStatusFilter,
   filteredCount,
   totalCount
 }) => {
@@ -48,30 +44,16 @@ const TemplateFilters: React.FC<TemplateFiltersProps> = ({
             <label className="text-sm font-medium text-gray-700">Template Type:</label>
             <select
               value={templateFilter}
-              onChange={(e) => setTemplateFilter(e.target.value as 'all' | 'custom' | 'meta')}
+              onChange={(e) => setTemplateFilter(e.target.value as 'all' | 'utility' | 'marketing')}
               className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
             >
               <option value="all">All Templates</option>
-              <option value="custom">Custom Templates</option>
-              <option value="meta">Meta Templates</option>
+              <option value="utility">Utility</option>
+              <option value="marketing">Marketing</option>
             </select>
           </div>
 
-          {templateFilter === 'meta' && (
-            <div className="flex items-center space-x-3">
-              <label className="text-sm font-medium text-gray-700">Status:</label>
-              <select
-                value={metaStatusFilter}
-                onChange={(e) => setMetaStatusFilter(e.target.value as 'all' | 'APPROVED' | 'PENDING' | 'REJECTED')}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
-              >
-                <option value="all">All Statuses</option>
-                <option value="APPROVED">Approved</option>
-                <option value="PENDING">Pending</option>
-                <option value="REJECTED">Rejected</option>
-              </select>
-            </div>
-          )}
+
         </div>
       </div>
 
