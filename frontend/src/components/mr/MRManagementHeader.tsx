@@ -8,15 +8,19 @@ interface MRManagementHeaderProps {
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   onAddMR: () => void;
-  summaryItems?: any[];
-  loading?: boolean;
+  summaryItems: {
+    title: string;
+    value: number;
+    icon: string;
+    color: string;
+    textColor: string;
+  }[];
+  loading: boolean;
 }
 
 const MRManagementHeader: React.FC<MRManagementHeaderProps> = ({
-  totalCount,
-  filteredCount,
-  summaryItems = [],
-  loading = false
+  summaryItems,
+  loading
 }) => {
   return (
     <>

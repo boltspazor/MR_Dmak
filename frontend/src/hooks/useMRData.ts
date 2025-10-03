@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Contact, Group, SearchFilters, PaginationState } from '../types/mr.types';
+import { Contact, Group } from '../types/mr.types';
 import { api } from '../lib/api';
 
 export interface MRPaginationParams {
@@ -92,7 +92,7 @@ export const useMRData = () => {
       if (consentStatus) queryParams.append('consentStatus', consentStatus);
 
       const response = await api.get(`/mrs?${queryParams}`);
-      const { data: mrs, total } = response.data;
+      const { data: mrs } = response.data;
 
       // Transform backend MR data to Contact format
       const transformedContacts: Contact[] = mrs.map((mr: any) => ({

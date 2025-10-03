@@ -21,7 +21,7 @@ export interface CampaignRecord {
     recipientCount: number;
   } | null;
   date: string;
-  sendStatus: 'completed' | 'in progress' | 'pending' | 'failed' | 'cancelled';
+  sendStatus: 'completed' | 'sending' | 'pending' | 'failed' | 'cancelled' | 'draft';
   totalRecipients: number;
   sentCount: number;
   failedCount: number;

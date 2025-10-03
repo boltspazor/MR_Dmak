@@ -5,8 +5,11 @@ import RecipientListModal from '../components/ui/RecipientListModal';
 import StandardHeader from '../components/StandardHeader';
 import CampaignStats from '../components/dashboard/CampaignStats';
 import CampaignTable from '../components/dashboard/CampaignTable';
-import { campaignsAPI, templateAPI, Campaign } from '../api/campaigns-new';
+import AdvancedCampaignSearch from '../components/dashboard/AdvancedCampaignSearch';
+import { campaignsAPI, Campaign } from '../api/campaigns-new';
+import { templateApi } from '../api/templates';
 import { useCampaigns } from '../hooks/useCampaigns';
+import { CampaignFilterParams } from '../types/campaign.types';
 
 interface CampaignRecord {
   id: string;
@@ -24,7 +27,7 @@ interface CampaignRecord {
     recipientCount: number;
   } | null;
   date: string;
-  sendStatus: 'completed' | 'in progress' | 'pending' | 'failed' | 'cancelled';
+  sendStatus: 'completed' | 'sending' | 'pending' | 'failed' | 'cancelled' | 'draft';
   totalRecipients: number;
   sentCount: number;
   failedCount: number;
@@ -57,15 +60,69 @@ const Dashboard: React.FC = () => {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [loading, setLoading] = useState(true);
 
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
-  // New: use campaigns hook for pagination
+
+  // Enhanced campaigns hook for server-side operations
   const {
     campaigns: apiCampaigns,
     loading: apiLoading,
-    page,
-    setPage,
+
     totalPages,
+    total,
+    fetchCampaigns,
   } = useCampaigns();
+
+  // URL parameter management
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlSearch = urlParams.get('search') || '';
+    const urlStatus = urlParams.get('status') || '';
+    const urlPage = parseInt(urlParams.get('page') || '1');
+    const urlSort = urlParams.get('sortField') || 'date';
+    const urlDirection = (urlParams.get('sortDirection') as 'asc' | 'desc') || 'desc';
+
+    setSearchTerm(urlSearch);
+    setStatusFilter(urlStatus);
+    setCurrentPage(urlPage);
+    setSortField(urlSort as keyof CampaignRecord);
+    setSortDirection(urlDirection);
+  }, []);
+
+  // Update URL when filters change
+  useEffect(() => {
+    const urlParams = new URLSearchParams();
+    if (searchTerm) urlParams.set('search', searchTerm);
+    if (statusFilter) urlParams.set('status', statusFilter);
+    if (currentPage > 1) urlParams.set('page', currentPage.toString());
+    if (sortField !== 'date') urlParams.set('sortField', sortField);
+    if (sortDirection !== 'desc') urlParams.set('sortDirection', sortDirection);
+
+    const newUrl = urlParams.toString() ? `${window.location.pathname}?${urlParams.toString()}` : window.location.pathname;
+    window.history.replaceState({}, '', newUrl);
+  }, [searchTerm, statusFilter, currentPage, sortField, sortDirection]);
+
+  // Fetch data when filters or pagination changes
+  useEffect(() => {
+    const params: CampaignFilterParams = {
+      page: currentPage,
+      limit: 10
+    };
+
+    if (searchTerm) params.search = searchTerm;
+    if (statusFilter) params.status = statusFilter;
+    
+    // Add server-side sorting
+    params.sortField = sortField;
+    params.sortDirection = sortDirection;
+
+    console.log('Dashboard: Fetching with params:', params);
+    console.log('Current filters - searchTerm:', searchTerm, 'statusFilter:', statusFilter);
+    fetchCampaigns(params);
+  }, [currentPage, searchTerm, statusFilter, sortField, sortDirection, fetchCampaigns]);
 
   const loadCampaigns = async () => {
     try {
@@ -93,10 +150,7 @@ const Dashboard: React.FC = () => {
           recipientCount: campaign.recipientList.recipientCount
         } : null,
         date: new Date(campaign.createdAt).toISOString().split('T')[0],
-        sendStatus: (campaign.status === 'completed' ? 'completed' : 
-                   campaign.status === 'sending' ? 'in progress' : 
-                   campaign.status === 'failed' ? 'failed' : 
-                   campaign.status === 'cancelled' ? 'cancelled' : 'pending') as 'completed' | 'in progress' | 'pending' | 'failed' | 'cancelled',
+        sendStatus: campaign.status as 'completed' | 'sending' | 'pending' | 'failed' | 'cancelled' | 'draft',
         totalRecipients: campaign.progress?.total || 0,
         sentCount: campaign.progress?.sent || 0,
         failedCount: campaign.progress?.failed || 0,
@@ -114,43 +168,15 @@ const Dashboard: React.FC = () => {
 
   // Load campaigns whenever hook data changes (page changes or refetch)
   useEffect(() => {
-    loadCampaigns();
+    if (apiCampaigns && apiCampaigns.length > 0) {
+      loadCampaigns();
+    }
   }, [apiCampaigns]);
 
 
 
-  // Sort campaigns
-  const sortedCampaigns = React.useMemo(() => {
-    const sorted = [...campaigns];
-    
-    sorted.sort((a, b) => {
-      let aValue = a[sortField];
-      let bValue = b[sortField];
-
-      // Handle nested object properties
-      if (sortField === 'template') {
-        aValue = a.template.name;
-        bValue = b.template.name;
-      } else if (sortField === 'recipientList') {
-        aValue = a.recipientList?.name || '';
-        bValue = b.recipientList?.name || '';
-      }
-
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return sortDirection === 'asc' 
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
-      }
-
-      if (typeof aValue === 'number' && typeof bValue === 'number') {
-        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
-      }
-
-      return 0;
-    });
-
-    return sorted;
-  }, [campaigns, sortField, sortDirection]);
+  // Use campaigns directly since sorting is now handled server-side
+  const sortedCampaigns = campaigns;
 
   const handleSort = (field: keyof CampaignRecord) => {
     if (sortField === field) {
@@ -159,6 +185,17 @@ const Dashboard: React.FC = () => {
       setSortField(field);
       setSortDirection('asc');
     }
+    setCurrentPage(1); // Reset to first page when sorting changes
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('');
+    setCurrentPage(1);
   };
 
   const [showTemplatePreview, setShowTemplatePreview] = useState(false);
@@ -188,22 +225,23 @@ const Dashboard: React.FC = () => {
       }
       
       console.log('Fetching template for preview with ID:', templateId);
-      const template = await templateAPI.getTemplateById(templateId);
+      const response = await templateApi.getById(templateId);
+      const template = response.data;
       console.log('Template for preview:', template);
       
       // Set the full template data for preview
       setPreviewTemplate({
         name: template.name,
-        metaTemplateName: template.metaTemplateName,
-        isMetaTemplate: template.isMetaTemplate,
-        metaStatus: template.metaStatus,
+        metaTemplateName: (template as any).metaTemplateName,
+        isMetaTemplate: (template as any).isMetaTemplate,
+        metaStatus: (template as any).metaStatus,
         content: template.content,
-        type: template.type,
+        type: (template as any).type,
         imageUrl: template.imageUrl,
-        footerImageUrl: template.footerImageUrl,
-        parameters: template.parameters,
-        metaCategory: template.metaCategory,
-        metaLanguage: template.metaLanguage
+        footerImageUrl: (template as any).footerImageUrl,
+        parameters: (template as any).parameters,
+        metaCategory: (template as any).metaCategory,
+        metaLanguage: (template as any).metaLanguage
       });
       setShowTemplatePreview(true);
     } catch (error) {
@@ -293,6 +331,43 @@ const Dashboard: React.FC = () => {
 
         <CampaignStats campaigns={sortedCampaigns} loading={loading} />
 
+        {/* Advanced Search Component */}
+        <AdvancedCampaignSearch
+          searchTerm={searchTerm}
+          statusFilter={statusFilter}
+          onSearchChange={(term) => {
+            console.log('🔍 Dashboard - onSearchChange called with term:', term);
+            setSearchTerm(term);
+            setCurrentPage(1);
+            // Update URL immediately
+            const params = new URLSearchParams(window.location.search);
+            if (term) {
+              params.set('search', term);
+            } else {
+              params.delete('search');
+            }
+            params.set('page', '1');
+            window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
+          }}
+          onStatusChange={(status) => {
+            console.log('🔍 Dashboard - onStatusChange called with status:', status);
+            setStatusFilter(status);
+            setCurrentPage(1);
+            // Update URL immediately
+            const params = new URLSearchParams(window.location.search);
+            if (status) {
+              params.set('status', status);
+            } else {
+              params.delete('status');
+            }
+            params.set('page', '1');
+            window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
+          }}
+          onClearFilters={clearFilters}
+          filteredCount={campaigns.length}
+          totalCount={total || 0}
+        />
+
         <CampaignTable
           campaigns={sortedCampaigns}
           onRecipientListClick={handleRecipientListClick}
@@ -302,9 +377,9 @@ const Dashboard: React.FC = () => {
           onSort={handleSort}
           loading={loading || apiLoading}
           templateLoading={templateLoading}
-          page={page}
+          page={currentPage}
           totalPages={totalPages}
-          onPageChange={setPage}
+          onPageChange={handlePageChange}
         />
 
         <TemplatePreviewDialog

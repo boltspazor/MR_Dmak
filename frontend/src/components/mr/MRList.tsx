@@ -3,7 +3,6 @@ import { Contact, Group } from '../../types/mr.types';
 import AdvancedSearch from './AdvancedSearch';
 import MRTable from './MRTable';
 import {PaginationControls} from '../PaginationControls';
-import { useMRFilters } from '../../hooks/useMRFilters';
 import { useMRData, MRPaginationParams } from '../../hooks/useMRData';
 
 interface MRListProps {

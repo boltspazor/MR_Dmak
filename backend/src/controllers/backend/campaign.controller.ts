@@ -155,33 +155,127 @@ export class CampaignController {
   static async getCampaigns(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const userId = req.user?.userId;
-      const { page = 1, limit = 10, status, search } = req.query;
+      const { page = 1, limit = 10, status, search, sortField, sortDirection } = req.query;
 
-      // Build query
-      const query: any = { createdBy: userId, isActive: true };
-      
-      if (status) {
-        query.status = status;
-      }
+      console.log('🔍 Backend getCampaigns - Received params:', { page, limit, status, search, sortField, sortDirection });
 
+      // Build query - we'll handle status filtering after calculating dynamic status
+      const baseQuery: any = { createdBy: userId, isActive: true };
+      console.log('🔍 Backend - Base query:', baseQuery);
+      console.log('🔍 Backend - Requested status filter:', status);
+
+      // First, get campaigns with populated data for search
+      let searchQuery = baseQuery;
       if (search) {
-        query.$or = [
-          { name: { $regex: search, $options: 'i' } },
-          { description: { $regex: search, $options: 'i' } },
-          { campaignId: { $regex: search, $options: 'i' } }
-        ];
+        // For comprehensive search including template and recipient list names,
+        // we need to use aggregation pipeline
+        const searchStr = String(search);
+        
+        // Build the initial match query for user and active campaigns only
+        const initialMatch: any = { createdBy: userId, isActive: true };
+        
+        console.log('🔍 Backend - Performing search with term:', searchStr);
+        const campaigns = await Campaign.aggregate([
+          { $match: initialMatch },
+          {
+            $lookup: {
+              from: 'templates',
+              localField: 'templateId',
+              foreignField: '_id',
+              as: 'template'
+            }
+          },
+          {
+            $lookup: {
+              from: 'templaterecipients',
+              localField: 'recipientListId', 
+              foreignField: '_id',
+              as: 'recipientList'
+            }
+          },
+          {
+            $match: {
+              $or: [
+                { name: { $regex: searchStr, $options: 'i' } },
+                { description: { $regex: searchStr, $options: 'i' } },
+                { campaignId: { $regex: searchStr, $options: 'i' } },
+                { 'template.name': { $regex: searchStr, $options: 'i' } },
+                { 'template.metaTemplateName': { $regex: searchStr, $options: 'i' } },
+                { 'recipientList.name': { $regex: searchStr, $options: 'i' } }
+              ]
+            }
+          },
+          { $project: { _id: 1 } }
+        ]);
+        
+        console.log('🔍 Backend - Search found campaigns:', campaigns.length);
+        
+        const campaignIds = campaigns.map(c => c._id);
+        // Only filter by campaign IDs from search results
+        searchQuery = { createdBy: userId, isActive: true, _id: { $in: campaignIds } };
+      } else {
+        searchQuery = baseQuery;
       }
 
+      // Build sort options
+      const sortOptions: any = {};
+      if (sortField && sortDirection) {
+        // Map frontend sort fields to database fields
+        const fieldMap: { [key: string]: string } = {
+          'campaignName': 'name',
+          'template': 'templateId.name', // Will be handled after population
+          'recipientList': 'recipientListId.name', // Will be handled after population
+          'date': 'createdAt',
+          'sendStatus': 'status'
+        };
+        
+        const sortFieldStr = String(sortField);
+        const dbField = fieldMap[sortFieldStr] || sortFieldStr || 'createdAt';
+        // For nested fields, use simple field for initial sort, then sort in memory after population
+        const actualSortField = dbField.includes('.') ? dbField.split('.')[0] : dbField;
+        sortOptions[actualSortField] = sortDirection === 'asc' ? 1 : -1;
+      } else {
+        // Default sort
+        sortOptions.createdAt = -1;
+      }
+
+      console.log('🔍 Backend - Final searchQuery:', searchQuery);
+      console.log('🔍 Backend - Sort options:', sortOptions);
+      
       // Get campaigns with populated data
-      const campaigns = await Campaign.find(query)
+      let campaigns = await Campaign.find(searchQuery)
         .populate('templateId', 'name metaTemplateName metaStatus isMetaTemplate type imageUrl')
         .populate('recipientListId', 'name description recipients')
         .populate('createdBy', 'name email')
-        .sort({ createdAt: -1 })
+        .sort(sortOptions)
         .limit(Number(limit) * 1)
         .skip((Number(page) - 1) * Number(limit));
 
-      const total = await Campaign.countDocuments(query);
+      // Handle client-side sorting for nested fields that require populated data
+      if (sortField && sortDirection) {
+        if (sortField === 'template' || sortField === 'recipientList') {
+          campaigns = campaigns.sort((a, b) => {
+            let aValue = '';
+            let bValue = '';
+            
+            if (sortField === 'template') {
+              aValue = (a.templateId as any)?.name || '';
+              bValue = (b.templateId as any)?.name || '';
+            } else if (sortField === 'recipientList') {
+              aValue = (a.recipientListId as any)?.name || '';
+              bValue = (b.recipientListId as any)?.name || '';
+            }
+            
+            if (sortDirection === 'asc') {
+              return aValue.localeCompare(bValue);
+            } else {
+              return bValue.localeCompare(aValue);
+            }
+          });
+        }
+      }
+
+      const total = await Campaign.countDocuments(searchQuery);
 
       // Calculate progress for each campaign
       const campaignsWithProgress = await Promise.all(
@@ -268,15 +362,39 @@ export class CampaignController {
         })
       );
 
+      // Apply status filtering after calculating dynamic statuses
+      let filteredCampaigns = campaignsWithProgress;
+      if (status) {
+        console.log('🔍 Backend - Applying status filter:', status);
+        filteredCampaigns = campaignsWithProgress.filter(campaign => {
+          const matches = campaign.status === status;
+          console.log(`Campaign ${campaign.name} status: ${campaign.status}, requested: ${status}, matches: ${matches}`);
+          return matches;
+        });
+        console.log('🔍 Backend - Campaigns after status filter:', filteredCampaigns.length);
+      }
+
+      // Update pagination based on filtered results
+      const filteredTotal = filteredCampaigns.length;
+      const paginatedCampaigns = filteredCampaigns.slice(
+        (Number(page) - 1) * Number(limit),
+        Number(page) * Number(limit)
+      );
+
+      console.log('🔍 Backend - Returning campaigns count:', paginatedCampaigns.length);
+      console.log('🔍 Backend - Total from DB:', total);
+      console.log('🔍 Backend - Filtered total:', filteredTotal);
+      console.log('🔍 Backend - Final campaign statuses:', paginatedCampaigns.map(c => ({ id: c.id, name: c.name, status: c.status })));
+
       return res.json({
         success: true,
         data: {
-          campaigns: campaignsWithProgress,
+          campaigns: paginatedCampaigns,
           pagination: {
             page: Number(page),
             limit: Number(limit),
-            total,
-            totalPages: Math.ceil(total / Number(limit))
+            total: filteredTotal,
+            totalPages: Math.ceil(filteredTotal / Number(limit))
           }
         }
       });
@@ -287,6 +405,46 @@ export class CampaignController {
         success: false,
         message: 'Failed to get campaigns',
         error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
+   * Get available campaign statuses
+   */
+  static async getAvailableStatuses(req: AuthenticatedRequest, res: Response): Promise<Response> {
+    try {
+      const userId = req.user?.userId;
+      
+      // Get distinct statuses from the database for this user
+      const dbStatuses = await Campaign.distinct('status', { 
+        createdBy: userId, 
+        isActive: true 
+      });
+      
+      // Only include allowed statuses for filtering
+      const allowedStatuses = ['pending', 'completed', 'failed'];
+      
+      // Get distinct statuses from database and filter to only allowed ones
+      const availableStatuses = dbStatuses.filter(status => allowedStatuses.includes(status));
+      
+      // Ensure all allowed statuses are included even if not in database
+      const allStatuses = [...new Set([...availableStatuses, ...allowedStatuses])];
+      
+      return res.json({
+        success: true,
+        data: {
+          statuses: allStatuses.map(status => ({
+            value: status,
+            label: status.charAt(0).toUpperCase() + status.slice(1)
+          }))
+        }
+      });
+    } catch (error) {
+      console.error('Error getting available statuses:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to get available statuses'
       });
     }
   }

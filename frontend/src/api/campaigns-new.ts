@@ -55,40 +55,29 @@ export interface CreateCampaignWithMRsData {
 }
 
 export interface CampaignProgress {
-  campaign: {
-    id: string;
-    campaignId: string;
-    name: string;
-    description?: string;
-    status: string;
-    createdAt: string;
-    scheduledAt?: string;
-    startedAt?: string;
-    completedAt?: string;
-    totalRecipients: number;
-  };
+  id: string;
+  campaignId: string;
+  name: string;
+  description?: string;
+  status: 'draft' | 'pending' | 'sending' | 'completed' | 'failed' | 'cancelled';
+  createdAt: string;
+  scheduledAt?: string;
+  startedAt?: string;
+  completedAt?: string;
   template: {
     id: string;
     name: string;
+    content?: string;
     metaTemplateName?: string;
     metaStatus?: string;
     isMetaTemplate: boolean;
     type: string;
-    metaLanguage?: string;
   };
   recipientList: {
     id: string;
     name: string;
     description?: string;
-    recipients: Array<{
-      mrId: string;
-      firstName: string;
-      lastName: string;
-      phone: string;
-      email?: string;
-      groupId?: string;
-      parameters: Record<string, string>;
-    }>;
+    recipientCount: number;
   } | null;
   progress: {
     total: number;
@@ -112,6 +101,7 @@ export interface CampaignProgress {
   lastUpdated: string;
 }
 
+// Campaign API
 export const campaignsAPI = {
   /**
    * Create a new campaign
@@ -122,7 +112,7 @@ export const campaignsAPI = {
   },
 
   /**
-   * Create a campaign with direct MR selection (for templates without parameters)
+   * Create a campaign with MRs
    */
   createCampaignWithMRs: async (data: CreateCampaignWithMRsData): Promise<Campaign> => {
     const response = await api.post('/campaigns/with-mrs', data);
@@ -137,6 +127,8 @@ export const campaignsAPI = {
     limit?: number;
     status?: string;
     search?: string;
+    sortField?: string;
+    sortDirection?: 'asc' | 'desc';
   }): Promise<{
     campaigns: Campaign[];
     pagination: {
@@ -149,6 +141,14 @@ export const campaignsAPI = {
     const response = await api.get('/campaigns', { params });
     console.log('API Response:', response.data);
     return response.data.data;
+  },
+
+  /**
+   * Get available campaign statuses
+   */
+  getAvailableStatuses: async (): Promise<Array<{value: string, label: string}>> => {
+    const response = await api.get('/campaigns/statuses');
+    return response.data.data.statuses;
   },
 
   /**
@@ -179,44 +179,6 @@ export const campaignsAPI = {
    */
   getCampaignProgress: async (campaignId: string): Promise<CampaignProgress> => {
     const response = await api.get(`/campaigns/${campaignId}`);
-    return response.data.data;
-  }
-};
-
-// Template API
-export interface Template {
-  id: string;
-  name: string;
-  content: string;
-  type: 'html' | 'text' | 'image' | 'template';
-  imageUrl?: string;
-  footerImageUrl?: string;
-  parameters: Array<{name: string, type: 'text' | 'number'}> | string[];
-  isActive: boolean;
-  metaTemplateId?: string;
-  metaTemplateName?: string;
-  metaStatus?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'DISABLED' | 'PAUSED' | 'PENDING_DELETION';
-  metaCategory?: 'AUTHENTICATION' | 'MARKETING' | 'UTILITY';
-  metaLanguage?: string;
-  isMetaTemplate: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export const templateAPI = {
-  /**
-   * Get template by ID
-   */
-  getTemplateById: async (templateId: string): Promise<Template> => {
-    const response = await api.get(`/templates/${templateId}`);
-    return response.data.data;
-  },
-
-  /**
-   * Get all templates
-   */
-  getTemplates: async (): Promise<Template[]> => {
-    const response = await api.get('/templates');
     return response.data.data;
   }
 };
