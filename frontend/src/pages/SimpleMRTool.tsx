@@ -89,7 +89,7 @@ const SimpleMRTool: React.FC = () => {
     };
     
     loadData();
-  }, []); // Remove fetchContacts and fetchGroups from dependencies
+  }, []); 
 
   // Contact management functions
   const handleAddMRSuccess = async () => {
@@ -174,14 +174,12 @@ const SimpleMRTool: React.FC = () => {
 
           {/* MR List with Advanced Search and Pagination */}
           <MRList
-            contacts={contacts}
             groups={groups}
             onEdit={handleEditContact}
             onDelete={handleDeleteClick}
             onSort={handleSort}
             sortField={sortField}
             sortDirection={sortDirection}
-            loading={loading}
             onDownloadCSV={exportContactsToCSV}
           />
         </div>

@@ -177,12 +177,24 @@ export interface RecipientList {
   updatedAt: string;
 }
 
-export interface AvailableParameters {
-  parameters: string[];
-  recipientLists: Array<{
-    _id: string;
-    name: string;
-    columns: string[];
-    recordCount: number;
-  }>;
+export interface CSVExportOptions {
+  /** Custom filename for the downloaded CSV (without .csv extension) */
+  filename?: string;
+  /** Whether to include headers in the CSV */
+  includeHeaders?: boolean;
+  /** Custom headers to use instead of object keys */
+  headers?: string[];
+  /** Column delimiter (default: comma) */
+  delimiter?: string;
+}
+
+export interface UseCSVExportProps<T extends Record<string, any>> {
+  /** The data array to export */
+  data: T[];
+  /** Export configuration options */
+  options?: CSVExportOptions;
+}
+
+export interface CSVColumnMapping {
+  [key: string]: string;
 }

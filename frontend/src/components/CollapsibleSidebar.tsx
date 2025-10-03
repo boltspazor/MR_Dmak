@@ -73,23 +73,26 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
         ${isCollapsed ? 'w-16' : 'w-64'}
         ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         transition-all duration-300 ease-in-out
-        bg-gradient-to-b from-blue-500 to-white border-r border-gray-200 h-full flex flex-col shadow-sm
+         h-full flex flex-col shadow-sm
       `}>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+        <div className="flex items-center justify-between px-2 border-b border-gray-200">
           {!isCollapsed && (
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-white/20 backdrop-blur rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">D</span>
+              <div>
+                <img 
+                  src="/DVK_updated_logo.png" 
+                  alt="D-MAK Logo" 
+                  className="h-16 object-contain"
+                />
               </div>
-              <span className="text-lg font-bold text-white">D-MAK</span>
             </div>
           )}
           
           {/* Collapse Toggle */}
           <button
             onClick={toggleCollapse}
-            className="hidden lg:flex items-center justify-center w-8 h-8 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors"
+            className="hidden lg:flex items-center justify-center w-8 h-8 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors border border-gray-400"
           >
             {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
           </button>
@@ -104,7 +107,7 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-2">
+        <nav className="flex-1 p-4 space-y-2 bg-gradient-to-b from-blue-500 to-white border-r border-gray-200">
           {filteredItems.map((item) => {
             const Icon = item.icon;
             const isActive = activePage === item.route;
@@ -147,8 +150,8 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
             flex items-center gap-3 mb-3
             ${isCollapsed ? 'justify-center' : 'justify-start'}
           `}>
-            <div className="w-8 h-8 bg-white/20 backdrop-blur rounded-full flex items-center justify-center">
-              <User size={isCollapsed ? 20 : 16} className="text-white" />
+            <div className="w-8 h-8 bg-white/20 backdrop-blur rounded-full flex items-center justify-center border border-gray-400">
+              <User size={isCollapsed ? 20 : 16} className="" />
             </div>
             {!isCollapsed && (
               <div className="text-black">
@@ -174,8 +177,8 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
           
           {/* DVK Logo - Moved to bottom with larger size */}
           <div className={`
-            flex justify-center mt-4 pt-4 border-t border-white/20
-            ${isCollapsed ? 'px-2' : 'px-4'}
+            flex justify-center border-t border-white/20
+            ${isCollapsed ? 'px-2' : 'px-2'}
           `}>
             <img 
               src="/dvk.svg" 

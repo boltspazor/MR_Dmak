@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import ConsentForm from '../components/ConsentForm';
 import OptOutForm from '../components/OptOutForm';
 import ConsentStatusChecker from '../components/ConsentStatusChecker';
-import Header from '../components/Header';
+import Header from '../components/StandardHeader';
 
 const ConsentFormPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'consent' | 'optout' | 'status'>('consent');
@@ -35,9 +35,7 @@ const ConsentFormPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <div className=" p-10">
         <Header 
-          title="Consent Management"
-          subtitle="Manage your communication preferences with D-MAK Medical Representatives"
-          showExportButtons={false}
+          pageTitle="Consent Management"
         />
         <div className="py-8">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">

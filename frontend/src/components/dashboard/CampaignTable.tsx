@@ -2,6 +2,7 @@ import React from 'react';
 import { MessageSquare, BarChart3, Clock, CheckCircle, X } from 'lucide-react';
 import { SkeletonTable } from '../ui/SkeletonLoader';
 import { PaginationControls } from "../../components/PaginationControls";
+import { useCSVExportWithMapping } from '../../hooks/useCSVExport';
 
 
 export interface CampaignRecord {
@@ -55,6 +56,26 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
   totalPages,
   onPageChange
 }) => {
+  // CSV Export functionality
+  const { exportToCSV, canExport } = useCSVExportWithMapping({
+    data: campaigns,
+    columnMapping: {
+      'campaignName': 'Campaign Name',
+      'campaignId': 'Campaign ID',
+      'template.name': 'Template Name',
+      'recipientList.name': 'Recipient List',
+      'date': 'Date',
+      'status': 'Status',
+      'totalRecipients': 'Total Recipients',
+      'sentCount': 'Sent Count',
+      'failedCount': 'Failed Count',
+      'successRate': 'Success Rate'
+    },
+    options: {
+      filename: 'campaigns-export'
+    }
+  });
+
   const getEffectiveStatus = (campaign: CampaignRecord): string => {
     return campaign.status || "pending";
   };
@@ -276,6 +297,27 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
               totalPages={totalPages}
               onPageChange={onPageChange}
             />
+          </div>
+        )}
+
+        {/* Export Button */}
+        {campaigns.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="flex justify-between items-center">
+              <div className="text-sm text-gray-500">
+                Showing {campaigns.length} campaign{campaigns.length !== 1 ? 's' : ''}
+              </div>
+              <button
+                onClick={exportToCSV}
+                disabled={!canExport}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l4-4m-4 4l-4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Export
+              </button>
+            </div>
           </div>
         )}
 

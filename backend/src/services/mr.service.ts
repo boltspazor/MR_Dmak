@@ -167,10 +167,10 @@ export class MRService {
     }
   }
 
-  async getMRs(userId: string, groupId?: string, search?: string, limit = 50, offset = 0) {
+  async getMRs(userId: string, groupId?: string, search?: string, limit?: number, offset?: number) {
     try {
       const query: any = {};
-      
+
       if (groupId) {
         query.groupId = groupId;
       }
@@ -182,6 +182,41 @@ export class MRService {
           { mrId: { $regex: search, $options: 'i' } },
           { phone: { $regex: search, $options: 'i' } }
         ];
+      }
+
+      // If no limit/offset provided (getAll case), return all without pagination
+      if (limit === undefined || offset === undefined) {
+        const mrs = await MedicalRepresentative.find(query)
+          .populate('groupId', 'groupName')
+          .sort({ createdAt: -1 });
+
+        // Fetch consent status for each MR
+        const mrsWithConsent = await Promise.all(
+          mrs.map(async (mr) => {
+            try {
+              const phoneE164 = this.formatPhoneForConsent(mr.phone);
+              const consentResult = await consentService.getConsentStatus(phoneE164);
+              const consentStatus = this.determineConsentStatus(consentResult.consent);
+
+              return {
+                ...mr.toObject(),
+                consentStatus
+              };
+            } catch (error) {
+              logger.warn('Failed to fetch consent status for MR', { mrId: mr._id, phone: mr.phone, error });
+              return {
+                ...mr.toObject(),
+                consentStatus: 'not_requested' as const
+              };
+            }
+          })
+        );
+
+        return {
+          mrs: mrsWithConsent,
+          total: mrsWithConsent.length,
+          pagination: null // No pagination for getAll
+        };
       }
 
       const mrs = await MedicalRepresentative.find(query)
@@ -199,7 +234,7 @@ export class MRService {
             const phoneE164 = this.formatPhoneForConsent(mr.phone);
             const consentResult = await consentService.getConsentStatus(phoneE164);
             const consentStatus = this.determineConsentStatus(consentResult.consent);
-            
+
             return {
               ...mr.toObject(),
               consentStatus
@@ -689,7 +724,7 @@ export class MRService {
   async searchMRs(userId: string, query: string) {
     try {
       const searchRegex = new RegExp(query, 'i');
-      
+
       const mrs = await MedicalRepresentative.find({
         createdBy: userId,
         $or: [
@@ -704,13 +739,36 @@ export class MRService {
       .sort({ createdAt: -1 })
       .limit(50);
 
+      // Fetch consent status for each MR
+      const mrsWithConsent = await Promise.all(
+        mrs.map(async (mr) => {
+          try {
+            const phoneE164 = this.formatPhoneForConsent(mr.phone);
+            const consentResult = await consentService.getConsentStatus(phoneE164);
+            const consentStatus = this.determineConsentStatus(consentResult.consent);
+
+            return {
+              ...mr.toObject(),
+              consentStatus
+            };
+          } catch (error) {
+            logger.warn('Failed to fetch consent status for MR', { mrId: mr._id, phone: mr.phone, error });
+            return {
+              ...mr.toObject(),
+              consentStatus: 'not_requested' as const
+            };
+          }
+        })
+      );
+
       return {
-        mrs,
+        mrs: mrsWithConsent,
         pagination: {
-          total: mrs.length,
+          total: mrsWithConsent.length,
           page: 1,
           limit: 50,
-          hasMore: false
+          totalPages: Math.ceil(mrsWithConsent.length / 50),
+          hasMore: mrsWithConsent.length === 50
         }
       };
     } catch (error) {

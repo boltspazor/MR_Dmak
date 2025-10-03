@@ -1,13 +1,13 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Contact, Group } from '../../types/mr.types';
 import AdvancedSearch from './AdvancedSearch';
 import MRTable from './MRTable';
-import EnhancedPagination from './EnhancedPagination';
+import {PaginationControls} from '../PaginationControls';
 import { useMRFilters } from '../../hooks/useMRFilters';
-import { useMRPagination } from '../../hooks/useMRPagination';
+import { useMRData, MRPaginationParams } from '../../hooks/useMRData';
 
 interface MRListProps {
-  contacts: Contact[];
+  // Remove contacts from props since we're fetching them internally
   groups: Group[];
   onEdit: (contact: Contact) => void;
   onDelete: (contact: Contact) => void;
@@ -19,7 +19,6 @@ interface MRListProps {
 }
 
 const MRList: React.FC<MRListProps> = ({
-  contacts,
   groups,
   onEdit,
   onDelete,
@@ -29,76 +28,118 @@ const MRList: React.FC<MRListProps> = ({
   loading = false,
   onDownloadCSV
 }) => {
-  const {
-    filters,
-    filteredContacts,
-    updateSearchTerm,
-    updateGroupFilter,
-    clearFilters
-  } = useMRFilters(contacts);
+  // Use contacts from the hook instead of props
+  const { contacts, fetchContacts, fetchAllContacts, pagination, total, loading: dataLoading } = useMRData();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchFilters, setSearchFilters] = useState<MRPaginationParams>({});
 
-  // Apply parent's sorting to filtered contacts
+  // Remove useMRFilters since we're doing server-side filtering
+  const [searchTerm, setSearchTerm] = useState('');
+  const [groupFilter, setGroupFilter] = useState('');
+
+  // Fetch data when filters or pagination changes
+  useEffect(() => {
+    const params: MRPaginationParams = {
+      page: currentPage,
+      limit: 30,
+      ...searchFilters
+    };
+
+    if (searchTerm) params.search = searchTerm;
+    if (groupFilter) params.groupId = groupFilter;
+
+    console.log('MRList: Fetching with params:', params);
+    fetchContacts(params);
+  }, [currentPage, searchTerm, groupFilter, searchFilters, fetchContacts]);
+
+  // Apply sorting to the fetched contacts (client-side sorting)
   const sortedContacts = useMemo(() => {
-    return [...filteredContacts].sort((a, b) => {
+    return [...contacts].sort((a, b) => {
       const aValue = a[sortField] || '';
       const bValue = b[sortField] || '';
-      
+
       if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
       if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [filteredContacts, sortField, sortDirection]);
-
-  const pagination = useMRPagination({
-    totalItems: sortedContacts.length,
-    itemsPerPage: 50
-  });
-
-  const paginatedContacts = sortedContacts.slice(
-    pagination.startIndex,
-    pagination.endIndex
-  );
+  }, [contacts, sortField, sortDirection]);
 
   const handleSort = (field: keyof Contact) => {
     onSort(field);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleExportAll = async () => {
+    try {
+      const allContacts = await fetchAllContacts(
+        searchTerm,
+        groupFilter
+      );
+      // Call the parent's onDownloadCSV with all contacts
+      if (onDownloadCSV) {
+        onDownloadCSV();
+      }
+    } catch (error) {
+      console.error('Error exporting all contacts:', error);
+    }
+  };
+
+  const handleFilterChange = (newFilters: MRPaginationParams) => {
+    setSearchFilters(newFilters);
+    setCurrentPage(1); // Reset to first page when filters change
+  };
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setGroupFilter('');
+    setSearchFilters({});
+    setCurrentPage(1);
   };
 
   return (
     <div className="space-y-6">
       {/* Advanced Search */}
       <AdvancedSearch
-        searchTerm={filters.searchTerm}
-        groupFilter={filters.groupFilter}
+        searchTerm={searchTerm}
+        groupFilter={groupFilter}
         groups={groups}
-        onSearchChange={updateSearchTerm}
-        onGroupChange={updateGroupFilter}
+        onSearchChange={(term) => {
+          setSearchTerm(term);
+          setCurrentPage(1); // Reset to first page
+        }}
+        onGroupChange={(groupId) => {
+          setGroupFilter(groupId);
+          setCurrentPage(1); // Reset to first page
+        }}
         onClearFilters={clearFilters}
-        filteredCount={filteredContacts.length}
-        totalCount={contacts.length}
-        onDownloadCSV={onDownloadCSV}
+        filteredCount={contacts.length}
+        totalCount={total}
+        onDownloadCSV={handleExportAll}
       />
 
       {/* MR Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <MRTable
-          contacts={paginatedContacts}
+          contacts={sortedContacts}
           onEdit={onEdit}
           onDelete={onDelete}
           onSort={handleSort}
           sortField={sortField}
           sortDirection={sortDirection}
-          loading={loading}
+          loading={dataLoading || loading} // Use both loading states
         />
 
-        {/* Enhanced Pagination */}
-        <EnhancedPagination
-          pagination={pagination}
-          onPageChange={pagination.goToPage}
-          onPrevious={pagination.goToPreviousPage}
-          onNext={pagination.goToNextPage}
-          onFirst={pagination.goToFirstPage}
-          onLast={pagination.goToLastPage}
-        />
+        {/* Pagination Controls */}
+        {pagination && pagination.totalPages > 1 && (
+          <PaginationControls
+            currentPage={pagination.page}
+            totalPages={pagination.totalPages}
+            onPageChange={handlePageChange}
+          />
+        )}
       </div>
     </div>
   );

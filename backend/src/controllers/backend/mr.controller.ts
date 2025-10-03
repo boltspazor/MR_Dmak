@@ -86,14 +86,34 @@ export class MRController {
 
   async getMRs(req: any, res: Response) {
     try {
-      const { groupId, search, limit = 100, offset = 0 } = req.query;
+      const { groupId, search, page = 1, limit = 50, getAll } = req.query;
+
+      // If getAll is true, return all MRs without pagination for CSV export
+      if (getAll === 'true') {
+        const result = await mrService.getMRs(
+          req.user.userId,
+          groupId,
+          search,
+          undefined, // No limit for getAll
+          undefined  // No offset for getAll
+        );
+        return res.json({
+          message: 'MRs retrieved successfully',
+          data: result.mrs,
+          total: result.total,
+          getAll: true
+        });
+      }
+
+      // Standard pagination
       const result = await mrService.getMRs(
-        req.user.userId, 
-        groupId, 
-        search, 
-        parseInt(limit), 
-        parseInt(offset)
+        req.user.userId,
+        groupId,
+        search,
+        parseInt(limit),
+        (parseInt(page) - 1) * parseInt(limit)
       );
+
       return res.json({
         message: 'MRs retrieved successfully',
         data: result.mrs,

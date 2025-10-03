@@ -20,10 +20,7 @@ const MRManagementHeader: React.FC<MRManagementHeaderProps> = ({
 }) => {
   return (
     <>
-      {/* Standardized Header */}
       <StandardHeader pageTitle="MR Management" />
-
-      {/* Stats Cards */}
       <div className="mb-8">
         <MRStatsCards summaryItems={summaryItems} loading={loading} />
       </div>

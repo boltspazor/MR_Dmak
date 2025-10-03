@@ -2,6 +2,7 @@ import React from 'react';
 import { FileText, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { Template } from '../../types';
 import TemplateActions from './TemplateActions';
+import { useCSVExportWithMapping } from '../../hooks/useCSVExport';
 
 interface TemplateTableProps {
   templates: Template[];
@@ -22,9 +23,23 @@ const TemplateTable: React.FC<TemplateTableProps> = ({
   onExportPNG,
   onDelete,
 }) => {
+  const { exportToCSV, canExport } = useCSVExportWithMapping({
+    data: templates,
+    columnMapping: {
+      name: 'Template Name',
+      type: 'Type',
+      isActive: 'Active',
+      isMetaTemplate: 'Meta Template',
+      metaStatus: 'Meta Status',
+      createdAt: 'Created Date',
+      updatedAt: 'Updated Date',
+      parameters: 'Parameters Count',
+    },
+    options: { filename: 'templates-export' },
+  });
 
-
-  if (templates.length === 0) {
+  // ✅ If no templates, show empty state
+  if (!templates || templates.length === 0) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="text-center py-16">
@@ -36,7 +51,8 @@ const TemplateTable: React.FC<TemplateTableProps> = ({
               No Templates Found
             </h3>
             <p className="text-gray-600 max-w-md">
-              No templates match your current filters. Try adjusting your search criteria or create a new template.
+              No templates match your current filters. Try adjusting your search
+              criteria or create a new template.
             </p>
           </div>
         </div>
@@ -44,6 +60,7 @@ const TemplateTable: React.FC<TemplateTableProps> = ({
     );
   }
 
+  // ✅ Otherwise, show table
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       {/* Icon Descriptions */}
@@ -88,6 +105,8 @@ const TemplateTable: React.FC<TemplateTableProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
@@ -118,7 +137,9 @@ const TemplateTable: React.FC<TemplateTableProps> = ({
                   )}
                 </div>
               </th>
-              <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Actions</th>
+              <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
@@ -133,36 +154,59 @@ const TemplateTable: React.FC<TemplateTableProps> = ({
                     </div>
                     <div className="flex items-center space-x-1 flex-shrink-0">
                       {template.isMetaTemplate && (
-                        <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center" title="Meta Template">
-                          <span className="text-blue-700 font-bold text-xs">M</span>
+                        <div
+                          className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center"
+                          title="Meta Template"
+                        >
+                          <span className="text-blue-700 font-bold text-xs">
+                            M
+                          </span>
                         </div>
                       )}
                       {template.metaStatus === 'APPROVED' && (
-                        <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center" title="Approved">
+                        <div
+                          className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center"
+                          title="Approved"
+                        >
                           <CheckCircle className="h-3 w-3 text-green-700" />
                         </div>
                       )}
                       {template.metaStatus === 'PENDING' && (
-                        <div className="w-6 h-6 bg-yellow-100 rounded-full flex items-center justify-center" title="Pending">
+                        <div
+                          className="w-6 h-6 bg-yellow-100 rounded-full flex items-center justify-center"
+                          title="Pending"
+                        >
                           <Clock className="h-3 w-3 text-yellow-700" />
                         </div>
                       )}
                       {template.metaStatus === 'REJECTED' && (
-                        <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center" title="Rejected">
+                        <div
+                          className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center"
+                          title="Rejected"
+                        >
                           <XCircle className="h-3 w-3 text-red-700" />
                         </div>
                       )}
-                      {(template.imageUrl && template.imageUrl.trim() !== '') && (
-                        <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center" title="Has Image">
-                          <span className="text-purple-700 font-bold text-xs">I</span>
+                      {template.imageUrl?.trim() && (
+                        <div
+                          className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center"
+                          title="Has Image"
+                        >
+                          <span className="text-purple-700 font-bold text-xs">
+                            I
+                          </span>
                         </div>
                       )}
-                      {template.parameters && template.parameters.length > 0 && (
-                        <div className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center" title="Has Parameters">
-                          <span className="text-orange-700 font-bold text-xs">P</span>
+                      {template.parameters?.length > 0 && (
+                        <div
+                          className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center"
+                          title="Has Parameters"
+                        >
+                          <span className="text-orange-700 font-bold text-xs">
+                            P
+                          </span>
                         </div>
                       )}
-
                     </div>
                   </div>
                 </td>
@@ -170,7 +214,7 @@ const TemplateTable: React.FC<TemplateTableProps> = ({
                   {new Date(template.createdAt).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'short',
-                    day: 'numeric'
+                    day: 'numeric',
                   })}
                 </td>
                 <td className="py-4 px-6">
@@ -185,6 +229,36 @@ const TemplateTable: React.FC<TemplateTableProps> = ({
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Export Button */}
+      <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+        <div className="flex justify-between items-center">
+          <div className="text-sm text-gray-500">
+            Showing {templates.length} template
+            {templates.length !== 1 ? 's' : ''}
+          </div>
+          <button
+            onClick={exportToCSV}
+            disabled={!canExport}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <svg
+              className="w-4 h-4 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 10v6m0 0l4-4m-4 4l-4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            Export to CSV
+          </button>
+        </div>
       </div>
     </div>
   );

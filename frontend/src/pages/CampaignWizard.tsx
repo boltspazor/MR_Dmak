@@ -199,9 +199,9 @@ const CampaignWizard: React.FC = () => {
   const CurrentStepComponent = steps[currentStep - 1].component;
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col pt-4">
+    <div className="min-h-screen bg-gray-100 p-8">
       {/* Main Content */}
-      <div className="flex-1 flex flex-col px-4">
+      <div className="">
           <StandardHeader pageTitle="Create Campaign" />
 
         {/* Wizard Content */}
