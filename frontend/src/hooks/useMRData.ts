@@ -7,6 +7,9 @@ export interface MRPaginationParams {
   limit?: number;
   search?: string;
   groupId?: string;
+  consentStatus?: string;
+  sortField?: string;
+  sortDirection?: 'asc' | 'desc';
 }
 
 export interface BackendPagination {
@@ -30,14 +33,19 @@ export const useMRData = () => {
       setLoading(true);
       setError(null);
 
-      const { page = 1, limit = 30, search, groupId } = params;
+      const { page = 1, limit = 30, search, groupId, consentStatus, sortField, sortDirection } = params;
 
       const queryParams = new URLSearchParams();
-      queryParams.append('page', page.toString());
+      // Convert page to offset for backend compatibility
+      const offset = (page - 1) * limit;
+      queryParams.append('offset', offset.toString());
       queryParams.append('limit', limit.toString());
 
       if (search) queryParams.append('search', search);
       if (groupId) queryParams.append('groupId', groupId);
+      if (consentStatus) queryParams.append('consentStatus', consentStatus);
+      if (sortField) queryParams.append('sortField', sortField);
+      if (sortDirection) queryParams.append('sortDirection', sortDirection);
 
       const response = await api.get(`/mrs?${queryParams}`);
       const { data: mrs, pagination: paginationInfo } = response.data;
@@ -71,7 +79,7 @@ export const useMRData = () => {
     }
   }, []);
 
-  const fetchAllContacts = useCallback(async (search?: string, groupId?: string) => {
+  const fetchAllContacts = useCallback(async (search?: string, groupId?: string, consentStatus?: string) => {
     try {
       setLoading(true);
       setError(null);
@@ -81,6 +89,7 @@ export const useMRData = () => {
 
       if (search) queryParams.append('search', search);
       if (groupId) queryParams.append('groupId', groupId);
+      if (consentStatus) queryParams.append('consentStatus', consentStatus);
 
       const response = await api.get(`/mrs?${queryParams}`);
       const { data: mrs, total } = response.data;

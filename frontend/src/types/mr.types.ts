@@ -18,8 +18,19 @@ export interface Group {
 export interface SearchFilters {
   searchTerm: string;
   groupFilter: string;
+  consentStatusFilter: string;
   sortField: keyof Contact;
   sortDirection: 'asc' | 'desc';
+}
+
+export interface MRFilterParams {
+  searchTerm?: string;
+  groupId?: string;
+  consentStatus?: string;
+  sortField?: string;
+  sortDirection?: 'asc' | 'desc';
+  page?: number;
+  limit?: number;
 }
 
 export interface PaginationState {

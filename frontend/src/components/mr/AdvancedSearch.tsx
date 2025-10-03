@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Filter, X, ChevronDown } from 'lucide-react';
 import { Group } from '../../types/mr.types';
 
 interface AdvancedSearchProps {
   searchTerm: string;
   groupFilter: string;
+  consentStatusFilter: string;
   groups: Group[];
   onSearchChange: (searchTerm: string) => void;
   onGroupChange: (groupFilter: string) => void;
+  onConsentStatusChange: (consentStatus: string) => void;
   onClearFilters: () => void;
   filteredCount: number;
   totalCount: number;
@@ -17,9 +19,11 @@ interface AdvancedSearchProps {
 const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
   searchTerm,
   groupFilter,
+  consentStatusFilter,
   groups,
   onSearchChange,
   onGroupChange,
+  onConsentStatusChange,
   onClearFilters,
   filteredCount,
   totalCount,
@@ -27,6 +31,11 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
 }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [searchInput, setSearchInput] = useState(searchTerm);
+
+  // Sync searchInput with searchTerm prop
+  useEffect(() => {
+    setSearchInput(searchTerm);
+  }, [searchTerm]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +47,22 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
     onSearchChange('');
   };
 
-  const hasActiveFilters = searchTerm || groupFilter;
+  // Real-time search with debounce
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchInput !== searchTerm) {
+        onSearchChange(searchInput);
+      }
+    }, 300);
+    
+    return () => clearTimeout(timeoutId);
+  }, [searchInput, searchTerm, onSearchChange]);
+
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+  };
+
+  const hasActiveFilters = searchTerm || groupFilter || consentStatusFilter;
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
@@ -51,7 +75,7 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
               type="text"
               placeholder="Search by MR ID, name, phone, or group..."
               value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="w-full pl-12 pr-12 py-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white text-gray-900 placeholder-gray-500"
             />
             {searchInput && (
@@ -83,7 +107,7 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
       {/* Advanced Filters */}
       {showAdvanced && (
         <div className="border-t border-gray-200 pt-6 space-y-6 transition-all duration-200">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Group Filter */}
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-gray-700">
@@ -96,22 +120,55 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
               >
                 <option value="">All Groups</option>
                 {groups.map(group => (
-                  <option key={group.id} value={group.name}>
+                  <option key={group.id} value={group.id}>
                     {group.name} ({group.contactCount})
                   </option>
                 ))}
               </select>
             </div>
 
-            {/* Results Summary and Download */}
-            <div className="flex items-center justify-end space-x-4">
-              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 px-4 py-3 rounded-xl border border-indigo-100">
-                <div className="text-sm text-gray-700">
-                  Showing <span className="font-bold text-indigo-600">{filteredCount}</span> of{' '}
-                  <span className="font-bold text-gray-900">{totalCount}</span> MRs
-                </div>
+            {/* Consent Status Filter */}
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">
+                Filter by Consent Status
+              </label>
+              <select
+                value={consentStatusFilter}
+                onChange={(e) => onConsentStatusChange(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white text-gray-900"
+              >
+                <option value="">All Consent Status</option>
+                <option value="approved">Approved</option>
+                <option value="not_requested">Not Approved</option>
+                <option value="pending">Pending</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+
+            {/* Spacer for alignment */}
+            <div></div>
+          </div>
+
+          {/* Results Summary and Actions */}
+          <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+            <div className="bg-gradient-to-r from-indigo-50 to-blue-50 px-4 py-3 rounded-xl border border-indigo-100">
+              <div className="text-sm text-gray-700">
+                Showing <span className="font-bold text-indigo-600">{filteredCount}</span> of{' '}
+                <span className="font-bold text-gray-900">{totalCount}</span> MRs
               </div>
-              
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              {hasActiveFilters && (
+                <button
+                  onClick={onClearFilters}
+                  className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-all duration-200 hover:bg-gray-100 rounded-lg"
+                >
+                  <X className="h-4 w-4" />
+                  <span>Clear Filters</span>
+                </button>
+              )}
+
               {onDownloadCSV && (
                 <button
                   onClick={onDownloadCSV}
@@ -125,56 +182,40 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
               )}
             </div>
           </div>
-
-          {/* Clear Filters */}
-          {hasActiveFilters && (
-            <div className="flex justify-end">
-              <button
-                onClick={onClearFilters}
-                className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-all duration-200 hover:bg-gray-100 rounded-lg"
-              >
-                <X className="h-4 w-4" />
-                <span>Clear all filters</span>
-              </button>
-            </div>
-          )}
         </div>
       )}
 
-      {/* Active Filters Display */}
-      {hasActiveFilters && (
-        <div className="mt-6 pt-4 border-t border-gray-100">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-semibold text-gray-700">Active Filters</h4>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {searchTerm && (
-              <span className="inline-flex items-center px-3 py-2 rounded-full text-sm bg-indigo-100 text-indigo-800 border border-indigo-200 shadow-sm">
-                <Search className="h-3 w-3 mr-2" />
-                <span className="font-medium">"{searchTerm}"</span>
-                <button
-                  onClick={() => {
-                    setSearchInput('');
-                    onSearchChange('');
-                  }}
-                  className="ml-2 hover:text-indigo-600 transition-colors duration-200 p-0.5 rounded-full hover:bg-indigo-200"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            )}
-            {groupFilter && (
-              <span className="inline-flex items-center px-3 py-2 rounded-full text-sm bg-green-100 text-green-800 border border-green-200 shadow-sm">
-                <Filter className="h-3 w-3 mr-2" />
-                <span className="font-medium">{groupFilter}</span>
-                <button
-                  onClick={() => onGroupChange('')}
-                  className="ml-2 hover:text-green-600 transition-colors duration-200 p-0.5 rounded-full hover:bg-green-200"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            )}
+      {/* Active Filters Summary */}
+      {hasActiveFilters && !showAdvanced && (
+        <div className="mt-4 p-4 bg-indigo-50 rounded-lg border border-indigo-100">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4 text-sm text-indigo-700">
+              <span className="font-medium">Active Filters:</span>
+              <div className="flex items-center space-x-2">
+                {searchTerm && (
+                  <span className="px-2 py-1 bg-white rounded-md border border-indigo-200">
+                    Search: "{searchTerm}"
+                  </span>
+                )}
+                {groupFilter && (
+                  <span className="px-2 py-1 bg-white rounded-md border border-indigo-200">
+                    Group: {groups.find(g => g.id === groupFilter)?.name || groupFilter}
+                  </span>
+                )}
+                {consentStatusFilter && (
+                  <span className="px-2 py-1 bg-white rounded-md border border-indigo-200">
+                    Status: {consentStatusFilter === 'not_requested' ? 'Not Approved' : 
+                             consentStatusFilter.charAt(0).toUpperCase() + consentStatusFilter.slice(1)}
+                  </span>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={onClearFilters}
+              className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+            >
+              Clear All
+            </button>
           </div>
         </div>
       )}

@@ -167,7 +167,7 @@ export class MRService {
     }
   }
 
-  async getMRs(userId: string, groupId?: string, search?: string, limit?: number, offset?: number) {
+  async getMRs(userId: string, groupId?: string, search?: string, limit?: number, offset?: number, consentStatus?: string, sortField?: string, sortDirection?: 'asc' | 'desc') {
     try {
       const query: any = {};
 
@@ -184,14 +184,34 @@ export class MRService {
         ];
       }
 
+      // Build sort options
+      const sortOptions: any = {};
+      if (sortField && sortDirection) {
+        // Map frontend sort fields to database fields
+        const fieldMap: { [key: string]: string } = {
+          'firstName': 'firstName',
+          'lastName': 'lastName', 
+          'mrId': 'mrId',
+          'phone': 'phone',
+          'group': 'groupId', // Will be handled after population
+          'consentStatus': 'createdAt' // Will sort by creation date for consent, then filter in memory
+        };
+        
+        const dbField = fieldMap[sortField] || 'createdAt';
+        sortOptions[dbField] = sortDirection === 'asc' ? 1 : -1;
+      } else {
+        // Default sort
+        sortOptions.createdAt = -1;
+      }
+
       // If no limit/offset provided (getAll case), return all without pagination
       if (limit === undefined || offset === undefined) {
         const mrs = await MedicalRepresentative.find(query)
           .populate('groupId', 'groupName')
-          .sort({ createdAt: -1 });
+          .sort(sortOptions);
 
         // Fetch consent status for each MR
-        const mrsWithConsent = await Promise.all(
+        let mrsWithConsent = await Promise.all(
           mrs.map(async (mr) => {
             try {
               const phoneE164 = this.formatPhoneForConsent(mr.phone);
@@ -212,6 +232,22 @@ export class MRService {
           })
         );
 
+        // Filter by consent status if specified
+        if (consentStatus) {
+          mrsWithConsent = mrsWithConsent.filter(mr => mr.consentStatus === consentStatus);
+        }
+
+        // Apply client-side sorting for fields that require consent data
+        if (sortField === 'consentStatus' && mrsWithConsent.length > 0) {
+          mrsWithConsent.sort((a, b) => {
+            const aValue = a.consentStatus || '';
+            const bValue = b.consentStatus || '';
+            if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+            if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
+          });
+        }
+
         return {
           mrs: mrsWithConsent,
           total: mrsWithConsent.length,
@@ -221,14 +257,14 @@ export class MRService {
 
       const mrs = await MedicalRepresentative.find(query)
         .populate('groupId', 'groupName')
-        .sort({ createdAt: -1 })
+        .sort(sortOptions)
         .limit(limit)
         .skip(offset);
 
       const total = await MedicalRepresentative.countDocuments(query);
 
       // Fetch consent status for each MR
-      const mrsWithConsent = await Promise.all(
+      let mrsWithConsent = await Promise.all(
         mrs.map(async (mr) => {
           try {
             const phoneE164 = this.formatPhoneForConsent(mr.phone);
@@ -248,6 +284,22 @@ export class MRService {
           }
         })
       );
+
+      // Filter by consent status if specified
+      if (consentStatus) {
+        mrsWithConsent = mrsWithConsent.filter(mr => mr.consentStatus === consentStatus);
+      }
+
+      // Apply client-side sorting for fields that require consent data
+      if (sortField === 'consentStatus' && mrsWithConsent.length > 0) {
+        mrsWithConsent.sort((a, b) => {
+          const aValue = a.consentStatus || '';
+          const bValue = b.consentStatus || '';
+          if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+          if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+          return 0;
+        });
+      }
 
       return {
         mrs: mrsWithConsent,

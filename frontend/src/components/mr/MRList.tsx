@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Contact, Group } from '../../types/mr.types';
 import AdvancedSearch from './AdvancedSearch';
 import MRTable from './MRTable';
@@ -36,6 +36,33 @@ const MRList: React.FC<MRListProps> = ({
   // Remove useMRFilters since we're doing server-side filtering
   const [searchTerm, setSearchTerm] = useState('');
   const [groupFilter, setGroupFilter] = useState('');
+  const [consentStatusFilter, setConsentStatusFilter] = useState('');
+
+  // URL parameter management
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlSearch = urlParams.get('search') || '';
+    const urlGroup = urlParams.get('group') || '';
+    const urlConsent = urlParams.get('consent') || '';
+    const urlPage = parseInt(urlParams.get('page') || '1');
+
+    setSearchTerm(urlSearch);
+    setGroupFilter(urlGroup);
+    setConsentStatusFilter(urlConsent);
+    setCurrentPage(urlPage);
+  }, []);
+
+  // Update URL when filters change
+  useEffect(() => {
+    const urlParams = new URLSearchParams();
+    if (searchTerm) urlParams.set('search', searchTerm);
+    if (groupFilter) urlParams.set('group', groupFilter);
+    if (consentStatusFilter) urlParams.set('consent', consentStatusFilter);
+    if (currentPage > 1) urlParams.set('page', currentPage.toString());
+
+    const newUrl = urlParams.toString() ? `${window.location.pathname}?${urlParams.toString()}` : window.location.pathname;
+    window.history.replaceState({}, '', newUrl);
+  }, [searchTerm, groupFilter, consentStatusFilter, currentPage]);
 
   // Fetch data when filters or pagination changes
   useEffect(() => {
@@ -47,22 +74,18 @@ const MRList: React.FC<MRListProps> = ({
 
     if (searchTerm) params.search = searchTerm;
     if (groupFilter) params.groupId = groupFilter;
+    if (consentStatusFilter) params.consentStatus = consentStatusFilter;
+    
+    // Add server-side sorting
+    params.sortField = sortField;
+    params.sortDirection = sortDirection;
 
     console.log('MRList: Fetching with params:', params);
     fetchContacts(params);
-  }, [currentPage, searchTerm, groupFilter, searchFilters, fetchContacts]);
+  }, [currentPage, searchTerm, groupFilter, consentStatusFilter, sortField, sortDirection, searchFilters, fetchContacts]);
 
-  // Apply sorting to the fetched contacts (client-side sorting)
-  const sortedContacts = useMemo(() => {
-    return [...contacts].sort((a, b) => {
-      const aValue = a[sortField] || '';
-      const bValue = b[sortField] || '';
-
-      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
-    });
-  }, [contacts, sortField, sortDirection]);
+  // Use contacts directly since sorting is now handled server-side
+  const sortedContacts = contacts;
 
   const handleSort = (field: keyof Contact) => {
     onSort(field);
@@ -74,9 +97,10 @@ const MRList: React.FC<MRListProps> = ({
 
   const handleExportAll = async () => {
     try {
-      const allContacts = await fetchAllContacts(
+      await fetchAllContacts(
         searchTerm,
-        groupFilter
+        groupFilter,
+        consentStatusFilter
       );
       // Call the parent's onDownloadCSV with all contacts
       if (onDownloadCSV) {
@@ -87,14 +111,10 @@ const MRList: React.FC<MRListProps> = ({
     }
   };
 
-  const handleFilterChange = (newFilters: MRPaginationParams) => {
-    setSearchFilters(newFilters);
-    setCurrentPage(1); // Reset to first page when filters change
-  };
-
   const clearFilters = () => {
     setSearchTerm('');
     setGroupFilter('');
+    setConsentStatusFilter('');
     setSearchFilters({});
     setCurrentPage(1);
   };
@@ -105,6 +125,7 @@ const MRList: React.FC<MRListProps> = ({
       <AdvancedSearch
         searchTerm={searchTerm}
         groupFilter={groupFilter}
+        consentStatusFilter={consentStatusFilter}
         groups={groups}
         onSearchChange={(term) => {
           setSearchTerm(term);
@@ -112,6 +133,10 @@ const MRList: React.FC<MRListProps> = ({
         }}
         onGroupChange={(groupId) => {
           setGroupFilter(groupId);
+          setCurrentPage(1); // Reset to first page
+        }}
+        onConsentStatusChange={(consentStatus) => {
+          setConsentStatusFilter(consentStatus);
           setCurrentPage(1); // Reset to first page
         }}
         onClearFilters={clearFilters}
