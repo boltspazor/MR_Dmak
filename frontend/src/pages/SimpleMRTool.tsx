@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import UploadProgressDialog from '../components/ui/UploadProgressDialog';
 import AddMRDialog from '../components/AddMRDialog';
 import EditMRDialog from '../components/EditMRDialog';
@@ -8,7 +6,6 @@ import MRActionButtons from '../components/mr/MRActionButtons';
 import MRList from '../components/mr/MRList';
 import MRManagementHeader from '../components/mr/MRManagementHeader';
 import MRDeleteDialog from '../components/mr/MRDeleteDialog';
-import { Contact, Group } from '../types/mr.types';
 import { useMRData } from '../hooks/useMRData';
 import { useCSVImport } from '../hooks/useCSVImport';
 import { useMRManagement } from '../hooks/useMRManagement';
@@ -26,10 +23,8 @@ const SimpleMRTool: React.FC = () => {
     contacts,
     groups,
     loading,
-    error,
     fetchContacts,
     fetchGroups,
-    addContact,
     updateContact,
     deleteContact
   } = useMRData();
@@ -50,7 +45,7 @@ const SimpleMRTool: React.FC = () => {
   });
 
   // Export functionality
-  const { exportContactsToCSV, exportContactsToPDF, downloadCSVTemplate } = useMRExport({ contacts });
+  const { downloadCSVTemplate, exportContactsToCSV } = useMRExport({ contacts });
 
   // Statistics
   const { summaryItems } = useMRStats({ contacts, groups });
@@ -157,9 +152,12 @@ const SimpleMRTool: React.FC = () => {
       <div className="p-8">
         {/* Header and Stats */}
         <MRManagementHeader
+          totalCount={contacts.length}
+          filteredCount={contacts.length}
+          searchTerm=""
+          setSearchTerm={() => {}}
+          onAddMR={() => setIsAddMRDialogOpen(true)}
           summaryItems={summaryItems}
-          onExportCSV={exportContactsToCSV}
-          onExportPDF={exportContactsToPDF}
           loading={loading}
         />
 

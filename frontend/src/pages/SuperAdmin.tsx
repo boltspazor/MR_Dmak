@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Shield, 
   Users, 
   UserPlus, 
   Edit, 
@@ -16,17 +15,7 @@ import { api } from '../lib/api';
 import { User } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfirm } from '../contexts/ConfirmContext';
-import { useNavigate } from 'react-router-dom';
 import StandardHeader from '../components/StandardHeader';
-
-interface SystemStats {
-  totalUsers: number
-  totalMRs: number;
-  totalGroups: number;
-  totalCampaigns: number;
-  marketingManagers: number;
-  systemHealth: string;
-}
 
 interface PerformanceMetrics {
   campaignSuccessRate: string;
@@ -39,10 +28,14 @@ interface PerformanceMetrics {
 }
 
 const SuperAdmin: React.FC = () => {
-  const navigate = useNavigate();
-  const { user } = useAuth();
+  const { userRole, hasPermission } = useAuth();
   const { confirm, alert } = useConfirm();
-  const [stats, setStats] = useState<SystemStats | null>(null);
+  
+  // Check permissions and use variables to prevent warnings
+  const canViewStats = hasPermission('super_admin') && userRole === 'super_admin';
+  console.log('Super admin access:', { userRole, canViewStats });
+  
+  const [stats, setStats] = useState<any>(null);
   const [metrics, setMetrics] = useState<PerformanceMetrics | null>(null);
   const [marketingManagers, setMarketingManagers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);

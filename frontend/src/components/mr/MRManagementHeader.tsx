@@ -2,25 +2,20 @@ import React from 'react';
 import StandardHeader from '../StandardHeader';
 import MRStatsCards from './MRStatsCards';
 
-interface StatCard {
-  title: string;
-  value: number;
-  icon: string;
-  color: string;
-  textColor: string;
-}
-
 interface MRManagementHeaderProps {
-  summaryItems: StatCard[];
-  onExportCSV: () => void;
-  onExportPDF: () => void;
+  totalCount: number;
+  filteredCount: number;
+  searchTerm: string;
+  setSearchTerm: (term: string) => void;
+  onAddMR: () => void;
+  summaryItems?: any[];
   loading?: boolean;
 }
 
 const MRManagementHeader: React.FC<MRManagementHeaderProps> = ({
-  summaryItems,
-  onExportCSV,
-  onExportPDF,
+  totalCount,
+  filteredCount,
+  summaryItems = [],
   loading = false
 }) => {
   return (
