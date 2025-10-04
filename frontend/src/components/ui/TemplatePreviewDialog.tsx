@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, FileText, Download, Upload, Users, CheckCircle } from 'lucide-react';
+import { X, FileText, Download, Upload, Edit3, Save, Loader, CheckCircle, Users } from 'lucide-react';
 import { Template } from '../../types';
 import { api } from '../../lib/api';
 import toast from 'react-hot-toast';
@@ -24,10 +24,12 @@ const TemplatePreviewDialog: React.FC<TemplatePreviewDialogProps> = ({
   onBulkUploadRecipients,
   showDownloadButton = true,
   showBulkUploadButton = true,
-  variant = 'full'
-  // onUpdateTemplate - not used after removing Template Details section
+  variant = 'full',
+  onUpdateTemplate
 }) => {
-
+  const [isEditingImage, setIsEditingImage] = useState(false);
+  const [imageUrl, setImageUrl] = useState(template?.imageUrl || '');
+  const [saving, setSaving] = useState(false);
   
   // Recipient list functionality
   const [recipientLists, setRecipientLists] = useState<any[]>([]);
@@ -71,7 +73,20 @@ const TemplatePreviewDialog: React.FC<TemplatePreviewDialogProps> = ({
     loadRecipientLists();
   }, [template, isOpen]);
 
+  const handleSaveImageUrl = async () => {
+    if (!template || !onUpdateTemplate) return;
 
+    setSaving(true);
+    try {
+      await onUpdateTemplate(template._id, { imageUrl });
+      toast.success('Template image URL updated successfully!');
+      setIsEditingImage(false);
+    } catch (error) {
+      toast.error('Failed to update template image URL');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (!isOpen || !template) return null;
 
@@ -568,6 +583,44 @@ const TemplatePreviewDialog: React.FC<TemplatePreviewDialogProps> = ({
 
               {/* Right Side - Parameters */}
               <div className="space-y-6">
+                {/* Template Actions */}
+                {(showDownloadButton && onDownloadRecipientList) || (showBulkUploadButton && onBulkUploadRecipients) ? (
+                  <div className="bg-white border border-gray-200 rounded-lg p-6">
+                    <h4 className="text-lg font-semibold text-gray-800 mb-4">Template Actions</h4>
+                    <div className="flex gap-3">
+                      {showDownloadButton && onDownloadRecipientList && (
+                        <button
+                          onClick={() => onDownloadRecipientList(template)}
+                          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                          title="Download Recipient List Template"
+                        >
+                          <Download className="h-4 w-4" />
+                          Download Template CSV
+                        </button>
+                      )}
+                      {showBulkUploadButton && onBulkUploadRecipients && (
+                        <button
+                          onClick={() => onBulkUploadRecipients(template)}
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                          title="Upload Recipients for this Template"
+                        >
+                          <Upload className="h-4 w-4" />
+                          Upload Recipients
+                        </button>
+                      )}
+                    </div>
+                    <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                      <p className="text-xs text-gray-600 mb-2">
+                        <strong>CSV Format:</strong>
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        • Row 1: Template Name in A1, template name in B1<br />
+                        • Row 2: MR ID, First Name, Last Name{extractedParams.length > 0 ? `, ${extractedParams.join(', ')}` : ''}<br />
+                        • Each parameter will have its own column in the recipient list
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
 
                 <div className="bg-white border border-gray-200 rounded-lg p-6">
                   <h4 className="text-lg font-semibold text-gray-800 mb-4">Extracted Parameters</h4>
@@ -610,9 +663,125 @@ const TemplatePreviewDialog: React.FC<TemplatePreviewDialogProps> = ({
                   )}
                 </div>
 
-
-
-
+                {/* Template Details */}
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4">Template Details</h4>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Type:</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {template.type || 'text'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Created:</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {new Date(template.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Content Length:</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {template.content.length} characters
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Parameters:</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {extractedParams.length}
+                      </span>
+                    </div>
+                    {template.recipientLists && Array.isArray(template.recipientLists) && template.recipientLists.length > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Recipient Lists:</span>
+                        <span className="text-sm font-medium text-gray-900">
+                          {template.recipientLists.reduce((total, list) => {
+                            try {
+                              return total + (Array.isArray(list.recipients) ? list.recipients.length : 0);
+                            } catch (error) {
+                              console.error('Error calculating recipient count:', error);
+                              return total;
+                            }
+                          }, 0)} recipients across {template.recipientLists.length} list(s)
+                        </span>
+                      </div>
+                    )}
+                    {template.createdBy && (
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Created By:</span>
+                        <span className="text-sm font-medium text-gray-900">
+                          {template.createdBy.name}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {/* Image URL Section */}
+                    <div className="border-t border-gray-200 pt-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm font-medium text-gray-600">Image URL:</span>
+                        {onUpdateTemplate && (
+                          <button
+                            onClick={() => setIsEditingImage(!isEditingImage)}
+                            className="flex items-center space-x-1 text-indigo-600 hover:text-indigo-700 text-sm"
+                          >
+                            <Edit3 className="h-4 w-4" />
+                            <span>{isEditingImage ? 'Cancel' : 'Edit'}</span>
+                          </button>
+                        )}
+                      </div>
+                      
+                      {isEditingImage ? (
+                        <div className="space-y-3">
+                          <input
+                            type="url"
+                            value={imageUrl}
+                            onChange={(e) => setImageUrl(e.target.value)}
+                            placeholder="https://example.com/image.jpg"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                          />
+                          
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={handleSaveImageUrl}
+                              disabled={saving}
+                              className="flex items-center space-x-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm"
+                            >
+                              {saving ? (
+                                <Loader className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Save className="h-4 w-4" />
+                              )}
+                              <span>{saving ? 'Saving...' : 'Save'}</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setIsEditingImage(false);
+                                setImageUrl(template?.imageUrl || '');
+                              }}
+                              className="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-sm">
+                          {template.imageUrl && template.imageUrl.trim() !== '' ? (
+                            <div className="space-y-2">
+                              <p className="text-gray-900 font-medium break-all">{template.imageUrl}</p>
+                              <p className="text-green-600 flex items-center space-x-1">
+                                <CheckCircle className="h-3 w-3" />
+                                <span>Image URL configured</span>
+                              </p>
+                            </div>
+                          ) : (
+                            <p className="text-gray-500 italic">No image URL configured</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
 
                 {/* Recipient Lists Section */}
                 {template.parameters && template.parameters.length > 0 && (
@@ -707,54 +876,8 @@ const TemplatePreviewDialog: React.FC<TemplatePreviewDialogProps> = ({
                     )}
                   </div>
                 )}
-
-                {/* Information Section - Moved to right side */}
-                <div className="bg-white border border-gray-200 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-800 mb-4">Information</h4>
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-xs text-gray-600 mb-2">
-                      <strong>CSV Format:</strong>
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      • Row 1: Template Name in A1, template name in B1<br />
-                      • Row 2: MR ID, First Name, Last Name{template ? extractParameters(template.content).map(p => p.name).join(', ') : ''}<br />
-                      • Each parameter will have its own column in the recipient list
-                    </p>
-                  </div>
-                </div>
               </div>
             </div>
-            
-            {/* Template Actions - Bottom left below WhatsApp preview */}
-            {(showDownloadButton && onDownloadRecipientList) || (showBulkUploadButton && onBulkUploadRecipients) ? (
-              <div className="flex justify-start mt-6">
-                <div className="bg-white border border-gray-200 rounded-lg p-6 max-w-md">
-                  <h4 className="text-lg font-semibold text-gray-800 mb-4">Template Actions</h4>
-                  <div className="flex gap-3">
-                    {showDownloadButton && onDownloadRecipientList && (
-                      <button
-                        onClick={() => onDownloadRecipientList(template)}
-                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                        title="Download Recipient List Template"
-                      >
-                        <Download className="h-4 w-4" />
-                        Download Template CSV
-                      </button>
-                    )}
-                    {showBulkUploadButton && onBulkUploadRecipients && (
-                      <button
-                        onClick={() => onBulkUploadRecipients(template)}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                        title="Upload Recipients for this Template"
-                      >
-                        <Upload className="h-4 w-4" />
-                        Upload Recipients
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ) : null}
           </div>
         </div>
       </div>
