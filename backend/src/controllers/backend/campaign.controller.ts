@@ -1112,6 +1112,172 @@ export class CampaignController {
   }
 
   /**
+   * Export campaigns to CSV with current filters applied
+   */
+  static async exportCampaigns(req: AuthenticatedRequest, res: Response): Promise<Response> {
+    try {
+      const userId = req.user?.userId;
+      const { search, status, sortField, sortDirection } = req.query;
+
+      logger.info('Exporting campaigns with filters', { 
+        userId, 
+        filters: { search, status, sortField, sortDirection }
+      });
+
+      // Build query - same as getCampaigns but without pagination
+      const baseQuery: any = { createdBy: userId, isActive: true };
+      
+      // Build sort options
+      const sortOptions: any = {};
+      if (sortField && sortDirection) {
+        const fieldMap: { [key: string]: string } = {
+          'campaignName': 'name',
+          'template': 'templateId',
+          'date': 'createdAt',
+          'sendStatus': 'status'
+        };
+        
+        const sortFieldStr = String(sortField);
+        const dbField = fieldMap[sortFieldStr] || 'createdAt';
+        sortOptions[dbField] = sortDirection === 'asc' ? 1 : -1;
+      } else {
+        sortOptions.createdAt = -1;
+      }
+
+      // Apply search filter if provided
+      let searchQuery = baseQuery;
+      if (search) {
+        const searchStr = String(search);
+        const campaigns = await Campaign.aggregate([
+          { $match: { createdBy: userId, isActive: true } },
+          {
+            $lookup: {
+              from: 'templates',
+              localField: 'templateId',
+              foreignField: '_id',
+              as: 'template'
+            }
+          },
+          {
+            $match: {
+              $or: [
+                { name: { $regex: searchStr, $options: 'i' } },
+                { description: { $regex: searchStr, $options: 'i' } },
+                { campaignId: { $regex: searchStr, $options: 'i' } },
+                { 'template.name': { $regex: searchStr, $options: 'i' } }
+              ]
+            }
+          },
+          { $project: { _id: 1 } }
+        ]);
+        
+        const campaignIds = campaigns.map(c => c._id);
+        searchQuery = { createdBy: userId, isActive: true, _id: { $in: campaignIds } };
+      }
+
+      // Get campaigns with populated data (no pagination for export)
+      let campaigns = await Campaign.find(searchQuery)
+        .populate('templateId', 'name metaTemplateName metaStatus isMetaTemplate type')
+        .populate('createdBy', 'name email')
+        .sort(sortOptions);
+
+      // Calculate progress and apply status filtering
+      const campaignsWithProgress = await Promise.all(
+        campaigns.map(async (campaign) => {
+          // Similar progress calculation as in getCampaigns
+          const recipients = (campaign as any).recipients || [];
+          let total = recipients.length || campaign.totalRecipients || 0;
+          let receivedCount = 0;
+          let failedCount = 0;
+          let pendingCount = 0;
+
+          if (recipients.length > 0) {
+            for (const r of recipients as any[]) {
+              const status = (r.status || '').toLowerCase();
+              if (status === 'delivered' || status === 'read') receivedCount++;
+              else if (status === 'failed') failedCount++;
+              else pendingCount++;
+            }
+          } else {
+            const messageLogs = await MessageLog.find({ campaignId: campaign._id });
+            total = messageLogs.length || total;
+            messageLogs.forEach(log => {
+              const s = (log.status || '').toLowerCase();
+              if (s === 'delivered' || s === 'read') receivedCount++;
+              else if (s === 'failed') failedCount++;
+              else pendingCount++;
+            });
+          }
+
+          const successRate = total > 0 ? Math.round((receivedCount / total) * 100) : 0;
+
+          // Calculate status
+          let apiStatus = campaign.status;
+          if (total > 0) {
+            if (receivedCount + failedCount === total) {
+              if (failedCount === total) {
+                apiStatus = 'failed';
+              } else {
+                apiStatus = 'completed';
+              }
+            } else if (pendingCount > 0) {
+              apiStatus = 'in-progress';
+            } else {
+              apiStatus = 'pending';
+            }
+          }
+
+          return {
+            id: campaign._id,
+            campaignId: campaign.campaignId,
+            name: campaign.name,
+            description: campaign.description,
+            status: apiStatus,
+            createdAt: campaign.createdAt,
+            template: campaign.templateId ? {
+              name: (campaign.templateId as any).name,
+              metaTemplateName: (campaign.templateId as any).metaTemplateName
+            } : null,
+            progress: {
+              total,
+              sent: receivedCount,
+              failed: failedCount,
+              pending: pendingCount,
+              successRate
+            }
+          };
+        })
+      );
+
+      // Apply status filtering after calculation
+      let filteredCampaigns = campaignsWithProgress;
+      if (status) {
+        filteredCampaigns = campaignsWithProgress.filter(campaign => campaign.status === status);
+      }
+
+      // Import ExcelService for CSV generation
+      const { ExcelService } = await import('../../services/excel.service');
+      const excelService = new ExcelService();
+      
+      // Generate CSV from filtered results
+      const csvData = excelService.generateCSV(filteredCampaigns, 'campaign');
+      
+      // Set headers for CSV download
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename=campaigns-${new Date().toISOString().split('T')[0]}.csv`);
+      
+      return res.send(csvData);
+    } catch (error) {
+      logger.error('Error exporting campaigns:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to export campaigns',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
    * Search campaign recipients with filters
    */
   static async searchCampaignRecipients(req: AuthenticatedRequest, res: Response): Promise<Response> {

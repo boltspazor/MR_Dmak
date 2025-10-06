@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import MedicalRepresentative from '../models/MedicalRepresentative';
 import Group from '../models/Group';
 import { CreateMRForm, UpdateMRForm } from '../types/mongodb';
@@ -169,7 +170,7 @@ export class MRService {
 
   async getMRs(userId: string, groupId?: string, search?: string, limit?: number, offset?: number, consentStatus?: string, sortField?: string, sortDirection?: 'asc' | 'desc') {
     try {
-      const query: any = {};
+      const query: any = { marketingManagerId: userId };
 
       if (groupId) {
         query.groupId = groupId;
@@ -749,23 +750,77 @@ export class MRService {
 
   async getMRStats(userId: string) {
     try {
-      const totalMRs = await MedicalRepresentative.countDocuments({ createdBy: userId });
+      const totalMRs = await MedicalRepresentative.countDocuments({ marketingManagerId: userId });
       const totalGroups = await Group.countDocuments({ createdBy: userId });
       
       // Get MRs by group
       const mrsByGroup = await MedicalRepresentative.aggregate([
-        { $match: { createdBy: userId } },
+        { $match: { marketingManagerId: new mongoose.Types.ObjectId(userId) } },
         { $group: { _id: '$groupId', count: { $sum: 1 } } },
         { $lookup: { from: 'groups', localField: '_id', foreignField: '_id', as: 'group' } },
         { $unwind: '$group' },
         { $project: { groupName: '$group.groupName', count: 1 } }
       ]);
 
+      // Get consent status summary by fetching all MRs with consent status
+      const allMRs = await MedicalRepresentative.find({ marketingManagerId: userId }).select('phone');
+      
+      // Initialize consent counters
+      let consentedCount = 0;
+      let notConsentedCount = 0;
+      let deletedCount = 0;
+      
+      // Fetch consent status for each MR to get accurate counts
+      logger.info('📊 Getting consent status for MRs', { totalMRs: allMRs.length, userId });
+      
+      await Promise.all(
+        allMRs.map(async (mr, index) => {
+          try {
+            const phoneE164 = this.formatPhoneForConsent(mr.phone);
+            const consentResult = await consentService.getConsentStatus(phoneE164);
+            const consentStatus = this.determineConsentStatus(consentResult.consent);
+            
+            logger.debug(`MR ${index + 1}/${allMRs.length}: phone=${phoneE164}, status=${consentStatus}`);
+            
+            switch (consentStatus) {
+              case 'approved':
+                consentedCount++;
+                break;
+              case 'rejected':
+                deletedCount++; // Rejected = flagged as deleted
+                break;
+              case 'pending':
+              case 'not_requested':
+              default:
+                notConsentedCount++;
+                break;
+            }
+          } catch (error) {
+            logger.warn('Failed to get consent status for MR', { phone: mr.phone, error });
+            // If consent check fails, count as not consented
+            notConsentedCount++;
+          }
+        })
+      );
+      
+      logger.info('📈 Final consent summary', { 
+        consentedCount, 
+        notConsentedCount, 
+        deletedCount, 
+        totalProcessed: consentedCount + notConsentedCount + deletedCount 
+      });
+
       return {
         totalMRs,
         totalGroups,
         mrsByGroup,
-        averageMRsPerGroup: totalGroups > 0 ? Math.round(totalMRs / totalGroups * 100) / 100 : 0
+        averageMRsPerGroup: totalGroups > 0 ? Math.round(totalMRs / totalGroups * 100) / 100 : 0,
+        consentSummary: {
+          consented: consentedCount,
+          notConsented: notConsentedCount,
+          deleted: deletedCount,
+          total: consentedCount + notConsentedCount + deletedCount
+        }
       };
     } catch (error) {
       logger.error('Failed to get MR stats', { userId, error });
@@ -778,7 +833,7 @@ export class MRService {
       const searchRegex = new RegExp(query, 'i');
 
       const mrs = await MedicalRepresentative.find({
-        createdBy: userId,
+        marketingManagerId: userId,
         $or: [
           { mrId: searchRegex },
           { firstName: searchRegex },
@@ -832,13 +887,13 @@ export class MRService {
   async getAllGroupStats(userId: string) {
     try {
       const groups = await Group.find({ createdBy: userId });
-      const totalMRs = await MedicalRepresentative.countDocuments({ createdBy: userId });
+      const totalMRs = await MedicalRepresentative.countDocuments({ marketingManagerId: userId });
       
       const groupStats = await Promise.all(
         groups.map(async (group) => {
           const mrCount = await MedicalRepresentative.countDocuments({ 
             groupId: group._id, 
-            createdBy: userId 
+            marketingManagerId: userId 
           });
           return {
             groupId: group._id,
@@ -880,7 +935,7 @@ export class MRService {
         groups.map(async (group) => {
           const mrCount = await MedicalRepresentative.countDocuments({ 
             groupId: group._id, 
-            createdBy: userId 
+            marketingManagerId: userId 
           });
           return {
             ...group.toObject(),

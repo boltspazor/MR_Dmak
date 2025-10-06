@@ -264,13 +264,28 @@ export class MRController {
   async getMRStats(req: any, res: Response) {
     try {
       const stats = await mrService.getMRStats(req.user.userId);
+      
+      // Transform mrsByGroup array to byGroup object for frontend compatibility
+      const byGroup: Record<string, number> = {};
+      stats.mrsByGroup.forEach((group: any) => {
+        byGroup[group.groupName] = group.count;
+      });
+      
       return res.json({
+        success: true,
         message: 'MR statistics retrieved successfully',
-        data: stats
+        data: {
+          total: stats.totalMRs,
+          byGroup,
+          consentSummary: stats.consentSummary
+        }
       });
     } catch (error: any) {
       logger.error('Failed to get MR stats', { error: error.message });
-      return res.status(500).json({ error: error.message });
+      return res.status(500).json({ 
+        success: false,
+        error: error.message 
+      });
     }
   }
 
@@ -289,6 +304,47 @@ export class MRController {
       });
     } catch (error: any) {
       logger.error('Failed to search MRs', { error: error.message, query: req.query });
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  async exportMRs(req: any, res: Response) {
+    try {
+      const { 
+        groupId, 
+        search, 
+        consentStatus, 
+        sortField, 
+        sortDirection 
+      } = req.query;
+
+      logger.info('Exporting MRs with filters', { 
+        userId: req.user.userId, 
+        filters: { groupId, search, consentStatus, sortField, sortDirection }
+      });
+
+      // Get all MRs matching the current filters (no pagination for export)
+      const result = await mrService.getMRs(
+        req.user.userId,
+        groupId,
+        search,
+        undefined, // No limit for export
+        undefined, // No offset for export
+        consentStatus,
+        sortField,
+        sortDirection
+      );
+
+      // Generate CSV from the filtered results
+      const csvData = excelService.generateCSV(result.mrs, 'mr');
+      
+      // Set headers for CSV download
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename=medical-representatives-${new Date().toISOString().split('T')[0]}.csv`);
+      
+      return res.send(csvData);
+    } catch (error: any) {
+      logger.error('Failed to export MRs', { error: error.message, query: req.query });
       return res.status(500).json({ error: error.message });
     }
   }

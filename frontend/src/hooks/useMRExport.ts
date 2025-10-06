@@ -1,12 +1,49 @@
 import { useCallback } from 'react';
 import { parsePhoneNumber, isValidPhoneNumber } from 'libphonenumber-js';
 import { Contact } from '../types/mr.types';
+import { api } from '../api/config';
 
 interface UseMRExportProps {
   contacts: Contact[];
 }
 
 export const useMRExport = ({ contacts }: UseMRExportProps) => {
+  
+  // New filtered export functionality using backend API
+  const exportFilteredMRsToCSV = useCallback(async (
+    searchTerm?: string,
+    groupFilter?: string,
+    consentStatusFilter?: string,
+    sortField?: string,
+    sortDirection?: 'asc' | 'desc'
+  ) => {
+    try {
+      // Build query parameters
+      const params = new URLSearchParams();
+      if (searchTerm) params.append('search', searchTerm);
+      if (groupFilter) params.append('group', groupFilter);
+      if (consentStatusFilter) params.append('consentStatus', consentStatusFilter);
+      if (sortField) params.append('sortField', sortField);
+      if (sortDirection) params.append('sortDirection', sortDirection);
+
+      // Call backend export API
+      const response = await api.get(`/mrs/export?${params.toString()}`, {
+        responseType: 'blob'
+      });
+
+      // Download the CSV file
+      const blob = new Blob([response.data], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `mr_filtered_export_${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error exporting filtered MRs:', error);
+      throw error;
+    }
+  }, []);
   const exportContactsToCSV = useCallback(() => {
     console.log('Exporting contacts:', contacts);
     
@@ -170,6 +207,7 @@ export const useMRExport = ({ contacts }: UseMRExportProps) => {
   return {
     exportContactsToCSV,
     exportContactsToPDF,
-    downloadCSVTemplate
+    downloadCSVTemplate,
+    exportFilteredMRsToCSV
   };
 };

@@ -45,10 +45,10 @@ const SimpleMRTool: React.FC = () => {
   });
 
   // Export functionality
-  const { downloadCSVTemplate, exportContactsToCSV } = useMRExport({ contacts });
+  const { downloadCSVTemplate, exportContactsToCSV, exportFilteredMRsToCSV } = useMRExport({ contacts });
 
   // Statistics
-  const { summaryItems } = useMRStats({ contacts, groups });
+  const { originalSummaryItems, consentSummaryItems, loading: statsLoading } = useMRStats({ contacts, groups });
 
   // Sorting
   const { sortField, sortDirection, handleSort } = useMRSorting();
@@ -157,8 +157,9 @@ const SimpleMRTool: React.FC = () => {
           searchTerm=""
           setSearchTerm={() => {}}
           onAddMR={() => setIsAddMRDialogOpen(true)}
-          summaryItems={summaryItems}
-          loading={loading}
+          originalSummaryItems={originalSummaryItems}
+          consentSummaryItems={consentSummaryItems}
+          loading={loading || statsLoading}
         />
 
         {/* Main Content Area */}
@@ -181,6 +182,7 @@ const SimpleMRTool: React.FC = () => {
             sortField={sortField}
             sortDirection={sortDirection}
             onDownloadCSV={exportContactsToCSV}
+            onFilteredExport={exportFilteredMRsToCSV}
           />
         </div>
 

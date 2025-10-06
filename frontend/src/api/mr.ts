@@ -98,7 +98,18 @@ export const mrApi = {
   },
 
   // Get MR statistics
-  getStats: async (): Promise<{ success: boolean; data: { total: number; byGroup: Record<string, number> } }> => {
+  getStats: async (): Promise<{ 
+    success: boolean; 
+    data: { 
+      total: number; 
+      byGroup: Record<string, number>;
+      consentSummary: {
+        consented: number;
+        notConsented: number;
+        deleted: number;
+      };
+    } 
+  }> => {
     const response = await api.get('/mrs/stats');
     return response.data;
   },

@@ -202,4 +202,75 @@ export class ExcelService {
     
     return csvContent;
   }
+
+  generateCSV(data: any[], dataType: 'mr' | 'campaign' | 'template' = 'mr'): string {
+    if (!data || data.length === 0) {
+      return 'No data available for export';
+    }
+
+    let headers: string[] = [];
+    let rows: any[][] = [];
+
+    switch (dataType) {
+      case 'mr':
+        headers = ['MR ID', 'First Name', 'Last Name', 'Phone', 'Email', 'Group', 'Consent Status', 'Comments', 'Created At'];
+        rows = data.map((mr: any) => [
+          mr.mrId || '',
+          mr.firstName || '',
+          mr.lastName || '',
+          mr.phone || '',
+          mr.email || '',
+          mr.groupId?.groupName || mr.group?.groupName || '',
+          mr.consentStatus || 'not_requested',
+          mr.comments || '',
+          new Date(mr.createdAt).toLocaleDateString()
+        ]);
+        break;
+      
+      case 'campaign':
+        headers = ['Campaign ID', 'Campaign Name', 'Template', 'Status', 'Total Recipients', 'Sent Count', 'Failed Count', 'Success Rate', 'Created At'];
+        rows = data.map((campaign: any) => [
+          campaign.campaignId || '',
+          campaign.name || '',
+          campaign.template?.name || '',
+          campaign.status || '',
+          campaign.progress?.total || 0,
+          campaign.progress?.sent || 0,
+          campaign.progress?.failed || 0,
+          `${campaign.progress?.successRate || 0}%`,
+          new Date(campaign.createdAt).toLocaleDateString()
+        ]);
+        break;
+      
+      case 'template':
+        headers = ['Template ID', 'Name', 'Type', 'Meta Status', 'Category', 'Language', 'Created At'];
+        rows = data.map((template: any) => [
+          template.id || '',
+          template.name || '',
+          template.type || '',
+          template.metaStatus || '',
+          template.metaCategory || '',
+          template.metaLanguage || '',
+          new Date(template.createdAt).toLocaleDateString()
+        ]);
+        break;
+    }
+
+    // Combine headers and rows
+    const csvData = [headers, ...rows];
+    
+    // Convert to CSV format with proper escaping
+    const csvContent = csvData.map(row => 
+      row.map(cell => {
+        const cellValue = String(cell || '');
+        // Escape commas, quotes, and newlines in CSV
+        if (cellValue.includes(',') || cellValue.includes('"') || cellValue.includes('\n')) {
+          return `"${cellValue.replace(/"/g, '""')}"`;
+        }
+        return cellValue;
+      }).join(',')
+    ).join('\n');
+    
+    return csvContent;
+  }
 }

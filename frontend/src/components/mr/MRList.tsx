@@ -15,6 +15,13 @@ interface MRListProps {
   sortDirection: 'asc' | 'desc';
   loading?: boolean;
   onDownloadCSV?: () => void;
+  onFilteredExport?: (
+    searchTerm?: string,
+    groupFilter?: string,
+    consentStatusFilter?: string,
+    sortField?: string,
+    sortDirection?: 'asc' | 'desc'
+  ) => void;
 }
 
 const MRList: React.FC<MRListProps> = ({
@@ -25,7 +32,8 @@ const MRList: React.FC<MRListProps> = ({
   sortField,
   sortDirection,
   loading = false,
-  onDownloadCSV
+  onDownloadCSV,
+  onFilteredExport
 }) => {
   // Use contacts from the hook instead of props
   const { contacts, fetchContacts, fetchAllContacts, pagination, total, loading: dataLoading } = useMRData();
@@ -96,14 +104,26 @@ const MRList: React.FC<MRListProps> = ({
 
   const handleExportAll = async () => {
     try {
-      await fetchAllContacts(
-        searchTerm,
-        groupFilter,
-        consentStatusFilter
-      );
-      // Call the parent's onDownloadCSV with all contacts
-      if (onDownloadCSV) {
-        onDownloadCSV();
+      // Use filtered export if available, otherwise fallback to old method
+      if (onFilteredExport) {
+        await onFilteredExport(
+          searchTerm,
+          groupFilter,
+          consentStatusFilter,
+          sortField as string,
+          sortDirection
+        );
+      } else {
+        // Fallback to old method
+        await fetchAllContacts(
+          searchTerm,
+          groupFilter,
+          consentStatusFilter
+        );
+        // Call the parent's onDownloadCSV with all contacts
+        if (onDownloadCSV) {
+          onDownloadCSV();
+        }
       }
     } catch (error) {
       console.error('Error exporting all contacts:', error);

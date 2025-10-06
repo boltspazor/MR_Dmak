@@ -11,6 +11,7 @@ router.use(authenticateToken);
 router.post('/', CampaignController.createCampaign);
 router.post('/with-mrs', CampaignController.createCampaignWithMRs);
 router.get('/statuses', CampaignController.getAvailableStatuses);
+router.get('/export', CampaignController.exportCampaigns);
 router.get('/', CampaignController.getCampaigns);
 router.get('/:campaignId', CampaignController.getCampaignById);
 router.patch('/:campaignId/status', CampaignController.updateCampaignStatus);
