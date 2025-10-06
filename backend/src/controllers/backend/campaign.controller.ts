@@ -479,10 +479,33 @@ export class CampaignController {
         });
       }
 
-      // Prefer recipients stored on campaign; fallback to recipient list if missing
-      let campaignRecipients = (campaign as any).recipients && (campaign as any).recipients.length > 0
-        ? (campaign as any).recipients
-        : (campaign.recipientListId ? ((campaign.recipientListId as any).recipients || []) : []);
+      // Get campaign recipients - handle both recipient list campaigns and direct MR campaigns  
+      let campaignRecipients: any[] = [];
+      
+      if ((campaign as any).recipients && (campaign as any).recipients.length > 0) {
+        // Campaign has seeded recipients (after being activated)
+        campaignRecipients = (campaign as any).recipients;
+      } else if (campaign.recipientListId) {
+        // Campaign with recipient list - get from populated recipientListId
+        campaignRecipients = ((campaign.recipientListId as any).recipients || []);
+      } else if (campaign.mrIds && campaign.mrIds.length > 0) {
+        // Campaign with direct MRs - fetch MRs from database
+        const mrs = await MedicalRep.find({ 
+          _id: { $in: campaign.mrIds },
+          $or: [{ isActive: true }, { isActive: { $exists: false } }]
+        });
+        
+        campaignRecipients = mrs.map((mr: any) => ({
+          mrId: mr._id,
+          firstName: mr.firstName,
+          lastName: mr.lastName,
+          phone: mr.phone,
+          groupId: mr.groupId,
+          status: 'pending' // Default status for non-activated campaigns
+        }));
+      }
+
+      console.log('🔍 getCampaignById - Found campaign recipients:', campaignRecipients.length);
       
       // Get message logs for this campaign to find status
       const messageLogs = await MessageLog.find({ campaignId: campaign._id });
@@ -1303,10 +1326,43 @@ export class CampaignController {
         });
       }
 
-      // Get campaign recipients
-      const campaignRecipients = (campaign as any).recipients && (campaign as any).recipients.length > 0
-        ? (campaign as any).recipients
-        : [];
+      // Get campaign recipients - handle both recipient list campaigns and direct MR campaigns
+      let campaignRecipients: any[] = [];
+      
+      if ((campaign as any).recipients && (campaign as any).recipients.length > 0) {
+        // Campaign has seeded recipients (after being activated)
+        campaignRecipients = (campaign as any).recipients;
+      } else if (campaign.recipientListId) {
+        // Campaign with recipient list - fetch from recipient list
+        const recipientList = await TemplateRecipients.findById(campaign.recipientListId);
+        if (recipientList && recipientList.recipients) {
+          campaignRecipients = recipientList.recipients.map((recipient: any) => ({
+            mrId: recipient.mrId || recipient._id,
+            firstName: recipient.firstName,
+            lastName: recipient.lastName,
+            phone: recipient.phone,
+            groupId: recipient.groupId,
+            status: 'pending' // Default status for non-activated campaigns
+          }));
+        }
+      } else if (campaign.mrIds && campaign.mrIds.length > 0) {
+        // Campaign with direct MRs - fetch MRs from database
+        const mrs = await MedicalRep.find({ 
+          _id: { $in: campaign.mrIds },
+          $or: [{ isActive: true }, { isActive: { $exists: false } }]
+        });
+        
+        campaignRecipients = mrs.map((mr: any) => ({
+          mrId: mr._id,
+          firstName: mr.firstName,
+          lastName: mr.lastName,
+          phone: mr.phone,
+          groupId: mr.groupId,
+          status: 'pending' // Default status for non-activated campaigns
+        }));
+      }
+
+      console.log('🔍 Backend - Found campaign recipients:', campaignRecipients.length);
       
       // Get message logs for this campaign to find status
       const messageLogs = await MessageLog.find({ campaignId: campaign._id });
