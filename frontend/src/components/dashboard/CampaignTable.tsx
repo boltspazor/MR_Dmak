@@ -292,9 +292,6 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
         {campaigns.length > 0 && (
           <div className="mt-4 pt-4 border-t border-gray-200">
             <div className="flex justify-between items-center">
-              <div className="text-sm text-gray-500">
-                Showing {campaigns.length} campaign{campaigns.length !== 1 ? 's' : ''}
-              </div>
               <button
                 onClick={exportToCSV}
                 disabled={!canExport}
@@ -305,6 +302,9 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
                 </svg>
                 Export
               </button>
+              <div className="text-sm text-gray-500">
+                Showing {campaigns.length} campaign{campaigns.length !== 1 ? 's' : ''}
+              </div>
             </div>
           </div>
         )}

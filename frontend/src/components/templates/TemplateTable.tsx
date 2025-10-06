@@ -2,7 +2,6 @@ import React from 'react';
 import { FileText, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { Template } from '../../types';
 import TemplateActions from './TemplateActions';
-import { useCSVExportWithMapping } from '../../hooks/useCSVExport';
 
 interface TemplateTableProps {
   templates: Template[];
@@ -23,20 +22,6 @@ const TemplateTable: React.FC<TemplateTableProps> = ({
   onExportPNG,
   onDelete,
 }) => {
-  const { exportToCSV, canExport } = useCSVExportWithMapping({
-    data: templates,
-    columnMapping: {
-      name: 'Template Name',
-      type: 'Type',
-      isActive: 'Active',
-      isMetaTemplate: 'Meta Template',
-      metaStatus: 'Meta Status',
-      createdAt: 'Created Date',
-      updatedAt: 'Updated Date',
-      parameters: 'Parameters Count',
-    },
-    options: { filename: 'templates-export' },
-  });
 
   // ✅ If no templates, show empty state
   if (!templates || templates.length === 0) {
@@ -231,35 +216,6 @@ const TemplateTable: React.FC<TemplateTableProps> = ({
         </table>
       </div>
 
-      {/* Export Button */}
-      <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-        <div className="flex justify-between items-center">
-          <div className="text-sm text-gray-500">
-            Showing {templates.length} template
-            {templates.length !== 1 ? 's' : ''}
-          </div>
-          <button
-            onClick={exportToCSV}
-            disabled={!canExport}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <svg
-              className="w-4 h-4 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 10v6m0 0l4-4m-4 4l-4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            Export to CSV
-          </button>
-        </div>
-      </div>
     </div>
   );
 };
