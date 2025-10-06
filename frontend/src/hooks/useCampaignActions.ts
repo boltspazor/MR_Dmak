@@ -21,7 +21,7 @@ export const useCampaignActions = () => {
       });
       
       // Automatically activate the campaign to start sending
-      await campaignsAPI.updateCampaignStatus(campaign.campaignId, 'sending');
+      await campaignsAPI.updateCampaignStatus(campaign.campaignId, 'in-progress');
       
       return { success: true, campaign };
     } catch (error) {
@@ -62,7 +62,7 @@ export const useCampaignActions = () => {
       
       // If the response contains campaign information, activate it
       if (response.data?.data?.campaignId) {
-        await campaignsAPI.updateCampaignStatus(response.data.data.campaignId, 'sending');
+        await campaignsAPI.updateCampaignStatus(response.data.data.campaignId, 'in-progress');
       }
       
       return { success: true, campaign: response.data?.data };

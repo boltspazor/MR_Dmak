@@ -70,11 +70,14 @@ const CampaignProgressTracker: React.FC<CampaignProgressTrackerProps> = ({
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'sent':
+        return <CheckCircle className="w-4 h-4 text-blue-500" />;
+      case 'delivered':
         return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case 'read':
+        return <CheckCircle className="w-4 h-4 text-green-600" />;
       case 'failed':
         return <XCircle className="w-4 h-4 text-red-500" />;
       case 'pending':
-      case 'queued':
         return <Clock className="w-4 h-4 text-yellow-500" />;
       default:
         return <AlertCircle className="w-4 h-4 text-gray-500" />;
@@ -84,11 +87,14 @@ const CampaignProgressTracker: React.FC<CampaignProgressTrackerProps> = ({
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'sent':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'delivered':
         return 'bg-green-100 text-green-800 border-green-200';
+      case 'read':
+        return 'bg-green-200 text-green-900 border-green-300';
       case 'failed':
         return 'bg-red-100 text-red-800 border-red-200';
       case 'pending':
-      case 'queued':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';

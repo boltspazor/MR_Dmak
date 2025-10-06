@@ -17,7 +17,7 @@ export interface CampaignRecord {
     recipientCount: number;
   } | null;
   date: string;
-  sendStatus: 'completed' | 'sending' | 'pending' | 'failed' | 'cancelled' | 'draft';
+  sendStatus: 'completed' | 'in-progress' | 'pending' | 'failed';
   totalRecipients: number;
   sentCount: number;
   failedCount: number;
@@ -34,21 +34,11 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({ campaigns, loading = fals
   const stats = React.useMemo(() => {
     const total = campaigns.length;
     
-    // More accurate status counting based on both status and progress
-    const completed = campaigns.filter(c => 
-      c.status === 'completed' || 
-      (c.status === 'sending' && c.totalRecipients > 0 && c.sentCount + c.failedCount >= c.totalRecipients)
-    ).length;
-    
-    const inProgress = campaigns.filter(c => 
-      c.status === 'sending' && c.totalRecipients > 0 && c.sentCount + c.failedCount < c.totalRecipients
-    ).length;
-    
+    // Campaign status counting based on new 4-status system
+    const completed = campaigns.filter(c => c.status === 'completed').length;
+    const inProgress = campaigns.filter(c => c.status === 'in-progress').length;
     const failed = campaigns.filter(c => c.status === 'failed').length;
-    
-    const pending = campaigns.filter(c => 
-      c.status === 'pending' || c.status === 'draft'
-    ).length;
+    const pending = campaigns.filter(c => c.status === 'pending').length;
     
     // Calculate totals from real-time progress data
     const totalRecipients = campaigns.reduce((sum, c) => sum + c.totalRecipients, 0);

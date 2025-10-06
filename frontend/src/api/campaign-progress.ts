@@ -28,7 +28,7 @@ export interface CampaignProgress {
     lastName: string;
     phone: string;
     group: string;
-    status: 'sent' | 'failed' | 'pending' | 'queued' | 'delivered' | 'read';
+    status: 'sent' | 'delivered' | 'read' | 'failed' | 'pending';
     sentAt?: string;
     errorMessage?: string;
     errorCode?: number;

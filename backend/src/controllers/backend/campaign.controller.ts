@@ -311,19 +311,24 @@ export class CampaignController {
 
           const successRate = total > 0 ? Math.round((receivedCount / total) * 100) : 0;
 
-          // Compute API-facing status strictly from recipient outcomes:
-          // - completed: ONLY if all recipients are delivered/read
-          // - sending: if any are still pending/queued/sent
-          // - failed: if none delivered/read and at least one failed (edge)
-          // - otherwise fall back to stored status
+          // Compute campaign status based on message outcomes:
+          // - pending: new campaign in queue (not started)
+          // - in-progress: still hitting the APIs (has pending messages)
+          // - completed: all MRs have a final status (delivered/read/failed)
+          // - failed: all MRs failed to receive the message
           let apiStatus = campaign.status;
           if (total > 0) {
-            if (receivedCount === total) {
-              apiStatus = 'completed';
+            if (receivedCount + failedCount === total) {
+              // All messages processed
+              if (failedCount === total) {
+                apiStatus = 'failed'; // All failed
+              } else {
+                apiStatus = 'completed'; // All have status (mix of success/failed)
+              }
             } else if (pendingCount > 0) {
-              apiStatus = 'sending';
-            } else if (receivedCount === 0 && failedCount > 0) {
-              apiStatus = 'failed';
+              apiStatus = 'in-progress'; // Still processing
+            } else {
+              apiStatus = 'pending'; // Not started
             }
           }
 
@@ -423,7 +428,7 @@ export class CampaignController {
       });
       
       // Only include allowed statuses for filtering
-      const allowedStatuses = ['pending', 'completed', 'failed'];
+      const allowedStatuses = ['pending', 'in-progress', 'completed', 'failed'];
       
       // Get distinct statuses from database and filter to only allowed ones
       const availableStatuses = dbStatuses.filter(status => allowedStatuses.includes(status));
@@ -436,7 +441,7 @@ export class CampaignController {
         data: {
           statuses: allStatuses.map(status => ({
             value: status,
-            label: status.charAt(0).toUpperCase() + status.slice(1)
+            label: status === 'in-progress' ? 'In Progress' : status.charAt(0).toUpperCase() + status.slice(1)
           }))
         }
       });
@@ -545,7 +550,7 @@ export class CampaignController {
       const sentCount = recipientsWithRealTimeStatus.filter((r: any) => r.status === 'sent' || r.status === 'delivered' || r.status === 'read').length;
       const failedCount = recipientsWithRealTimeStatus.filter((r: any) => r.status === 'failed').length;
       const pendingCount = recipientsWithRealTimeStatus.filter((r: any) => 
-        r.status === 'pending' || r.status === 'queued'
+        r.status === 'pending'
       ).length;
 
       const successRate = campaign.totalRecipients > 0 
@@ -606,7 +611,7 @@ export class CampaignController {
       const { status } = req.body;
       const userId = req.user?.userId;
 
-      const validStatuses = ['draft', 'pending', 'sending', 'completed', 'failed', 'cancelled'];
+      const validStatuses = ['pending', 'in-progress', 'completed', 'failed'];
       if (!validStatuses.includes(status)) {
         return res.status(400).json({
           success: false,
@@ -633,12 +638,12 @@ export class CampaignController {
 
       const updateData: any = { status };
       
-      if (status === 'sending') {
-        // Check if campaign is already in sending state
-        if (campaign.status === 'sending') {
+      if (status === 'in-progress') {
+        // Check if campaign is already in progress state
+        if (campaign.status === 'in-progress') {
           return res.status(400).json({
             success: false,
-            message: 'Campaign is already being sent'
+            message: 'Campaign is already in progress'
           });
         }
 
@@ -726,7 +731,7 @@ export class CampaignController {
           });
         }
 
-        // Update campaign status to sending
+        // Update campaign status to in-progress
         await Campaign.findByIdAndUpdate(campaign._id, updateData);
 
         // Seed campaign recipients list and enqueue messages for all recipients
@@ -736,13 +741,13 @@ export class CampaignController {
 
         for (const recipient of recipients) {
           try {
-            // Seed recipient into campaign document (pending/queued)
+            // Seed recipient into campaign document (pending status)
             seededRecipients.push({
               mrId: recipient.mrId,
               phone: recipient.phone,
               firstName: recipient.firstName,
               lastName: recipient.lastName,
-              status: 'queued'
+              status: 'pending'
             });
 
             // Create message log entry
@@ -753,7 +758,7 @@ export class CampaignController {
               templateName: template.metaTemplateName,
               templateLanguage: template.metaLanguage,
               templateParameters: recipient.parameters || {},
-              status: 'queued',
+              status: 'pending',
               sentBy: userId,
             });
 
@@ -802,7 +807,7 @@ export class CampaignController {
           message: `Campaign activated! ${enqueuedCount} messages enqueued for sending`,
           data: {
             campaignId: campaign.campaignId,
-            status: 'sending',
+            status: 'in-progress',
             enqueuedCount,
             totalRecipients: recipients.length
           }
@@ -828,7 +833,7 @@ export class CampaignController {
           data: updatedCampaign
         });
       } else {
-        // For other status changes (draft, pending, cancelled)
+        // For other status changes (pending)
         const updatedCampaign = await Campaign.findByIdAndUpdate(
           campaign._id,
           updateData,
@@ -1033,14 +1038,21 @@ export class CampaignController {
       );
 
       if (allProcessed && allLogs.length > 0) {
-        campaign.status = 'completed';
+        const sentCount = allLogs.filter(log => log.status === 'sent' || log.status === 'delivered' || log.status === 'read').length;
+        const failedCount = allLogs.filter(log => log.status === 'failed').length;
+        
+        // Determine final status: failed if all failed, otherwise completed
+        const finalStatus = failedCount === allLogs.length ? 'failed' : 'completed';
+        
+        campaign.status = finalStatus;
         campaign.completedAt = new Date();
         await campaign.save();
-        logger.info('Campaign marked as completed', { 
+        logger.info('Campaign marked as final status', { 
           campaignId: campaign.campaignId,
+          finalStatus,
           totalMessages: allLogs.length,
-          sentCount: allLogs.filter(log => log.status === 'sent' || log.status === 'delivered' || log.status === 'read').length,
-          failedCount: allLogs.filter(log => log.status === 'failed').length
+          sentCount,
+          failedCount
         });
       }
     } catch (error) {

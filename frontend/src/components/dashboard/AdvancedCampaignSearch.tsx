@@ -37,7 +37,7 @@ const AdvancedCampaignSearch: React.FC<AdvancedCampaignSearchProps> = ({
         const statuses = await campaignsAPI.getAvailableStatuses();
         const statusOptions = [
           { value: '', label: 'All Statuses' },
-          ...statuses.filter(s => ['completed', 'pending', 'failed'].includes(s.value)).map(s => ({ 
+          ...statuses.filter(s => ['pending', 'in-progress', 'completed', 'failed'].includes(s.value)).map(s => ({ 
             value: s.value, 
             label: s.label 
           }))

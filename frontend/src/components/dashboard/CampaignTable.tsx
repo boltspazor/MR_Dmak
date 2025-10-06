@@ -21,7 +21,7 @@ export interface CampaignRecord {
     recipientCount: number;
   } | null;
   date: string;
-  sendStatus: 'completed' | 'sending' | 'pending' | 'failed' | 'cancelled' | 'draft';
+  sendStatus: 'pending' | 'in-progress' | 'completed' | 'failed';
   totalRecipients: number;
   sentCount: number;
   failedCount: number;
@@ -85,18 +85,12 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
     switch (status.toLowerCase()) {
       case 'completed':
         return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'active':
-        return <Clock className="h-4 w-4 text-blue-600" />;
-      case 'sending':
+      case 'in-progress':
         return <Clock className="h-4 w-4 text-blue-600" />;
       case 'pending':
         return <Clock className="h-4 w-4 text-yellow-600" />;
       case 'failed':
         return <X className="h-4 w-4 text-red-600" />;
-      case 'cancelled':
-        return <X className="h-4 w-4 text-gray-600" />;
-      case 'draft':
-        return <Clock className="h-4 w-4 text-gray-600" />;
       default:
         return <Clock className="h-4 w-4 text-gray-600" />;
     }
@@ -106,18 +100,12 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
     switch (status.toLowerCase()) {
       case 'completed':
         return 'bg-green-100 text-green-800';
-      case 'active':
-        return 'bg-blue-100 text-blue-800';
-      case 'sending':
+      case 'in-progress':
         return 'bg-blue-100 text-blue-800';
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
       case 'failed':
         return 'bg-red-100 text-red-800';
-      case 'cancelled':
-        return 'bg-gray-100 text-gray-800';
-      case 'draft':
-        return 'bg-gray-100 text-gray-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }

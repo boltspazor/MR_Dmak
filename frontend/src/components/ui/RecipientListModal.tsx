@@ -14,7 +14,7 @@ export interface GroupMember {
   phone: string;
   email?: string;
   group: string;
-  status: 'queued' | 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
+  status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
   sentAt?: string;
   deliveredAt?: string;
   readAt?: string;
@@ -293,7 +293,6 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   >
                     <option value="all">All Statuses</option>
-                    <option value="queued">Queued</option>
                     <option value="pending">Pending</option>
                     <option value="sent">Sent</option>
                     <option value="delivered">Delivered</option>
@@ -348,11 +347,15 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
                       <td className="py-3 px-6 text-sm text-gray-900">{recipient.phone}</td>
                       <td className="py-3 px-6 text-sm">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          recipient.status === 'delivered' || recipient.status === 'read'
+                          recipient.status === 'read'
+                            ? 'bg-green-200 text-green-900'
+                            : recipient.status === 'delivered'
                             ? 'bg-green-100 text-green-800'
+                            : recipient.status === 'sent'
+                            ? 'bg-blue-100 text-blue-800'
                             : recipient.status === 'failed'
                             ? 'bg-red-100 text-red-800'
-                            : 'bg-blue-100 text-blue-800'
+                            : 'bg-yellow-100 text-yellow-800'
                         }`}>
                           {recipient.status}
                         </span>

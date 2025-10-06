@@ -59,7 +59,7 @@ export interface CampaignProgress {
   campaignId: string;
   name: string;
   description?: string;
-  status: 'draft' | 'pending' | 'sending' | 'completed' | 'failed' | 'cancelled';
+  status: 'pending' | 'in-progress' | 'completed' | 'failed';
   createdAt: string;
   scheduledAt?: string;
   startedAt?: string;
@@ -93,7 +93,7 @@ export interface CampaignProgress {
     lastName: string;
     phone: string;
     group: string;
-    status: 'sent' | 'failed' | 'pending' | 'queued';
+    status: 'sent' | 'delivered' | 'read' | 'failed' | 'pending';
     sentAt?: string;
     errorMessage?: string;
     messageId?: string;
@@ -199,7 +199,7 @@ export const campaignsAPI = {
       name: string;
       phone: string;
       group: string;
-      status: 'queued' | 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
+      status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
       sentAt?: string;
       errorMessage?: string;
       errorCode?: number;

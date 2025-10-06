@@ -344,12 +344,12 @@ export class CampaignController {
 
       const updateData: any = { status };
       
-      if (status === 'sending') {
-        // Check if campaign is already in sending state
-        if (campaign.status === 'sending') {
+      if (status === 'in-progress') {
+        // Check if campaign is already in progress state
+        if (campaign.status === 'in-progress') {
           res.status(400).json({
             success: false,
-            message: 'Campaign is already being sent'
+            message: 'Campaign is already in progress'
           });
         }
 

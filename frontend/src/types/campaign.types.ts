@@ -17,9 +17,10 @@ export interface CampaignPaginationParams extends CampaignFilterParams {}
 // Status options for campaign filtering
 export const CAMPAIGN_STATUSES = [
   { value: '', label: 'All Statuses' },
-  { value: 'completed', label: 'Completed' },
   { value: 'pending', label: 'Pending' },
+  { value: 'in-progress', label: 'In Progress' },
+  { value: 'completed', label: 'Completed' },
   { value: 'failed', label: 'Failed' },
 ] as const;
 
-export type CampaignStatus = 'completed' | 'pending' | 'failed';
+export type CampaignStatus = 'pending' | 'in-progress' | 'completed' | 'failed';

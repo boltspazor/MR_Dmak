@@ -77,7 +77,7 @@ export class CampaignProgressController {
       let updatedStatus = campaign.status;
       if (totalMessages > 0) {
         if (sentCount === totalMessages) updatedStatus = 'completed';
-        else if (pendingCount > 0) updatedStatus = 'sending';
+        else if (pendingCount > 0) updatedStatus = 'in-progress';
         else if (sentCount === 0 && failedCount > 0) updatedStatus = 'failed';
       }
 

@@ -13,7 +13,7 @@ export interface ICampaign extends Document {
   
   // Campaign metadata
   createdBy: mongoose.Types.ObjectId; // User who created the campaign
-  status: 'draft' | 'pending' | 'sending' | 'completed' | 'failed' | 'cancelled';
+  status: 'pending' | 'in-progress' | 'completed' | 'failed';
   
   // Progress tracking (calculated from MessageLog)
   totalRecipients: number; // Total number of recipients in the recipient list
@@ -37,7 +37,7 @@ export interface ICampaign extends Document {
     firstName?: string;
     lastName?: string;
     groupId?: string;
-    status: 'queued' | 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
+    status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
     messageId?: string;
     sentAt?: Date;
     deliveredAt?: Date;
@@ -85,8 +85,8 @@ const campaignSchema = new Schema<ICampaign>({
   },
   status: {
     type: String,
-    enum: ['draft', 'pending', 'sending', 'completed', 'failed', 'cancelled'],
-    default: 'draft'
+    enum: ['pending', 'in-progress', 'completed', 'failed'],
+    default: 'pending'
   },
   totalRecipients: {
     type: Number,

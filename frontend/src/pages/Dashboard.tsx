@@ -27,7 +27,7 @@ interface CampaignRecord {
     recipientCount: number;
   } | null;
   date: string;
-  sendStatus: 'completed' | 'sending' | 'pending' | 'failed' | 'cancelled' | 'draft';
+  sendStatus: 'pending' | 'in-progress' | 'completed' | 'failed';
   totalRecipients: number;
   sentCount: number;
   failedCount: number;
@@ -44,7 +44,7 @@ interface GroupMember {
   phone: string;
   email?: string;
   group: string;
-  status: 'sent' | 'failed' | 'pending' | 'queued';
+  status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
   sentAt?: string;
   errorMessage?: string;
   errorCode?: number;
@@ -150,7 +150,7 @@ const Dashboard: React.FC = () => {
           recipientCount: campaign.recipientList.recipientCount
         } : null,
         date: new Date(campaign.createdAt).toISOString().split('T')[0],
-        sendStatus: campaign.status as 'completed' | 'sending' | 'pending' | 'failed' | 'cancelled' | 'draft',
+        sendStatus: campaign.status as 'pending' | 'in-progress' | 'completed' | 'failed',
         totalRecipients: campaign.progress?.total || 0,
         sentCount: campaign.progress?.sent || 0,
         failedCount: campaign.progress?.failed || 0,
