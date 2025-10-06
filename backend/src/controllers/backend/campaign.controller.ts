@@ -1100,6 +1100,144 @@ export class CampaignController {
   }
 
   /**
+   * Search campaign recipients with filters
+   */
+  static async searchCampaignRecipients(req: AuthenticatedRequest, res: Response): Promise<Response> {
+    try {
+      const { campaignId } = req.params;
+      const { search, status, page = 1, limit = 10 } = req.query;
+      const userId = req.user?.userId;
+
+      console.log('🔍 Backend searchCampaignRecipients - Received params:', { campaignId, search, status, page, limit });
+
+      // Find campaign and verify ownership
+      const campaign = await Campaign.findOne({ 
+        $or: [
+          { _id: campaignId, createdBy: userId, isActive: true },
+          { campaignId: campaignId, createdBy: userId, isActive: true }
+        ]
+      });
+
+      if (!campaign) {
+        return res.status(404).json({
+          success: false,
+          message: 'Campaign not found'
+        });
+      }
+
+      // Get campaign recipients
+      const campaignRecipients = (campaign as any).recipients && (campaign as any).recipients.length > 0
+        ? (campaign as any).recipients
+        : [];
+      
+      // Get message logs for this campaign to find status
+      const messageLogs = await MessageLog.find({ campaignId: campaign._id });
+
+      // Create a map of mrId to message log for quick lookup
+      const messageLogMap = new Map();
+      messageLogs.forEach(log => {
+        const mrId = log.mrId;
+        if (!messageLogMap.has(mrId) || log.createdAt > messageLogMap.get(mrId).createdAt) {
+          messageLogMap.set(mrId, log);
+        }
+      });
+
+      // Process recipients with real-time status
+      let recipients = campaignRecipients.map((recipient: any) => {
+        const messageLog = messageLogMap.get(recipient.mrId);
+        let realTimeStatus = recipient.status || 'pending';
+        let realTimeTimestamp = null;
+        let errorMessage = null;
+        let messageId = null;
+        
+        if (messageLog) {
+          realTimeStatus = messageLog.status;
+          realTimeTimestamp = messageLog.sentAt || messageLog.deliveredAt;
+          errorMessage = messageLog.errorMessage;
+          messageId = messageLog.messageId;
+        }
+
+        return {
+          id: recipient._id || recipient.mrId,
+          mrId: recipient.mrId,
+          firstName: recipient.firstName,
+          lastName: recipient.lastName,
+          name: `${recipient.firstName || ''} ${recipient.lastName || ''}`.trim() || 'Unknown',
+          phone: recipient.phone,
+          group: recipient.groupId || 'Default Group',
+          status: realTimeStatus,
+          sentAt: recipient.sentAt || realTimeTimestamp,
+          errorMessage: recipient.errorMessage || errorMessage,
+          errorCode: messageLog?.errorCode,
+          errorTitle: messageLog?.errorTitle,
+          errorDetails: messageLog?.errorDetails,
+          messageId: recipient.messageId || messageId
+        };
+      });
+
+      console.log('🔍 Backend - Total recipients before filtering:', recipients.length);
+
+      // Apply search filter
+      if (search && search.toString().trim() !== '') {
+        const searchStr = search.toString().toLowerCase();
+        recipients = recipients.filter((recipient: any) => {
+          const nameMatch = (recipient.name || '').toLowerCase().includes(searchStr);
+          const phoneMatch = (recipient.phone || '').toLowerCase().includes(searchStr);
+          const firstNameMatch = (recipient.firstName || '').toLowerCase().includes(searchStr);
+          const lastNameMatch = (recipient.lastName || '').toLowerCase().includes(searchStr);
+          
+          return nameMatch || phoneMatch || firstNameMatch || lastNameMatch;
+        });
+        console.log('🔍 Backend - Recipients after search filtering:', recipients.length, 'search term:', searchStr);
+      }
+
+      // Apply status filter
+      if (status && status.toString().trim() !== '' && status !== 'all') {
+        recipients = recipients.filter((recipient: any) => recipient.status === status);
+        console.log('🔍 Backend - Recipients after status filtering:', recipients.length, 'status:', status);
+      }
+
+      // Calculate pagination
+      const totalFiltered = recipients.length;
+      const pageNum = Number(page);
+      const limitNum = Number(limit);
+      const totalPages = Math.ceil(totalFiltered / limitNum);
+      const startIndex = (pageNum - 1) * limitNum;
+      const endIndex = startIndex + limitNum;
+      const paginatedRecipients = recipients.slice(startIndex, endIndex);
+
+      console.log('🔍 Backend - Pagination:', { page: pageNum, limit: limitNum, totalFiltered, totalPages, startIndex, endIndex });
+      console.log('🔍 Backend - Returning recipients count:', paginatedRecipients.length);
+
+      return res.json({
+        success: true,
+        data: {
+          recipients: paginatedRecipients,
+          pagination: {
+            page: pageNum,
+            limit: limitNum,
+            total: totalFiltered,
+            totalPages
+          },
+          campaign: {
+            id: campaign._id,
+            campaignId: campaign.campaignId,
+            name: campaign.name
+          }
+        }
+      });
+
+    } catch (error) {
+      logger.error('Error searching campaign recipients:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to search campaign recipients',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
    * Get real-time status for all messages in a campaign
    */
   static async getCampaignRealTimeStatus(req: AuthenticatedRequest, res: Response): Promise<Response> {

@@ -180,5 +180,53 @@ export const campaignsAPI = {
   getCampaignProgress: async (campaignId: string): Promise<CampaignProgress> => {
     const response = await api.get(`/campaigns/${campaignId}`);
     return response.data.data;
+  },
+
+  /**
+   * Search campaign recipients with filters
+   */
+  searchCampaignRecipients: async (campaignId: string, params?: {
+    search?: string;
+    status?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    recipients: Array<{
+      id: string;
+      mrId: string;
+      firstName: string;
+      lastName: string;
+      name: string;
+      phone: string;
+      group: string;
+      status: 'queued' | 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
+      sentAt?: string;
+      errorMessage?: string;
+      errorCode?: number;
+      errorTitle?: string;
+      errorDetails?: string;
+      messageId?: string;
+    }>;
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+    campaign: {
+      id: string;
+      campaignId: string;
+      name: string;
+    };
+  }> => {
+    console.log('🔍 Frontend API - searchCampaignRecipients request:', {
+      url: `/campaigns/${campaignId}/recipients`,
+      params: params,
+      queryString: new URLSearchParams(params as any).toString()
+    });
+    
+    const response = await api.get(`/campaigns/${campaignId}/recipients`, { params });
+    console.log('🔍 Frontend API - searchCampaignRecipients response:', response.data);
+    return response.data.data;
   }
 };

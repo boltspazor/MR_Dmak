@@ -264,11 +264,20 @@ const Dashboard: React.FC = () => {
   // Recipient list popup states
   const [showRecipientPopup, setShowRecipientPopup] = useState(false);
   const [selectedRecipients, setSelectedRecipients] = useState<GroupMember[]>([]);
+  const [selectedCampaign, setSelectedCampaign] = useState<CampaignRecord | null>(null);
 
   const handleRecipientListClick = useCallback(async (campaign: CampaignRecord) => {
     try {
+      // Store the campaign for the modal
+      setSelectedCampaign(campaign);
+      
+      // For backward compatibility, still fetch the campaign data
       const campaignData = await campaignsAPI.getCampaignById(campaign.id);
-      if (!campaignData) return;
+      if (!campaignData) {
+        setSelectedRecipients([]);
+        setShowRecipientPopup(true);
+        return;
+      }
       
       const groupMembers: GroupMember[] = (campaignData.recipients || []).map((recipient: any) => ({
         id: recipient.id,
@@ -291,6 +300,8 @@ const Dashboard: React.FC = () => {
       setSelectedRecipients(groupMembers);
       setShowRecipientPopup(true);
     } catch (error) {
+      console.error('Error fetching campaign recipients:', error);
+      setSelectedRecipients([]);
       setShowRecipientPopup(true);
     }
   }, []);
@@ -392,9 +403,15 @@ const Dashboard: React.FC = () => {
 
         <RecipientListModal
           isOpen={showRecipientPopup}
-          onClose={() => setShowRecipientPopup(false)}
+          onClose={() => {
+            setShowRecipientPopup(false);
+            setSelectedCampaign(null);
+          }}
           recipients={selectedRecipients}
-          campaignName={selectedRecipients.length > 0 ? 'Campaign Recipients' : undefined}
+          campaignName={selectedCampaign?.campaignName || 'Campaign Recipients'}
+          campaignId={selectedCampaign?.id}
+          showProgress={true}
+          showExportButton={true}
         />
       </div>
     </div>

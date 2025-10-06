@@ -19,6 +19,7 @@ router.delete('/:campaignId', CampaignController.deleteCampaign);
 // Campaign progress routes
 router.get('/message/:messageId/status', CampaignController.getMessageStatus);
 router.get('/:campaignId/realtime-status', CampaignController.getCampaignRealTimeStatus);
+router.get('/:campaignId/recipients', CampaignController.searchCampaignRecipients);
 router.post('/webhook/status', CampaignController.updateMessageStatus);
 router.post('/:campaignId/check-completion', CampaignController.checkCampaignCompletion);
 
