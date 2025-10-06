@@ -159,8 +159,8 @@ const MRList: React.FC<MRListProps> = ({
           setCurrentPage(1); // Reset to first page
         }}
         onClearFilters={clearFilters}
-        filteredCount={contacts.length}
-        totalCount={total}
+        filteredCount={total ?? 0}
+        totalCount={total ?? 0}
         onDownloadCSV={handleExportAll}
       />
 
@@ -189,18 +189,27 @@ const MRList: React.FC<MRListProps> = ({
         <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
           <div className="flex justify-between items-center">
             <div className="text-sm text-gray-500">
-              Showing {contacts.length} MR{contacts.length !== 1 ? 's' : ''}
-              {(searchTerm || groupFilter || consentStatusFilter) && (
-                <span className="ml-1 text-gray-400">
-                  (filtered from {total || contacts.length} total)
-                </span>
+              {(searchTerm || groupFilter || consentStatusFilter) ? (
+                <>
+                  Found [{total ?? 0}] filtered MR{(total ?? 0) !== 1 ? 's' : ''}
+                  <span className="ml-1 text-gray-400">
+                    (showing {contacts.length} on this page)
+                  </span>
+                </>
+              ) : (
+                <>
+                  Total [{total ?? 0}] MR{(total ?? 0) !== 1 ? 's' : ''}
+                  <span className="ml-1 text-gray-400">
+                    (showing {contacts.length} on this page)
+                  </span>
+                </>
               )}
             </div>
             <div className="flex flex-col items-end space-y-1">
               <button
                 onClick={handleExportAll}
                 disabled={dataLoading || loading}
-                title={`Export ${total || contacts.length} MRs with applied filters to CSV`}
+                title={`Export ${total ?? 0} MRs with applied filters to CSV`}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -208,12 +217,7 @@ const MRList: React.FC<MRListProps> = ({
                 </svg>
                 {dataLoading || loading ? 'Exporting...' : 'Export'}
               </button>
-              <div className="text-xs text-gray-400">
-                {(searchTerm || groupFilter || consentStatusFilter) 
-                  ? `Will export ${total || contacts.length} filtered MRs`
-                  : `Will export all ${total || contacts.length} MRs`
-                }
-              </div>
+              
             </div>
           </div>
         </div>
