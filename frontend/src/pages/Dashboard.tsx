@@ -410,7 +410,6 @@ const Dashboard: React.FC = () => {
           recipients={selectedRecipients}
           campaignName={selectedCampaign?.campaignName || 'Campaign Recipients'}
           campaignId={selectedCampaign?.id}
-          showProgress={true}
           showExportButton={true}
         />
       </div>

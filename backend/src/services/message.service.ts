@@ -336,7 +336,8 @@ export class MessageService {
         
         logger.info('🔍 Looking up MRs from template recipient list', { mrIdsCount: mrIds.length, mrIds: mrIds.slice(0, 5) });
         mrs = await MedicalRepresentative.find({
-          mrId: { $in: mrIds }
+          mrId: { $in: mrIds },
+          $or: [{ isActive: true }, { isActive: { $exists: false } }] // Only active MRs
         }).populate('groupId', 'groupName');
         logger.info('✅ MRs found from template recipient list', { mrsCount: mrs.length });
 
@@ -403,7 +404,8 @@ export class MessageService {
         
         logger.info('🔍 Looking up MRs for custom campaign', { mrIdsCount: mrIds.length, mrIds: mrIds.slice(0, 5) });
         mrs = await MedicalRepresentative.find({
-          _id: { $in: mrIds }
+          _id: { $in: mrIds },
+          $or: [{ isActive: true }, { isActive: { $exists: false } }] // Only active MRs
         }).populate('groupId', 'groupName');
         logger.info('✅ MRs found for custom campaign', { mrsCount: mrs.length });
 

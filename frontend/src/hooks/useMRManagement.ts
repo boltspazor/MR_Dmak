@@ -6,12 +6,14 @@ interface UseMRManagementProps {
   contacts: Contact[];
   onUpdateContact: (id: string, contactData: Omit<Contact, 'id'>) => Promise<void>;
   onDeleteContact: (id: string) => Promise<void>;
+  onDeleteSuccess?: () => void; // Add callback for successful deletion
 }
 
 export const useMRManagement = ({ 
   contacts, 
   onUpdateContact, 
-  onDeleteContact 
+  onDeleteContact,
+  onDeleteSuccess
 }: UseMRManagementProps) => {
   const { alert } = useConfirm();
   
@@ -20,6 +22,7 @@ export const useMRManagement = ({
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Contact management functions
   const handleEditContact = useCallback((contact: Contact) => {
@@ -74,18 +77,30 @@ export const useMRManagement = ({
   }, []);
 
   const handleDeleteConfirm = useCallback(async () => {
-    if (!contactToDelete) return;
+    if (!contactToDelete || isDeleting) return;
 
     try {
+      setIsDeleting(true);
+      
       await onDeleteContact(contactToDelete.id);
+      
+      // Close dialog and clear state after successful deletion
       setShowDeleteDialog(false);
       setContactToDelete(null);
+      
+      // Call success callback if provided
+      if (onDeleteSuccess) {
+        onDeleteSuccess();
+      }
+      
       await alert('MR deleted successfully!', 'success');
     } catch (error: any) {
       console.error('Error deleting contact:', error);
       await alert('Failed to delete MR', 'error');
+    } finally {
+      setIsDeleting(false);
     }
-  }, [contactToDelete, onDeleteContact, alert]);
+  }, [contactToDelete, isDeleting, onDeleteContact, onDeleteSuccess, alert]);
 
   const handleDeleteCancel = useCallback(() => {
     setShowDeleteDialog(false);
@@ -103,6 +118,7 @@ export const useMRManagement = ({
     isEditDialogOpen,
     showDeleteDialog,
     contactToDelete,
+    isDeleting,
     
     // Actions
     handleEditContact,

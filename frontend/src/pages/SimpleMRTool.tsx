@@ -59,6 +59,7 @@ const SimpleMRTool: React.FC = () => {
     isEditDialogOpen,
     showDeleteDialog,
     contactToDelete,
+    isDeleting,
     handleEditContact,
     handleUpdateContact,
     handleDeleteClick,
@@ -68,12 +69,14 @@ const SimpleMRTool: React.FC = () => {
   } = useMRManagement({
     contacts,
     onUpdateContact: updateContact,
-    onDeleteContact: deleteContact
+    onDeleteContact: deleteContact,
+    onDeleteSuccess: () => setRefreshTrigger(prev => prev + 1) // Trigger refresh in MRList
   });
 
   // UI state
   const [isAddMRDialogOpen, setIsAddMRDialogOpen] = useState(false);
   const [showErrorAlert, setShowErrorAlert] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
 
 
@@ -183,6 +186,8 @@ const SimpleMRTool: React.FC = () => {
             sortDirection={sortDirection}
             onDownloadCSV={exportContactsToCSV}
             onFilteredExport={exportFilteredMRsToCSV}
+            onRefresh={() => setRefreshTrigger(prev => prev + 1)}
+            refreshTrigger={refreshTrigger}
           />
         </div>
 
@@ -211,6 +216,7 @@ const SimpleMRTool: React.FC = () => {
           contactToDelete={contactToDelete}
           onConfirm={handleDeleteConfirm}
           onCancel={handleDeleteCancel}
+          isDeleting={isDeleting}
         />
 
 

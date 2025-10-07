@@ -8,7 +8,7 @@ export interface IMedicalRepresentative extends Document {
   email?: string;
   address?: string;
   comments?: string;
-  groupId: mongoose.Types.ObjectId;
+  groupId?: mongoose.Types.ObjectId;
   marketingManagerId: mongoose.Types.ObjectId; // Associate MR with marketing manager
   createdAt: Date;
   updatedAt: Date;
@@ -52,7 +52,7 @@ const medicalRepresentativeSchema = new Schema<IMedicalRepresentative>({
   groupId: {
     type: Schema.Types.ObjectId,
     ref: 'Group',
-    required: true
+    required: false
   },
   marketingManagerId: {
     type: Schema.Types.ObjectId,

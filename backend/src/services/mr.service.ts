@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import MedicalRepresentative from '../models/MedicalRepresentative';
 import Group from '../models/Group';
+import MessageLog from '../models/MessageLog';
+import MessageCampaign from '../models/MessageCampaign';
 import { CreateMRForm, UpdateMRForm } from '../types/mongodb';
 import logger from '../utils/logger';
 import whatsappCloudAPIService from './whatsapp-cloud-api.service';
@@ -81,15 +83,9 @@ export class MRService {
         throw new Error('MR with this ID already exists in the group');
       }
 
-      const mr = await MedicalRepresentative.create({
-        mrId: data.mrId,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        phone: data.phone,
-        email: data.email,
-        groupId: groupId,
-        comments: data.comments,
-        marketingManagerId: userId,
+            const mr = await MedicalRepresentative.create({
+        ...data,
+        marketingManagerId: userId
       });
 
       const populatedMR = await MedicalRepresentative.findById(mr._id)
@@ -159,8 +155,35 @@ export class MRService {
         throw new Error('MR not found');
       }
 
+      // Check if MR belongs to the requesting user
+      if (mr.marketingManagerId.toString() !== userId) {
+        throw new Error('Access denied. You can only delete your own MRs.');
+      }
+
+      // Cascade delete: Remove all related data
+      await Promise.all([
+        // Delete from MessageLogs
+        MessageLog.deleteMany({ mrId: mr.mrId }),
+        // Delete from MessageCampaigns (template recipients)
+        MessageCampaign.updateMany(
+          {},
+          { $pull: { templateRecipients: { mrId: mr.mrId } } }
+        ),
+        // Remove from Groups
+        Group.updateMany(
+          { members: id },
+          { $pull: { members: id } }
+        )
+      ]);
+
+      // Finally delete the MR
       await MedicalRepresentative.findByIdAndDelete(id);
-      logger.info('MR deleted successfully', { mrId: id, userId });
+
+      logger.info('MR deleted successfully with cascade', { 
+        mrId: id, 
+        userId,
+        mrIdString: mr.mrId
+      });
       return { success: true };
     } catch (error) {
       logger.error('Failed to delete MR', { id, userId, error });
@@ -170,7 +193,9 @@ export class MRService {
 
   async getMRs(userId: string, groupId?: string, search?: string, limit?: number, offset?: number, consentStatus?: string, sortField?: string, sortDirection?: 'asc' | 'desc') {
     try {
-      const query: any = { marketingManagerId: userId };
+      const query: any = { 
+        marketingManagerId: userId
+      };
 
       if (groupId) {
         query.groupId = groupId;
@@ -356,17 +381,17 @@ export class MRService {
       const groups = await Group.find({ createdBy: userId });
 
       // Get MR count for each group
-      const groupsWithCounts = await Promise.all(
-        groups.map(async (group) => {
-          const mrCount = await MedicalRepresentative.countDocuments({ groupId: group._id });
-          return {
-            ...group.toObject(),
-            mrCount
-          };
-        })
-      );
-
-      return groupsWithCounts;
+        const groupsWithCounts = await Promise.all(
+          groups.map(async (group) => {
+            const mrCount = await MedicalRepresentative.countDocuments({ 
+              groupId: group._id
+            });
+            return {
+              ...group.toObject(),
+              mrCount
+            };
+          })
+        );      return groupsWithCounts;
     } catch (error) {
       logger.error('Failed to get groups', { userId, error });
       throw error;
@@ -541,10 +566,12 @@ export class MRService {
 
       for (const groupId of groupIds) {
         try {
-          // Check if group has MRs
-          const mrCount = await MedicalRepresentative.countDocuments({ groupId });
+          // Check if group has active MRs
+          const mrCount = await MedicalRepresentative.countDocuments({ 
+            groupId
+          });
           if (mrCount > 0) {
-            results.errors.push(`Group ${groupId} has ${mrCount} MRs and cannot be deleted`);
+            results.errors.push(`Group ${groupId} has ${mrCount} active MRs and cannot be deleted`);
             continue;
           }
 

@@ -26,10 +26,9 @@ export class CampaignController {
         });
       }
 
-      // Validate MRs exist (include MRs with isActive: true or undefined)
+      // Validate MRs exist
       const mrs = await MedicalRep.find({ 
-        _id: { $in: mrIds }, 
-        $or: [{ isActive: true }, { isActive: { $exists: false } }]
+        _id: { $in: mrIds }
       });
       
       if (mrs.length !== mrIds.length) {
@@ -491,8 +490,7 @@ export class CampaignController {
       } else if (campaign.mrIds && campaign.mrIds.length > 0) {
         // Campaign with direct MRs - fetch MRs from database
         const mrs = await MedicalRep.find({ 
-          _id: { $in: campaign.mrIds },
-          $or: [{ isActive: true }, { isActive: { $exists: false } }]
+          _id: { $in: campaign.mrIds }
         });
         
         campaignRecipients = mrs.map((mr: any) => ({
@@ -717,10 +715,10 @@ export class CampaignController {
           }
           recipients = recipientList.recipients;
         } else if (campaign.mrIds && campaign.mrIds.length > 0) {
-          // Campaign with direct MRs - get MRs from database
+          // Campaign with direct MRs - get MRs from database (exclude soft deleted)
           const mrs = await MedicalRep.find({ 
             _id: { $in: campaign.mrIds }, 
-            $or: [{ isActive: true }, { isActive: { $exists: false } }]
+
           });
           
           if (mrs.length === 0) {
@@ -1348,8 +1346,7 @@ export class CampaignController {
       } else if (campaign.mrIds && campaign.mrIds.length > 0) {
         // Campaign with direct MRs - fetch MRs from database
         const mrs = await MedicalRep.find({ 
-          _id: { $in: campaign.mrIds },
-          $or: [{ isActive: true }, { isActive: { $exists: false } }]
+          _id: { $in: campaign.mrIds }
         });
         
         campaignRecipients = mrs.map((mr: any) => ({

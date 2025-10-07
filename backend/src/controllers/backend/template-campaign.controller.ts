@@ -90,7 +90,9 @@ export class TemplateCampaignController {
 
       // Get the actual MedicalRepresentative ObjectIds from the string mrIds
       const mrIds = recipientList.recipients.map(r => r.mrId);
-      const medicalReps = await MedicalRep.find({ mrId: { $in: mrIds } });
+      const medicalReps = await MedicalRep.find({ 
+        mrId: { $in: mrIds }
+      });
       const mrIdMap = new Map(medicalReps.map(mr => [mr.mrId, mr._id]));
 
       // Create message logs for tracking

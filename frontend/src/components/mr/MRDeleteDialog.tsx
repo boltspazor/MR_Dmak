@@ -7,13 +7,15 @@ interface MRDeleteDialogProps {
   contactToDelete: Contact | null;
   onConfirm: () => void;
   onCancel: () => void;
+  isDeleting?: boolean;
 }
 
 const MRDeleteDialog: React.FC<MRDeleteDialogProps> = ({
   isOpen,
   contactToDelete,
   onConfirm,
-  onCancel
+  onCancel,
+  isDeleting = false
 }) => {
   if (!isOpen || !contactToDelete) return null;
 
@@ -37,15 +39,17 @@ const MRDeleteDialog: React.FC<MRDeleteDialogProps> = ({
           <div className="flex space-x-4">
             <button
               onClick={onCancel}
-              className="flex-1 px-6 py-3 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-all duration-200 font-medium border border-gray-200"
+              disabled={isDeleting}
+              className="flex-1 px-6 py-3 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-all duration-200 font-medium border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
             <button
               onClick={onConfirm}
-              className="flex-1 px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all duration-200 font-medium shadow-lg hover:shadow-xl"
+              disabled={isDeleting}
+              className="flex-1 px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all duration-200 font-medium shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Delete
+              {isDeleting ? 'Deleting...' : 'Delete'}
             </button>
           </div>
         </div>

@@ -22,6 +22,8 @@ interface MRListProps {
     sortField?: string,
     sortDirection?: 'asc' | 'desc'
   ) => void;
+  onRefresh?: () => void; // Add refresh callback
+  refreshTrigger?: number; // Add refresh trigger
 }
 
 const MRList: React.FC<MRListProps> = ({
@@ -33,7 +35,9 @@ const MRList: React.FC<MRListProps> = ({
   sortDirection,
   loading = false,
   onDownloadCSV,
-  onFilteredExport
+  onFilteredExport,
+  onRefresh,
+  refreshTrigger
 }) => {
   // Use contacts from the hook instead of props
   const { contacts, fetchContacts, fetchAllContacts, pagination, total, loading: dataLoading } = useMRData();
@@ -91,8 +95,52 @@ const MRList: React.FC<MRListProps> = ({
     fetchContacts(params);
   }, [currentPage, searchTerm, groupFilter, consentStatusFilter, sortField, sortDirection, searchFilters, fetchContacts]);
 
+  // Refresh data when refreshTrigger changes (after deletion)
+  useEffect(() => {
+    if (refreshTrigger && refreshTrigger > 0) {
+      const params: MRPaginationParams = {
+        page: currentPage,
+        limit: 30
+      };
+
+      if (searchTerm) params.search = searchTerm;
+      if (groupFilter) params.groupId = groupFilter;
+      if (consentStatusFilter) params.consentStatus = consentStatusFilter;
+      params.sortField = sortField;
+      params.sortDirection = sortDirection;
+
+      console.log('MRList: Refreshing after deletion with params:', params);
+      fetchContacts(params);
+    }
+  }, [refreshTrigger, currentPage, searchTerm, groupFilter, consentStatusFilter, sortField, sortDirection, fetchContacts]);
+
   // Use contacts directly since sorting is now handled server-side
   const sortedContacts = contacts;
+
+  // Create a wrapper function for delete that refreshes the list
+  const handleDeleteWithRefresh = async (contact: Contact) => {
+    // Call the original delete function
+    await onDelete(contact);
+    
+    // Refresh the list data after successful deletion
+    const params: MRPaginationParams = {
+      page: currentPage,
+      limit: 30
+    };
+
+    if (searchTerm) params.search = searchTerm;
+    if (groupFilter) params.groupId = groupFilter;
+    if (consentStatusFilter) params.consentStatus = consentStatusFilter;
+    params.sortField = sortField;
+    params.sortDirection = sortDirection;
+
+    fetchContacts(params);
+    
+    // Also call the onRefresh callback if provided
+    if (onRefresh) {
+      onRefresh();
+    }
+  };
 
   const handleSort = (field: keyof Contact) => {
     onSort(field);
@@ -169,7 +217,7 @@ const MRList: React.FC<MRListProps> = ({
         <MRTable
           contacts={sortedContacts}
           onEdit={onEdit}
-          onDelete={onDelete}
+          onDelete={handleDeleteWithRefresh}
           onSort={handleSort}
           sortField={sortField}
           sortDirection={sortDirection}

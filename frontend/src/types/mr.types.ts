@@ -46,8 +46,6 @@ export interface UploadProgress {
   processed: number;
   successful: number;
   failed: number;
-  currentBatch: number;
-  totalBatches: number;
 }
 
 export interface UploadStatus {

@@ -9,8 +9,6 @@ interface UploadProgressDialogProps {
     processed: number;
     successful: number;
     failed: number;
-    currentBatch: number;
-    totalBatches: number;
   };
   status: 'uploading' | 'completed' | 'error';
   message?: string;
@@ -28,7 +26,6 @@ const UploadProgressDialog: React.FC<UploadProgressDialogProps> = ({
   if (!isOpen) return null;
 
   const progressPercentage = progress.total > 0 ? (progress.processed / progress.total) * 100 : 0;
-  const batchProgress = progress.totalBatches > 0 ? (progress.currentBatch / progress.totalBatches) * 100 : 0;
 
   const getStatusIcon = () => {
     switch (status) {
@@ -93,21 +90,7 @@ const UploadProgressDialog: React.FC<UploadProgressDialogProps> = ({
             </div>
           </div>
 
-          {/* Batch Progress */}
-          {progress.totalBatches > 1 && (
-            <div>
-              <div className="flex justify-between text-sm text-gray-600 mb-1">
-                <span>Batch Progress</span>
-                <span>{progress.currentBatch} / {progress.totalBatches}</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${batchProgress}%` }}
-                ></div>
-              </div>
-            </div>
-          )}
+
 
           {/* Statistics */}
           <div className="grid grid-cols-3 gap-4 text-center">

@@ -44,6 +44,8 @@ export interface MedicalRepresentative {
   };
   comments?: string;
   consentStatus: 'pending' | 'approved' | 'rejected' | 'not_requested';
+  isActive?: boolean;
+  deletedAt?: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -179,13 +179,14 @@ export class MRController {
     try {
       const { id } = req.params;
       await mrService.deleteMR(id, req.user.userId);
-      return res.json({ message: 'MR deleted successfully' });
+      return res.json({ message: 'MR soft deleted successfully' });
     } catch (error: any) {
       logger.error('Failed to delete MR', { error: error.message, mrId: req.params.id });
       
       // Handle specific business logic errors with appropriate status codes
       if (error.message.includes('not found') ||
-          error.message.includes('validation')) {
+          error.message.includes('validation') ||
+          error.message.includes('Access denied')) {
         return res.status(400).json({ 
           error: error.message,
           message: error.message
@@ -196,6 +197,8 @@ export class MRController {
       return res.status(500).json({ error: error.message });
     }
   }
+
+
 
   async getGroups(req: any, res: Response) {
     try {

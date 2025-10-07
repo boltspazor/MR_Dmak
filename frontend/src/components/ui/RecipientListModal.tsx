@@ -32,7 +32,6 @@ interface RecipientListModalProps {
   recipients?: GroupMember[];
   campaignName?: string;
   campaignId?: string;
-  showProgress?: boolean;
   onExportCSV?: () => void;
   showExportButton?: boolean;
 }
@@ -43,7 +42,6 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
   recipients = [],
   campaignName = 'Campaign',
   campaignId,
-  showProgress = false,
   onExportCSV,
   showExportButton = false
 }) => {
