@@ -222,12 +222,16 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
         return;
       }
 
+      // Activate the campaign before proceeding
+      toast.loading('Activating campaign...', { id: 'campaign-creation' });
+      await campaignsAPI.updateCampaignStatus(campaignId, 'in-progress');
+
       const campaign: WizardCampaign = {
         id: campaignId,
         campaignName: campaignName.trim(),
         templateId: selectedTemplate._id,
         selectedMRs: selectedMRs,
-        status: 'draft',
+        status: 'sending',
         createdAt: new Date().toISOString()
       };
 
@@ -236,7 +240,7 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
         ? selectedRecipientList.recipients?.length || 0
         : selectedMRs.length;
 
-      toast.success(`Campaign "${campaignName.trim()}" created successfully with ${recipientCount} recipients!`, {
+      toast.success(`Campaign "${campaignName.trim()}" created and activated successfully with ${recipientCount} recipients!`, {
         id: 'campaign-creation'
       });
 
@@ -247,8 +251,8 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
       });
 
     } catch (error: any) {
-      console.error('Campaign creation error:', error);
-      toast.error(`Failed to create campaign: ${error.response?.data?.error || error.message}`, {
+      console.error('Campaign creation/activation error:', error);
+      toast.error(`Failed to create or activate campaign: ${error.response?.data?.error || error.message}`, {
         id: 'campaign-creation'
       });
     }
