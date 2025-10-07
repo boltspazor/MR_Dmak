@@ -4,6 +4,7 @@ import { X, AlertCircle, Search, Filter, ChevronDown } from 'lucide-react';
 import { formatErrorMessage, getErrorTooltip } from '../../utils/whatsappErrorCodes';
 import { campaignsAPI } from '../../api/campaigns-new';
 import { useSearchParams } from 'react-router-dom';
+import { exportToCSV } from '../../utils/csvExport';
 
 export interface GroupMember {
   id: string;
@@ -61,6 +62,7 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
     total: 0,
     totalPages: 0
   });
+  const [exporting, setExporting] = useState(false);
 
   // Initialize state from URL parameters when modal opens
   useEffect(() => {
@@ -172,6 +174,65 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
   useEffect(() => {
     setPagination(prev => ({ ...prev, page: 1 }));
   }, [debouncedSearchTerm, statusFilter]);
+
+  // CSV Export (backend-driven)
+  const handleExportCSV = useCallback(async () => {
+    if (!campaignId) return;
+    try {
+      setExporting(true);
+      // First fetch to get total count with current filters
+      const baseParams: { search?: string; status?: string; page?: number; limit?: number } = {
+        page: 1,
+        limit: pagination.limit
+      };
+      if (searchTerm.trim()) baseParams.search = searchTerm.trim();
+      if (statusFilter && statusFilter !== 'all') baseParams.status = statusFilter;
+
+      const firstPage = await campaignsAPI.searchCampaignRecipients(campaignId, baseParams);
+      const total = firstPage.pagination?.total || firstPage.recipients.length;
+      const perPage = firstPage.pagination?.limit || pagination.limit;
+      const totalPages = firstPage.pagination?.totalPages || Math.ceil(total / perPage);
+
+      // Collect all recipients across pages
+      let allRecipients = Array.isArray(firstPage.recipients) ? [...firstPage.recipients] : [];
+      if (totalPages > 1) {
+        for (let page = 2; page <= totalPages; page++) {
+          const pageData = await campaignsAPI.searchCampaignRecipients(campaignId, {
+            ...baseParams,
+            page,
+            limit: perPage
+          });
+          if (Array.isArray(pageData.recipients)) {
+            allRecipients = allRecipients.concat(pageData.recipients);
+          }
+        }
+      }
+
+      const exportRows = allRecipients.map(r => ({
+        Name: r.name || `${r.firstName || ''} ${r.lastName || ''}`.trim(),
+        Phone: r.phone,
+        Status: r.status,
+        ErrorMessage: r.errorMessage || '',
+        ErrorCode: r.errorCode ?? '',
+        ErrorTitle: r.errorTitle || '',
+        ErrorDetails: r.errorDetails || ''
+      }));
+
+      // Use CSV utility to export
+      const fileBase = (campaignName || 'campaign').replace(/\s+/g, '_');
+      const statusSuffix = baseParams.status ? `_${baseParams.status}` : '';
+      const dateStr = new Date().toISOString().slice(0, 10);
+      exportToCSV(exportRows, {
+        filename: `${fileBase}_recipients${statusSuffix}_${dateStr}`,
+        includeHeaders: true,
+        headers: ['Name', 'Phone', 'Status', 'ErrorMessage', 'ErrorCode', 'ErrorTitle', 'ErrorDetails']
+      });
+    } catch (err) {
+      console.error('Error exporting recipients CSV:', err);
+    } finally {
+      setExporting(false);
+    }
+  }, [campaignId, searchTerm, statusFilter, campaignName, pagination.limit]);
 
   // Get recipients with proper name formatting
   const actualRecipients = useMemo(() => {
@@ -441,16 +502,17 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
         </div>
 
         {/* Export Button */}
-        {showExportButton && onExportCSV && (
+        {showExportButton && (onExportCSV || campaignId) && (
           <div className="mt-6 flex justify-start">
             <button
-              onClick={onExportCSV}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              onClick={onExportCSV ?? handleExportCSV}
+              disabled={exporting}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              Export to CSV
+              {exporting ? 'Exporting...' : 'Export to CSV'}
             </button>
           </div>
         )}
