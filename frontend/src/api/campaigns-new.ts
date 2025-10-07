@@ -213,6 +213,16 @@ export const campaignsAPI = {
       total: number;
       totalPages: number;
     };
+    stats?: {
+      total: number;
+      pending: number;
+      sent: number;
+      delivered: number;
+      read: number;
+      failed: number;
+      received: number;
+      successRate: number;
+    };
     campaign: {
       id: string;
       campaignId: string;

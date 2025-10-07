@@ -62,6 +62,16 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
     total: 0,
     totalPages: 0
   });
+  const [backendStats, setBackendStats] = useState<{
+    total: number;
+    pending: number;
+    sent: number;
+    delivered: number;
+    read: number;
+    failed: number;
+    received: number;
+    successRate: number;
+  } | null>(null);
   const [exporting, setExporting] = useState(false);
 
   // Initialize state from URL parameters when modal opens
@@ -155,6 +165,7 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
       console.log('🔍 Frontend RecipientListModal - API response:', response);
       setApiRecipients(response.recipients);
       setPagination(response.pagination);
+      setBackendStats(response.stats || null);
     } catch (error) {
       console.error('Error fetching recipients:', error);
       setApiRecipients([]);
@@ -244,13 +255,24 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
 
   // Calculate statistics
   const stats = useMemo(() => {
+    // Use backend stats when available (for filtered/paginated results)
+    if (backendStats) {
+      return {
+        total: backendStats.total,
+        received: backendStats.received,
+        failed: backendStats.failed,
+        successRate: backendStats.successRate
+      };
+    }
+    
+    // For prop-based recipients (non-paginated), calculate normally
     const total = actualRecipients.length;
     const received = actualRecipients.filter(r => r.status === 'delivered' || r.status === 'read').length;
     const failed = actualRecipients.filter(r => r.status === 'failed').length;
     const successRate = total > 0 ? Math.round((received / total) * 100) : 0;
     
     return { total, received, failed, successRate };
-  }, [actualRecipients]);
+  }, [actualRecipients, backendStats]);
 
   if (!isOpen) return null;
 
@@ -278,24 +300,36 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
         
         {/* Summary Section */}
         <div className="bg-indigo-50 p-4 rounded-lg mb-6">
-          <div className="grid grid-cols-4 gap-4">
-            <div className="bg-white p-4 rounded-lg">
-              <p className="text-sm font-medium text-gray-600">Total</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+          {loading ? (
+            // Skeleton Loading for Statistics
+            <div className="grid grid-cols-4 gap-4">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="bg-white p-4 rounded-lg animate-pulse">
+                  <div className="h-4 bg-gray-200 rounded mb-2 w-16"></div>
+                  <div className="h-8 bg-gray-200 rounded w-12"></div>
+                </div>
+              ))}
             </div>
-            <div className="bg-white p-4 rounded-lg">
-              <p className="text-sm font-medium text-gray-600">Received</p>
-              <p className="text-2xl font-bold text-green-600">{stats.received}</p>
+          ) : (
+            <div className="grid grid-cols-4 gap-4">
+              <div className="bg-white p-4 rounded-lg">
+                <p className="text-sm font-medium text-gray-600">Total</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+              </div>
+              <div className="bg-white p-4 rounded-lg">
+                <p className="text-sm font-medium text-gray-600">Received</p>
+                <p className="text-2xl font-bold text-green-600">{stats.received}</p>
+              </div>
+              <div className="bg-white p-4 rounded-lg">
+                <p className="text-sm font-medium text-gray-600">Failed</p>
+                <p className="text-2xl font-bold text-red-600">{stats.failed}</p>
+              </div>
+              <div className="bg-white p-4 rounded-lg">
+                <p className="text-sm font-medium text-gray-600">Success Rate</p>
+                <p className="text-2xl font-bold text-blue-600">{stats.successRate}%</p>
+              </div>
             </div>
-            <div className="bg-white p-4 rounded-lg">
-              <p className="text-sm font-medium text-gray-600">Failed</p>
-              <p className="text-2xl font-bold text-red-600">{stats.failed}</p>
-            </div>
-            <div className="bg-white p-4 rounded-lg">
-              <p className="text-sm font-medium text-gray-600">Success Rate</p>
-              <p className="text-2xl font-bold text-blue-600">{stats.successRate}%</p>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Search and Filter Section */}
@@ -368,13 +402,22 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
           {/* Results Summary */}
           {campaignId && (
             <div className="flex items-center justify-between text-sm text-gray-600">
-              <span>
-                {loading ? 'Loading...' : `Showing ${actualRecipients.length} of ${pagination.total} recipients`}
-              </span>
-              {pagination.totalPages > 1 && (
-                <span>
-                  Page {pagination.page} of {pagination.totalPages}
-                </span>
+              {loading ? (
+                <div className="flex items-center space-x-4 animate-pulse">
+                  <div className="h-4 bg-gray-200 rounded w-32"></div>
+                  <div className="h-4 bg-gray-200 rounded w-20"></div>
+                </div>
+              ) : (
+                <>
+                  <span>
+                    {`Showing ${actualRecipients.length} of ${pagination.total} recipients`}
+                  </span>
+                  {pagination.totalPages > 1 && (
+                    <span>
+                      Page {pagination.page} of {pagination.totalPages}
+                    </span>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -387,7 +430,29 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
           </div>
           
           <div className="overflow-x-auto max-h-96 overflow-y-auto">
-            {actualRecipients.length === 0 ? (
+            {loading ? (
+              // Skeleton Loading State
+              <div className="p-4">
+                <div className="animate-pulse">
+                  {/* Table Header Skeleton */}
+                  <div className="flex space-x-4 mb-4 pb-2 border-b">
+                    <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/6"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                  </div>
+                  {/* Table Rows Skeleton */}
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <div key={index} className="flex space-x-4 mb-3 py-2">
+                      <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                      <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                      <div className="h-6 bg-gray-200 rounded-full w-16"></div>
+                      <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : actualRecipients.length === 0 ? (
               <div className="p-8 text-center text-gray-500">
                 No recipients found
               </div>

@@ -1440,8 +1440,25 @@ export class CampaignController {
       const endIndex = startIndex + limitNum;
       const paginatedRecipients = recipients.slice(startIndex, endIndex);
 
+      // Calculate aggregate statistics for filtered results
+      const delivered = recipients.filter(r => r.status === 'delivered').length;
+      const read = recipients.filter(r => r.status === 'read').length;
+      const successCount = delivered + read;
+      
+      const stats = {
+        total: totalFiltered,
+        pending: recipients.filter(r => r.status === 'pending').length,
+        sent: recipients.filter(r => r.status === 'sent').length,
+        delivered,
+        read,
+        failed: recipients.filter(r => r.status === 'failed').length,
+        received: successCount, // Combined delivered + read
+        successRate: totalFiltered > 0 ? Math.round((successCount / totalFiltered) * 100) : 0
+      };
+
       console.log('🔍 Backend - Pagination:', { page: pageNum, limit: limitNum, totalFiltered, totalPages, startIndex, endIndex });
       console.log('🔍 Backend - Returning recipients count:', paginatedRecipients.length);
+      console.log('🔍 Backend - Aggregate stats:', stats);
 
       return res.json({
         success: true,
@@ -1453,6 +1470,7 @@ export class CampaignController {
             total: totalFiltered,
             totalPages
           },
+          stats,
           campaign: {
             id: campaign._id,
             campaignId: campaign.campaignId,
