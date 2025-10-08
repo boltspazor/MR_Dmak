@@ -985,4 +985,314 @@ export class MRService {
       throw error;
     }
   }
+
+  /**
+   * Get detailed message status for a specific MR
+   */
+  async getMRDetailedMessageStatus(userId: string, mrId: string) {
+    try {
+      logger.info('🔍 Getting detailed message status for MR', { userId, mrId });
+
+      // Verify MR belongs to user
+      const mr = await MedicalRepresentative.findOne({
+        _id: mrId,
+        marketingManagerId: userId
+      }).populate('groupId', 'groupName description');
+
+      if (!mr) {
+        throw new Error('MR not found or access denied');
+      }
+
+      // Get the latest message log for this MR with detailed information
+      const latestMessageLog = await MessageLog.findOne({
+        mrId: mrId
+      })
+      .populate({
+        path: 'campaignId',
+        select: 'name campaignId templateId createdAt',
+        populate: {
+          path: 'templateId',
+          select: 'name metaTemplateName isMetaTemplate metaStatus'
+        }
+      })
+      .sort({ createdAt: -1 })
+      .lean();
+
+      let statusDetails = {
+        status: 'no_message',
+        errorMessage: null as string | null,
+        errorCode: null as number | null,
+        errorTitle: null as string | null,
+        successMessage: null as string | null,
+        timestamp: null as string | null,
+        campaignName: null as string | null,
+        templateName: null as string | null
+      };
+
+      if (latestMessageLog) {
+        statusDetails = {
+          status: latestMessageLog.status || 'pending',
+          errorMessage: latestMessageLog.errorMessage || null,
+          errorCode: latestMessageLog.errorCode || null,
+          errorTitle: latestMessageLog.errorTitle || null,
+          successMessage: ['sent', 'delivered', 'read'].includes(latestMessageLog.status) 
+            ? 'Message processed successfully through WhatsApp Business API' 
+            : null,
+          timestamp: (latestMessageLog.sentAt || latestMessageLog.createdAt)?.toISOString() || null,
+          campaignName: null,
+          templateName: null
+        };
+
+        // Get campaign and template information
+        if (latestMessageLog.campaignId) {
+          const campaign = latestMessageLog.campaignId as any;
+          statusDetails.campaignName = campaign?.name || 'Unknown Campaign';
+          
+          if (campaign?.templateId) {
+            const template = campaign.templateId;
+            statusDetails.templateName = template.metaTemplateName || template.name || 'Unknown Template';
+          }
+        }
+      }
+
+      logger.info('✅ Retrieved detailed message status', { 
+        userId, 
+        mrId,
+        status: statusDetails.status,
+        hasError: !!statusDetails.errorMessage
+      });
+
+      return {
+        mr: {
+          id: mr._id.toString(),
+          mrId: mr.mrId,
+          firstName: mr.firstName,
+          lastName: mr.lastName,
+          phone: mr.phone,
+          group: mr.groupId ? (mr.groupId as any).groupName : 'No Group'
+        },
+        statusDetails
+      };
+    } catch (error) {
+      logger.error('❌ Failed to get detailed message status', { userId, mrId, error });
+      throw error;
+    }
+  }
+
+  /**
+   * Get MR message statuses from campaigns
+   */
+  async getMRMessageStatuses(userId: string, mrIds?: string[]) {
+    try {
+      logger.info('🔍 Getting MR message statuses', { userId, mrIds });
+
+      // Build the query
+      const query: any = {
+        marketingManagerId: userId
+      };
+
+      if (mrIds && mrIds.length > 0) {
+        query._id = { $in: mrIds };
+      }
+
+      // Get all MRs for this user
+      const mrs = await MedicalRepresentative.find(query)
+        .populate('groupId', 'groupName description')
+        .lean();
+
+      if (!mrs.length) {
+        return [];
+      }
+
+      // Get the latest message log for each MR from the most recent campaign
+      const mrMessageStatuses = await Promise.all(
+        mrs.map(async (mr) => {
+          // First, find all message logs for this MR to identify the most recent campaign
+          const allMessageLogs = await MessageLog.find({
+            mrId: mr._id.toString()
+          })
+          .populate({
+            path: 'campaignId',
+            select: 'name campaignId templateId createdAt',
+            populate: {
+              path: 'templateId',
+              select: 'name metaTemplateName isMetaTemplate metaStatus'
+            }
+          })
+          .sort({ 
+            createdAt: -1,  // Sort by message creation time (most recent first)
+            sentAt: -1      // Then by sent time if available
+          })
+          .lean();
+
+          // Get the most recent message log (first one after sorting)
+          const latestMessageLog = allMessageLogs.length > 0 ? allMessageLogs[0] : null;
+
+          // Determine the overall message status from the latest campaign
+          let messageStatus = 'no_message';
+          let campaignName = null;
+          let lastMessageDate = null;
+          let templateName = null;
+
+          if (latestMessageLog) {
+            // Get the most recent status update for this message log
+            messageStatus = latestMessageLog.status || 'pending';
+            lastMessageDate = latestMessageLog.sentAt || latestMessageLog.createdAt;
+            
+            // Get campaign and template information
+            if (latestMessageLog.campaignId) {
+              const campaign = latestMessageLog.campaignId as any;
+              campaignName = campaign?.name || 'Unknown Campaign';
+              
+              if (campaign?.templateId) {
+                const template = campaign.templateId;
+                templateName = template.metaTemplateName || template.name || 'Unknown Template';
+              }
+            }
+          } else {
+            // If no message log found, check if there are any campaigns for this MR
+            // This helps identify MRs that might be in campaigns but haven't been sent messages yet
+            const mrCampaigns = await MessageLog.find({
+              mrId: mr._id.toString()
+            })
+            .populate('campaignId', 'name createdAt')
+            .sort({ createdAt: -1 })
+            .limit(1)
+            .lean();
+
+            if (mrCampaigns.length > 0) {
+              const latestCampaign = mrCampaigns[0];
+              campaignName = (latestCampaign.campaignId as any)?.name || 'Unknown Campaign';
+              messageStatus = latestCampaign.status || 'pending';
+              lastMessageDate = latestCampaign.createdAt;
+            }
+          }
+
+          return {
+            mrId: mr._id.toString(),
+            mrCode: mr.mrId,
+            firstName: mr.firstName,
+            lastName: mr.lastName,
+            phone: mr.phone,
+            group: mr.groupId ? (mr.groupId as any).groupName : 'No Group',
+            messageStatus,
+            campaignName,
+            templateName,
+            lastMessageDate
+          };
+        })
+      );
+
+      logger.info('✅ Retrieved MR message statuses', { 
+        userId, 
+        totalMRs: mrMessageStatuses.length,
+        withMessages: mrMessageStatuses.filter(mr => mr.messageStatus !== 'no_message').length
+      });
+
+      return mrMessageStatuses;
+    } catch (error) {
+      logger.error('❌ Failed to get MR message statuses', { userId, error });
+      throw error;
+    }
+  }
+
+  /**
+   * Refresh message statuses from Meta API for recent messages
+   * This ensures we have the latest status from WhatsApp Business API
+   */
+  async refreshMessageStatusesFromMeta(userId: string, hoursBack: number = 24) {
+    try {
+      logger.info('🔄 Refreshing message statuses from Meta API', { userId, hoursBack });
+
+      // Find recent message logs that might need status updates
+      const cutoffDate = new Date(Date.now() - (hoursBack * 60 * 60 * 1000));
+      
+      const recentMessageLogs = await MessageLog.find({
+        createdAt: { $gte: cutoffDate },
+        messageId: { $exists: true }, // Only messages that have Meta message IDs
+        status: { $in: ['sent', 'pending', 'queued'] } // Only update messages that could change status
+      })
+      .populate({
+        path: 'campaignId',
+        select: 'marketingManagerId',
+        match: { marketingManagerId: userId } // Only get logs from this user's campaigns
+      })
+      .lean();
+
+      if (!recentMessageLogs.length) {
+        logger.info('No recent messages found to refresh', { userId });
+        return { updated: 0, total: 0 };
+      }
+
+      let updatedCount = 0;
+      const batchSize = 10; // Process in batches to avoid rate limits
+
+      for (let i = 0; i < recentMessageLogs.length; i += batchSize) {
+        const batch = recentMessageLogs.slice(i, i + batchSize);
+        
+        await Promise.all(
+          batch.map(async (messageLog) => {
+            try {
+              if (!messageLog.messageId || !messageLog.campaignId) return;
+
+              // Get updated status from Meta API
+              const statusResponse = await whatsappCloudAPIService.getMessageStatus(messageLog.messageId);
+              
+              if (statusResponse && statusResponse.status && statusResponse.status !== messageLog.status) {
+                // Prepare update data based on status
+                const updateData: any = {
+                  status: statusResponse.status,
+                  lastUpdated: new Date()
+                };
+
+                // Set timestamps based on status
+                if (statusResponse.status === 'delivered' && !messageLog.deliveredAt) {
+                  updateData.deliveredAt = new Date(parseInt(statusResponse.timestamp) * 1000);
+                } else if (statusResponse.status === 'read' && !messageLog.readAt) {
+                  updateData.readAt = new Date(parseInt(statusResponse.timestamp) * 1000);
+                  // Also set deliveredAt if not already set
+                  if (!messageLog.deliveredAt) {
+                    updateData.deliveredAt = new Date(parseInt(statusResponse.timestamp) * 1000);
+                  }
+                } else if (statusResponse.status === 'failed' && !messageLog.failedAt) {
+                  updateData.failedAt = new Date(parseInt(statusResponse.timestamp) * 1000);
+                }
+
+                // Update the message log with new status
+                await MessageLog.findByIdAndUpdate(messageLog._id, updateData);
+
+                updatedCount++;
+                logger.debug('Updated message status', { 
+                  messageId: messageLog.messageId,
+                  oldStatus: messageLog.status,
+                  newStatus: statusResponse.status
+                });
+              }
+            } catch (error) {
+              logger.warn('Failed to refresh status for message', { 
+                messageId: messageLog.messageId,
+                error: error instanceof Error ? error.message : 'Unknown error'
+              });
+            }
+          })
+        );
+
+        // Small delay between batches to avoid rate limiting
+        if (i + batchSize < recentMessageLogs.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+
+      logger.info('✅ Completed message status refresh', { 
+        userId, 
+        total: recentMessageLogs.length,
+        updated: updatedCount
+      });
+
+      return { updated: updatedCount, total: recentMessageLogs.length };
+    } catch (error) {
+      logger.error('❌ Failed to refresh message statuses from Meta', { userId, error });
+      throw error;
+    }
+  }
 }

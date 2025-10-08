@@ -118,5 +118,67 @@ export const mrApi = {
   search: async (query: string): Promise<{ success: boolean; data: MRResponse[] }> => {
     const response = await api.get(`/mrs/search?q=${encodeURIComponent(query)}`);
     return response.data;
+  },
+
+  // Get MR message statuses
+  getMessageStatuses: async (mrIds?: string[]): Promise<{ 
+    success: boolean; 
+    data: Array<{
+      mrId: string;
+      mrCode: string;
+      firstName: string;
+      lastName: string;
+      phone: string;
+      group: string;
+      messageStatus: string;
+      campaignName: string | null;
+      templateName: string | null;
+      lastMessageDate: string | null;
+    }>
+  }> => {
+    const params = mrIds && mrIds.length > 0 ? `?mrIds=${mrIds.join(',')}` : '';
+    const response = await api.get(`/mrs/message-statuses${params}`);
+    return response.data;
+  },
+
+  // Get detailed message status for a specific MR
+  getDetailedMessageStatus: async (mrId: string): Promise<{
+    success: boolean;
+    data: {
+      mr: {
+        id: string;
+        mrId: string;
+        firstName: string;
+        lastName: string;
+        phone: string;
+        group: string;
+      };
+      statusDetails: {
+        status: string;
+        errorMessage?: string;
+        errorCode?: number;
+        errorTitle?: string;
+        successMessage?: string;
+        timestamp?: string;
+        campaignName?: string;
+        templateName?: string;
+      };
+    };
+  }> => {
+    const response = await api.get(`/mrs/${mrId}/message-status-details`);
+    return response.data;
+  },
+
+  // Refresh message statuses from Meta API
+  refreshMessageStatuses: async (hoursBack: number = 24): Promise<{
+    success: boolean;
+    data: {
+      updated: number;
+      total: number;
+    };
+    message: string;
+  }> => {
+    const response = await api.post(`/mrs/refresh-message-statuses?hoursBack=${hoursBack}`);
+    return response.data;
   }
 };

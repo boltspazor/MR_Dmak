@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Contact, Group } from '../types/mr.types';
 import { api } from '../lib/api';
+import { mrApi } from '../api/mr';
 
 export interface MRPaginationParams {
   page?: number;
@@ -62,7 +63,38 @@ export const useMRData = () => {
         consentStatus: mr.consentStatus || 'not_requested'
       }));
 
-      setContacts(transformedContacts);
+      // Fetch message statuses for the current batch of MRs
+      try {
+        const mrIds = transformedContacts.map(contact => contact.id);
+        const messageStatusResponse = await mrApi.getMessageStatuses(mrIds);
+        
+        if (messageStatusResponse.success) {
+          const messageStatusMap = new Map();
+          messageStatusResponse.data.forEach(status => {
+            messageStatusMap.set(status.mrId, status);
+          });
+
+          // Merge message status data with contact data
+          const contactsWithMessageStatus = transformedContacts.map(contact => {
+            const messageStatus = messageStatusMap.get(contact.id);
+            return {
+              ...contact,
+              messageStatus: messageStatus?.messageStatus || 'no_message',
+              campaignName: messageStatus?.campaignName || null,
+              templateName: messageStatus?.templateName || null,
+              lastMessageDate: messageStatus?.lastMessageDate || null
+            };
+          });
+
+          setContacts(contactsWithMessageStatus);
+        } else {
+          setContacts(transformedContacts);
+        }
+      } catch (messageStatusError) {
+        console.warn('Failed to fetch message statuses, using contacts without message data:', messageStatusError);
+        setContacts(transformedContacts);
+      }
+
       setPagination(paginationInfo);
       setTotal(paginationInfo?.total || transformedContacts.length);
 

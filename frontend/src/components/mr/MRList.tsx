@@ -11,6 +11,7 @@ interface MRListProps {
   onEdit: (contact: Contact) => void;
   onDelete: (contact: Contact) => void;
   onSort: (field: keyof Contact) => void;
+  onStatusClick?: (contact: Contact) => void;
   sortField: keyof Contact;
   sortDirection: 'asc' | 'desc';
   loading?: boolean;
@@ -31,6 +32,7 @@ const MRList: React.FC<MRListProps> = ({
   onEdit,
   onDelete,
   onSort,
+  onStatusClick,
   sortField,
   sortDirection,
   loading = false,
@@ -219,6 +221,7 @@ const MRList: React.FC<MRListProps> = ({
           onEdit={onEdit}
           onDelete={handleDeleteWithRefresh}
           onSort={handleSort}
+          onStatusClick={onStatusClick}
           sortField={sortField}
           sortDirection={sortDirection}
           loading={dataLoading || loading} // Use both loading states

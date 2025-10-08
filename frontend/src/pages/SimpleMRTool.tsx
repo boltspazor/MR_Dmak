@@ -6,12 +6,16 @@ import MRActionButtons from '../components/mr/MRActionButtons';
 import MRList from '../components/mr/MRList';
 import MRManagementHeader from '../components/mr/MRManagementHeader';
 import MRDeleteDialog from '../components/mr/MRDeleteDialog';
+import MessageStatusDialog from '../components/mr/MessageStatusDialog';
 import { useMRData } from '../hooks/useMRData';
 import { useCSVImport } from '../hooks/useCSVImport';
 import { useMRManagement } from '../hooks/useMRManagement';
 import { useMRExport } from '../hooks/useMRExport';
 import { useMRStats } from '../hooks/useMRStats';
 import { useMRSorting } from '../hooks/useMRSorting';
+import { mrApi } from '../api/mr';
+import { Contact } from '../types/mr.types';
+import toast from 'react-hot-toast';
 
 
 // Real API calls using the configured API instance
@@ -77,6 +81,12 @@ const SimpleMRTool: React.FC = () => {
   const [isAddMRDialogOpen, setIsAddMRDialogOpen] = useState(false);
   const [showErrorAlert, setShowErrorAlert] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  
+  // Message status dialog state
+  const [showMessageStatusDialog, setShowMessageStatusDialog] = useState(false);
+  const [selectedContactForStatus, setSelectedContactForStatus] = useState<Contact | null>(null);
+  const [statusDetails, setStatusDetails] = useState<any>(null);
+  const [loadingStatusDetails, setLoadingStatusDetails] = useState(false);
 
 
 
@@ -101,6 +111,29 @@ const SimpleMRTool: React.FC = () => {
 
   const handleTemplateDownload = () => {
     downloadCSVTemplate();
+  };
+
+  // Handle message status click
+  const handleStatusClick = async (contact: Contact) => {
+    try {
+      setSelectedContactForStatus(contact);
+      setShowMessageStatusDialog(true);
+      setLoadingStatusDetails(true);
+      setStatusDetails(null);
+
+      const response = await mrApi.getDetailedMessageStatus(contact.id);
+      
+      if (response.success) {
+        setStatusDetails(response.data.statusDetails);
+      } else {
+        toast.error('Failed to load message status details');
+      }
+    } catch (error: any) {
+      console.error('Error fetching message status details:', error);
+      toast.error('Failed to load message status details');
+    } finally {
+      setLoadingStatusDetails(false);
+    }
   };
 
   // Show error alert when there are upload errors
@@ -182,6 +215,7 @@ const SimpleMRTool: React.FC = () => {
             onEdit={handleEditContact}
             onDelete={handleDeleteClick}
             onSort={handleSort}
+            onStatusClick={handleStatusClick}
             sortField={sortField}
             sortDirection={sortDirection}
             onDownloadCSV={exportContactsToCSV}
@@ -229,6 +263,16 @@ const SimpleMRTool: React.FC = () => {
           message={uploadMessage}
           errors={uploadErrors}
         />
+
+        {/* Message Status Dialog */}
+        {showMessageStatusDialog && selectedContactForStatus && statusDetails && (
+          <MessageStatusDialog
+            isOpen={showMessageStatusDialog}
+            onClose={() => setShowMessageStatusDialog(false)}
+            contact={selectedContactForStatus}
+            statusDetails={statusDetails}
+          />
+        )}
 
       </div>
     </div>

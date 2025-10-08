@@ -1,5 +1,5 @@
 import React from 'react';
-import { Edit, Trash2, ChevronUp, ChevronDown, User, Phone, Users, MessageSquare, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Edit, Trash2, ChevronUp, ChevronDown, User, Phone, Users, MessageSquare, CheckCircle, XCircle, Clock, Send, AlertTriangle } from 'lucide-react';
 import { SkeletonTable } from '../ui/SkeletonLoader';
 
 interface Contact {
@@ -11,6 +11,10 @@ interface Contact {
   group: string;
   comments?: string;
   consentStatus?: 'pending' | 'approved' | 'rejected' | 'not_requested';
+  messageStatus?: string;
+  campaignName?: string | null;
+  templateName?: string | null;
+  lastMessageDate?: string | null;
 }
 
 interface MRTableProps {
@@ -18,12 +22,13 @@ interface MRTableProps {
   onEdit: (contact: Contact) => void;
   onDelete: (contact: Contact) => void;
   onSort: (field: keyof Contact) => void;
+  onStatusClick?: (contact: Contact) => void;
   sortField: keyof Contact;
   sortDirection: 'asc' | 'desc';
   loading?: boolean;
 }
 
-const MRTable: React.FC<MRTableProps> = ({ contacts, onEdit, onDelete, onSort, sortField, sortDirection, loading = false }) => {
+const MRTable: React.FC<MRTableProps> = ({ contacts, onEdit, onDelete, onSort, onStatusClick, sortField, sortDirection, loading = false }) => {
   const SortableHeader: React.FC<{ field: keyof Contact; children: React.ReactNode; icon?: React.ReactNode }> = ({ field, children, icon }) => (
     <th 
       className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors duration-200"
@@ -59,31 +64,77 @@ const MRTable: React.FC<MRTableProps> = ({ contacts, onEdit, onDelete, onSort, s
 
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
+      <table className="min-w-full divide-y divide-gray-200 table-fixed">
         <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
           <tr>
-            <SortableHeader field="mrId" icon={<User className="h-4 w-4" />}>
-              MR ID
-            </SortableHeader>
-            <SortableHeader field="firstName" icon={<User className="h-4 w-4" />}>
-              Name
-            </SortableHeader>
-            <SortableHeader field="phone" icon={<Phone className="h-4 w-4" />}>
-              Phone
-            </SortableHeader>
-            <SortableHeader field="group" icon={<Users className="h-4 w-4" />}>
-              Group
-            </SortableHeader>
-            <SortableHeader field="comments" icon={<MessageSquare className="h-4 w-4" />}>
-              Comments
-            </SortableHeader>
-            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors duration-200 w-20" onClick={() => onSort('mrId')}>
+              <div className="flex items-center space-x-2">
+                <User className="h-4 w-4 text-gray-400" />
+                <span>MR ID</span>
+                {sortField === 'mrId' && (
+                  <span className="text-indigo-600">
+                    {sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </span>
+                )}
+              </div>
+            </th>
+            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors duration-200 w-32" onClick={() => onSort('firstName')}>
+              <div className="flex items-center space-x-2">
+                <User className="h-4 w-4 text-gray-400" />
+                <span>Name</span>
+                {sortField === 'firstName' && (
+                  <span className="text-indigo-600">
+                    {sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </span>
+                )}
+              </div>
+            </th>
+            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors duration-200 w-28" onClick={() => onSort('phone')}>
+              <div className="flex items-center space-x-2">
+                <Phone className="h-4 w-4 text-gray-400" />
+                <span>Phone</span>
+                {sortField === 'phone' && (
+                  <span className="text-indigo-600">
+                    {sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </span>
+                )}
+              </div>
+            </th>
+            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors duration-200 w-24" onClick={() => onSort('group')}>
+              <div className="flex items-center space-x-2">
+                <Users className="h-4 w-4 text-gray-400" />
+                <span>Group</span>
+                {sortField === 'group' && (
+                  <span className="text-indigo-600">
+                    {sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </span>
+                )}
+              </div>
+            </th>
+            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors duration-200 w-32" onClick={() => onSort('comments')}>
+              <div className="flex items-center space-x-2">
+                <MessageSquare className="h-4 w-4 text-gray-400" />
+                <span>Comments</span>
+                {sortField === 'comments' && (
+                  <span className="text-indigo-600">
+                    {sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </span>
+                )}
+              </div>
+            </th>
+            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-28">
               <div className="flex items-center space-x-2">
                 <CheckCircle className="h-4 w-4 text-gray-400" />
                 <span>Consent Status</span>
               </div>
             </th>
-            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-40">
+              <div className="flex items-center space-x-2">
+                <Send className="h-4 w-4 text-gray-400" />
+                <span>Message Status</span>
+              </div>
+            </th>
+            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-20">
               Actions
             </th>
           </tr>
@@ -173,6 +224,79 @@ const MRTable: React.FC<MRTableProps> = ({ contacts, onEdit, onDelete, onSort, s
                       {getStatusIcon(consentStatus)}
                       <span className="ml-1">{getStatusText(consentStatus)}</span>
                     </span>
+                  );
+                })()}
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                {(() => {
+                  const messageStatus = contact.messageStatus || 'no_message';
+                  
+                  const getMessageStatusIcon = (status: string) => {
+                    switch (status) {
+                      case 'sent':
+                        return <Send className="h-3 w-3" />;
+                      case 'delivered':
+                        return <CheckCircle className="h-3 w-3" />;
+                      case 'read':
+                        return <CheckCircle className="h-3 w-3" />;
+                      case 'failed':
+                        return <AlertTriangle className="h-3 w-3" />;
+                      case 'pending':
+                        return <Clock className="h-3 w-3" />;
+                      default:
+                        return <XCircle className="h-3 w-3" />;
+                    }
+                  };
+                  
+                  const getMessageStatusColor = (status: string) => {
+                    switch (status) {
+                      case 'sent':
+                        return 'bg-blue-100 text-blue-800 hover:bg-blue-200';
+                      case 'delivered':
+                        return 'bg-green-100 text-green-800 hover:bg-green-200';
+                      case 'read':
+                        return 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200';
+                      case 'failed':
+                        return 'bg-red-100 text-red-800 hover:bg-red-200';
+                      case 'pending':
+                        return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200';
+                      default:
+                        return 'bg-gray-100 text-gray-800 hover:bg-gray-200';
+                    }
+                  };
+                  
+                  const getMessageStatusText = (status: string) => {
+                    switch (status) {
+                      case 'sent':
+                        return 'Sent';
+                      case 'delivered':
+                        return 'Delivered';
+                      case 'read':
+                        return 'Read';
+                      case 'failed':
+                        return 'Failed';
+                      case 'pending':
+                        return 'Pending';
+                      default:
+                        return 'No Message';
+                    }
+                  };
+
+                  const displayText = messageStatus === 'no_message' 
+                    ? 'No Message' 
+                    : contact.campaignName 
+                      ? `${getMessageStatusText(messageStatus)} (${contact.campaignName})`
+                      : getMessageStatusText(messageStatus);
+                  
+                  return (
+                    <button
+                      onClick={() => onStatusClick?.(contact)}
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors cursor-pointer ${getMessageStatusColor(messageStatus)}`}
+                      title="Click to view details"
+                    >
+                      {getMessageStatusIcon(messageStatus)}
+                      <span className="ml-1 max-w-32 truncate">{displayText}</span>
+                    </button>
                   );
                 })()}
               </td>

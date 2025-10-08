@@ -7,6 +7,10 @@ export interface Contact {
   group: string;
   comments?: string;
   consentStatus?: 'pending' | 'approved' | 'rejected' | 'not_requested';
+  messageStatus?: string;
+  campaignName?: string | null;
+  templateName?: string | null;
+  lastMessageDate?: string | null;
 }
 
 export interface Group {

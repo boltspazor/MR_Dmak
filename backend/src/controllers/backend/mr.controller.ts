@@ -351,4 +351,90 @@ export class MRController {
       return res.status(500).json({ error: error.message });
     }
   }
+
+  /**
+   * Get detailed message status for a specific MR
+   */
+  async getMRDetailedMessageStatus(req: any, res: Response) {
+    try {
+      const { mrId } = req.params;
+      const userId = req.user.userId;
+
+      if (!mrId) {
+        return res.status(400).json({
+          success: false,
+          error: 'MR ID is required'
+        });
+      }
+
+      logger.info('🔍 Getting detailed message status for MR', { userId, mrId });
+
+      const result = await mrService.getMRDetailedMessageStatus(userId, mrId);
+
+      return res.json({
+        success: true,
+        data: result,
+        message: 'Retrieved detailed message status'
+      });
+    } catch (error: any) {
+      logger.error('❌ Failed to get detailed message status', { error: error.message, params: req.params });
+      return res.status(500).json({ 
+        success: false,
+        error: error.message 
+      });
+    }
+  }
+
+  /**
+   * Get MR message statuses from campaigns
+   */
+  async getMRMessageStatuses(req: any, res: Response) {
+    try {
+      const { mrIds } = req.query;
+      const userId = req.user.userId;
+
+      logger.info('🔍 Getting MR message statuses', { userId, mrIds });
+
+      // Parse mrIds if provided
+      let parsedMrIds: string[] | undefined;
+      if (mrIds) {
+        parsedMrIds = Array.isArray(mrIds) ? mrIds : mrIds.split(',');
+      }
+
+      const messageStatuses = await mrService.getMRMessageStatuses(userId, parsedMrIds);
+
+      return res.json({
+        success: true,
+        data: messageStatuses,
+        message: `Retrieved message statuses for ${messageStatuses.length} MRs`
+      });
+    } catch (error: any) {
+      logger.error('❌ Failed to get MR message statuses', { error: error.message, query: req.query });
+      return res.status(500).json({ 
+        success: false,
+        error: error.message 
+      });
+    }
+  }
+
+  async refreshMessageStatuses(req: any, res: Response) {
+    try {
+      const userId = req.user.userId;
+      const { hoursBack = 24 } = req.query;
+
+      const result = await mrService.refreshMessageStatusesFromMeta(userId, parseInt(hoursBack));
+
+      return res.json({
+        success: true,
+        data: result,
+        message: `Refreshed ${result.updated} out of ${result.total} recent message statuses`
+      });
+    } catch (error: any) {
+      logger.error('❌ Failed to refresh message statuses', { error: error.message, query: req.query });
+      return res.status(500).json({ 
+        success: false,
+        error: error.message 
+      });
+    }
+  }
 }
