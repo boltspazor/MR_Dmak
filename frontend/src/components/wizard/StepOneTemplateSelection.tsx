@@ -6,6 +6,8 @@ import { WizardTemplate } from '../../pages/CampaignWizard';
 import WizardTemplateTable from './WizardTemplateTable';
 import TemplatePreviewDialog from '../ui/TemplatePreviewDialog';
 import { SkeletonTable } from '../ui/SkeletonLoader';
+import MetaIntegration from '../templates/MetaIntegration';
+import { useMetaTemplates } from '../../hooks/useMetaTemplates';
 
 interface StepOneTemplateSelectionProps {
   stepNumber: number;
@@ -36,31 +38,42 @@ const StepOneTemplateSelection: React.FC<StepOneTemplateSelectionProps> = ({
   const [showTemplatePreview, setShowTemplatePreview] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<WizardTemplate | null>(null);
 
+  // Meta templates hook for sync functionality
+  const {
+    metaTemplateStats,
+    syncingTemplates,
+    loadMetaTemplateStats,
+    syncTemplatesWithMeta,
+    getMetaTemplateCreationUrl
+  } = useMetaTemplates();
+
+  // Load templates function
+  const loadTemplates = async () => {
+    try {
+      setLoading(true);
+      console.log('Loading Meta templates from API...');
+      const response = await api.get('/meta-templates/all');
+      console.log('Meta templates API response:', response.data);
+      const templatesData = response.data.data || response.data || [];
+      console.log('Meta templates data:', templatesData);
+      setTemplates(templatesData);
+      if (templatesData.length === 0) {
+        toast('No Meta templates found. You can create new ones using the Meta Developer Tools.');
+      }
+    } catch (error: any) {
+      console.error('Failed to load Meta templates:', error);
+      toast.error(`Failed to load Meta templates: ${error.message || 'Unknown error'}`);
+      setTemplates([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Load Meta templates
   useEffect(() => {
-    const loadTemplates = async () => {
-      try {
-        setLoading(true);
-        console.log('Loading Meta templates from API...');
-        const response = await api.get('/meta-templates/all');
-        console.log('Meta templates API response:', response.data);
-        const templatesData = response.data.data || response.data || [];
-        console.log('Meta templates data:', templatesData);
-        setTemplates(templatesData);
-        if (templatesData.length === 0) {
-          toast('No Meta templates found. You can create new ones using the Meta Developer Tools.');
-        }
-      } catch (error: any) {
-        console.error('Failed to load Meta templates:', error);
-        toast.error(`Failed to load Meta templates: ${error.message || 'Unknown error'}`);
-        setTemplates([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadTemplates();
-  }, []);
+    loadMetaTemplateStats();
+  }, [loadMetaTemplateStats]);
 
 
 
@@ -146,6 +159,15 @@ const StepOneTemplateSelection: React.FC<StepOneTemplateSelectionProps> = ({
           <p className="mt-1 text-sm text-red-600">Campaign name is required</p>
         )}
       </div>
+
+      {/* Meta Integration - Sync Templates */}
+      <MetaIntegration
+        metaTemplateStats={metaTemplateStats}
+        syncingTemplates={syncingTemplates}
+        onGetMetaTemplateCreationUrl={getMetaTemplateCreationUrl}
+        onSyncTemplatesWithMeta={syncTemplatesWithMeta}
+        onRefreshTemplates={loadTemplates}
+      />
 
       {/* Templates List */}
       <div className="space-y-4">

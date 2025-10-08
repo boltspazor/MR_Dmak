@@ -15,9 +15,11 @@ import { extractTemplateParameters, escapeCSV } from '../utils/csvValidation';
 import TemplateFilters from '../components/templates/TemplateFilters';
 import TemplateTable from '../components/templates/TemplateTable';
 import DeleteConfirmationDialog from '../components/templates/DeleteConfirmationDialog';
+import MetaIntegration from '../components/templates/MetaIntegration';
 
 // Import custom hooks
 import { useTemplates } from '../hooks/useTemplates';
+import { useMetaTemplates } from '../hooks/useMetaTemplates';
 
 
 const Templates: React.FC = () => {
@@ -33,6 +35,15 @@ const Templates: React.FC = () => {
     exportTemplatesToCSV,
     exportTemplatesToPDF
   } = useTemplates();
+
+  // Meta templates hook for sync functionality
+  const {
+    metaTemplateStats,
+    syncingTemplates,
+    loadMetaTemplateStats,
+    syncTemplatesWithMeta,
+    getMetaTemplateCreationUrl
+  } = useMetaTemplates();
 
   // Local state
   const [nameSearchTerm, setNameSearchTerm] = useState('');
@@ -84,7 +95,8 @@ const Templates: React.FC = () => {
   // Load data on mount
   useEffect(() => {
     loadTemplates();
-  }, [loadTemplates]);
+    loadMetaTemplateStats();
+  }, [loadTemplates, loadMetaTemplateStats]);
 
 
 
@@ -287,6 +299,15 @@ const Templates: React.FC = () => {
           onExportPDF={exportTemplatesToPDF}
         >
           <div className="space-y-6">
+            {/* Meta Integration - Sync Templates */}
+            <MetaIntegration
+              metaTemplateStats={metaTemplateStats}
+              syncingTemplates={syncingTemplates}
+              onGetMetaTemplateCreationUrl={getMetaTemplateCreationUrl}
+              onSyncTemplatesWithMeta={syncTemplatesWithMeta}
+              onRefreshTemplates={loadTemplates}
+            />
+
             {/* Filters and Search */}
             <TemplateFilters
               nameSearchTerm={nameSearchTerm}
