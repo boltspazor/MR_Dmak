@@ -125,13 +125,13 @@ const MRTable: React.FC<MRTableProps> = ({ contacts, onEdit, onDelete, onSort, o
             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-28">
               <div className="flex items-center space-x-2">
                 <CheckCircle className="h-4 w-4 text-gray-400" />
-                <span>Consent Status</span>
+                <span>App Status</span>
               </div>
             </th>
             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-40">
               <div className="flex items-center space-x-2">
                 <Send className="h-4 w-4 text-gray-400" />
-                <span>Message Status</span>
+                <span>Meta Status</span>
               </div>
             </th>
             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-20">
