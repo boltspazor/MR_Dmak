@@ -393,7 +393,10 @@ export class WebhookController {
                 const mrService = new MRService();
                 
                 const errorMessage = updateData.errorMessage || 'Message failed to deliver';
-                const campaignId = campaignIdObj.toString();
+                
+                // Get the actual campaignId field from the campaign document
+                const campaignDoc = await CampaignModel.findById(campaignIdObj).select('campaignId');
+                const campaignId = campaignDoc?.campaignId || campaignIdObj.toString();
                 
                 await mrService.updateMRMetaStatus(
                   updatedLog.mrId, 

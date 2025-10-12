@@ -193,7 +193,7 @@ const MRStatusDialog: React.FC<MRStatusDialogProps> = ({
                   <p><strong>Error Date:</strong> {new Date(contact.lastErrorAt).toLocaleString()}</p>
                 )}
                 {contact.lastErrorCampaignId && (
-                  <p><strong>Campaign ID:</strong> {contact.lastErrorCampaignId}</p>
+                  <p><strong>Campaign ID:</strong> <code className="bg-gray-100 px-1 py-0.5 rounded text-xs">{contact.lastErrorCampaignId}</code></p>
                 )}
               </div>
             )}
