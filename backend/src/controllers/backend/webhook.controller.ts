@@ -411,7 +411,7 @@ export class WebhookController {
               } catch (error) {
                 logger.error('Failed to update MR meta status', {
                   mrId: updatedLog.mrId,
-                  error: error.message
+                  error: (error as Error).message
                 });
               }
             }
