@@ -11,12 +11,15 @@ interface MRStats {
   totalMRs: number;
   totalGroups: number;
   activeMRs: number;
+  metaStatusSummary: {
+    active: number;
+    error: number;
+  };
   mrsPerGroup: { groupName: string; count: number }[];
   mostActiveGroup: { groupName: string; count: number };
   consentSummary: {
     consented: number;
     notConsented: number;
-    deleted: number;
   };
 }
 
@@ -25,12 +28,15 @@ export const useMRStats = ({ contacts, groups }: UseMRStatsProps) => {
     totalMRs: 0,
     totalGroups: 0,
     activeMRs: 0,
+    metaStatusSummary: {
+      active: 0,
+      error: 0
+    },
     mrsPerGroup: [],
     mostActiveGroup: { groupName: 'None', count: 0 },
     consentSummary: {
       consented: 0,
-      notConsented: 0,
-      deleted: 0
+      notConsented: 0
     }
   });
   const [loading, setLoading] = useState(true);
@@ -49,6 +55,12 @@ export const useMRStats = ({ contacts, groups }: UseMRStatsProps) => {
           const totalGroups = groups.length;
           const activeMRs = contacts.length; // All contacts are considered active for now
           
+          // Calculate MetaStatus summary
+          const metaStatusSummary = {
+            active: contacts.filter(contact => contact.metaStatus === 'ACTIVE').length,
+            error: contacts.filter(contact => contact.metaStatus === 'ERROR').length
+          };
+          
           // Calculate MRs per group
           const mrsPerGroup = groups.map(group => ({
             groupName: group.name,
@@ -65,12 +77,12 @@ export const useMRStats = ({ contacts, groups }: UseMRStatsProps) => {
             totalMRs: apiStats.total,
             totalGroups,
             activeMRs,
+            metaStatusSummary,
             mrsPerGroup,
             mostActiveGroup,
-            consentSummary: apiStats.consentSummary || {
-              consented: 0,
-              notConsented: 0,
-              deleted: 0
+            consentSummary: {
+              consented: apiStats.consentSummary?.consented || 0,
+              notConsented: apiStats.consentSummary?.notConsented || 0
             }
           });
         } else {
@@ -78,6 +90,12 @@ export const useMRStats = ({ contacts, groups }: UseMRStatsProps) => {
           const totalMRs = contacts.length;
           const totalGroups = groups.length;
           const activeMRs = contacts.length;
+          
+          // Calculate MetaStatus summary for fallback
+          const metaStatusSummary = {
+            active: contacts.filter(contact => contact.metaStatus === 'ACTIVE').length,
+            error: contacts.filter(contact => contact.metaStatus === 'ERROR').length
+          };
           
           const mrsPerGroup = groups.map(group => ({
             groupName: group.name,
@@ -93,12 +111,12 @@ export const useMRStats = ({ contacts, groups }: UseMRStatsProps) => {
             totalMRs,
             totalGroups,
             activeMRs,
+            metaStatusSummary,
             mrsPerGroup,
             mostActiveGroup,
             consentSummary: {
               consented: 0,
-              notConsented: 0,
-              deleted: 0
+              notConsented: 0
             }
           });
         }
@@ -109,6 +127,12 @@ export const useMRStats = ({ contacts, groups }: UseMRStatsProps) => {
         const totalMRs = contacts.length;
         const totalGroups = groups.length;
         const activeMRs = contacts.length;
+        
+        // Calculate MetaStatus summary for error fallback
+        const metaStatusSummary = {
+          active: contacts.filter(contact => contact.metaStatus === 'ACTIVE').length,
+          error: contacts.filter(contact => contact.metaStatus === 'ERROR').length
+        };
         
         const mrsPerGroup = groups.map(group => ({
           groupName: group.name,
@@ -124,12 +148,12 @@ export const useMRStats = ({ contacts, groups }: UseMRStatsProps) => {
           totalMRs,
           totalGroups,
           activeMRs,
+          metaStatusSummary,
           mrsPerGroup,
           mostActiveGroup,
           consentSummary: {
             consented: 0,
-            notConsented: 0,
-            deleted: 0
+            notConsented: 0
           }
         });
       } finally {
@@ -159,11 +183,18 @@ export const useMRStats = ({ contacts, groups }: UseMRStatsProps) => {
       textColor: 'text-green-600'
     },
     {
-      title: 'Active MRs',
-      value: stats.activeMRs,
-      icon: 'Users',
-      color: 'bg-purple-100',
-      textColor: 'text-purple-600'
+      title: 'Active (Meta)',
+      value: stats.metaStatusSummary.active,
+      icon: 'CheckCircle',
+      color: 'bg-green-100',
+      textColor: 'text-green-600'
+    },
+    {
+      title: 'Error (Meta)',
+      value: stats.metaStatusSummary.error,
+      icon: 'XCircle',
+      color: 'bg-red-100',
+      textColor: 'text-red-600'
     }
   ];
 
@@ -181,13 +212,6 @@ export const useMRStats = ({ contacts, groups }: UseMRStatsProps) => {
       icon: 'Users', 
       color: 'bg-yellow-100',
       textColor: 'text-yellow-600'
-    },
-    {
-      title: 'Deleted',
-      value: stats.consentSummary.deleted,
-      icon: 'Users',
-      color: 'bg-red-100',
-      textColor: 'text-red-600'
     }
   ];
 

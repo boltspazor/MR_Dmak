@@ -317,13 +317,14 @@ export class MRController {
         groupId, 
         search, 
         consentStatus, 
+        metaStatus,
         sortField, 
         sortDirection 
       } = req.query;
 
       logger.info('Exporting MRs with filters', { 
         userId: req.user.userId, 
-        filters: { groupId, search, consentStatus, sortField, sortDirection }
+        filters: { groupId, search, consentStatus, metaStatus, sortField, sortDirection }
       });
 
       // Get all MRs matching the current filters (no pagination for export)
@@ -348,6 +349,100 @@ export class MRController {
       return res.send(csvData);
     } catch (error: any) {
       logger.error('Failed to export MRs', { error: error.message, query: req.query });
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  async getMRsWithStatus(req: any, res: Response) {
+    try {
+      const { 
+        groupId, 
+        search, 
+        page = 1, 
+        limit = 50, 
+        statusFilter,
+        metaStatus,
+        sortField, 
+        sortDirection,
+        offset 
+      } = req.query;
+
+      // If getAll is true, return all MRs without pagination for CSV export
+      if (req.query.getAll === 'true') {
+        const result = await mrService.getMRsWithStatus(
+          req.user.userId,
+          groupId,
+          search,
+          undefined, // No limit for getAll
+          undefined, // No offset for getAll
+          statusFilter,
+          metaStatus,
+          sortField,
+          sortDirection
+        );
+        return res.json({
+          message: 'MRs with status retrieved successfully',
+          data: result.mrs,
+          total: result.total,
+          getAll: true
+        });
+      }
+
+      // Standard pagination - support both offset and page-based pagination
+      const actualOffset = offset ? parseInt(offset) : (parseInt(page) - 1) * parseInt(limit);
+      
+      const result = await mrService.getMRsWithStatus(
+        req.user.userId,
+        groupId,
+        search,
+        parseInt(limit),
+        actualOffset,
+        statusFilter,
+        metaStatus,
+        sortField,
+        sortDirection
+      );
+
+      return res.json({
+        message: 'MRs with status retrieved successfully',
+        data: result.mrs,
+        pagination: result.pagination
+      });
+    } catch (error: any) {
+      logger.error('Failed to get MRs with status', { error: error.message, query: req.query });
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  async updateMRStatus(req: any, res: Response) {
+    try {
+      const { id } = req.params;
+      const { metaStatus, appStatus } = req.body;
+
+      if (metaStatus) {
+        await mrService.updateMRMetaStatus(id, metaStatus);
+      }
+
+      if (appStatus) {
+        await mrService.updateMRAppStatus(id, appStatus);
+      }
+
+      return res.json({ message: 'MR status updated successfully' });
+    } catch (error: any) {
+      logger.error('Failed to update MR status', { error: error.message, mrId: req.params.id });
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  async resetMRStatus(req: any, res: Response) {
+    try {
+      const { id } = req.params;
+      const { statusType = 'both' } = req.body;
+
+      await mrService.resetMRStatus(id, statusType);
+      return res.json({ message: 'MR status reset successfully' });
+    } catch (error: any) {
+      logger.error('Failed to reset MR status', { error: error.message, mrId: req.params.id });
       return res.status(500).json({ error: error.message });
     }
   }

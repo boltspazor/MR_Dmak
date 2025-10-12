@@ -6,28 +6,30 @@ interface AdvancedSearchProps {
   searchTerm: string;
   groupFilter: string;
   consentStatusFilter: string;
+  metaStatusFilter: string;
   groups: Group[];
   onSearchChange: (searchTerm: string) => void;
   onGroupChange: (groupFilter: string) => void;
   onConsentStatusChange: (consentStatus: string) => void;
+  onMetaStatusChange: (metaStatus: string) => void;
   onClearFilters: () => void;
   filteredCount: number;
   totalCount: number;
-  onDownloadCSV?: () => void;
 }
 
 const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
   searchTerm,
   groupFilter,
   consentStatusFilter,
+  metaStatusFilter,
   groups,
   onSearchChange,
   onGroupChange,
   onConsentStatusChange,
+  onMetaStatusChange,
   onClearFilters,
   filteredCount,
-  totalCount,
-  onDownloadCSV
+  totalCount
 }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [searchInput, setSearchInput] = useState(searchTerm);
@@ -62,7 +64,7 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
     setSearchInput(value);
   };
 
-  const hasActiveFilters = searchTerm || groupFilter || consentStatusFilter;
+  const hasActiveFilters = searchTerm || groupFilter || consentStatusFilter || metaStatusFilter;
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
@@ -145,8 +147,21 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
               </select>
             </div>
 
-            {/* Spacer for alignment */}
-            <div></div>
+            {/* Meta Status Filter */}
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">
+                Filter by Meta Status
+              </label>
+              <select
+                value={metaStatusFilter}
+                onChange={(e) => onMetaStatusChange(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white text-gray-900"
+              >
+                <option value="">All Meta Status</option>
+                <option value="ACTIVE">Active</option>
+                <option value="ERROR">Error</option>
+              </select>
+            </div>
           </div>
 
           {/* Results Summary and Actions */}
@@ -166,18 +181,6 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
                 >
                   <X className="h-4 w-4" />
                   <span>Clear Filters</span>
-                </button>
-              )}
-
-              {onDownloadCSV && (
-                <button
-                  onClick={onDownloadCSV}
-                  className="flex items-center space-x-2 px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-200 font-medium shadow-sm hover:shadow-md"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <span>Download CSV</span>
                 </button>
               )}
             </div>
@@ -202,10 +205,9 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
                     Group: {groups.find(g => g.id === groupFilter)?.name || groupFilter}
                   </span>
                 )}
-                {consentStatusFilter && (
+                {metaStatusFilter && (
                   <span className="px-2 py-1 bg-white rounded-md border border-indigo-200">
-                    Status: {consentStatusFilter === 'not_requested' ? 'Not Approved' : 
-                             consentStatusFilter.charAt(0).toUpperCase() + consentStatusFilter.slice(1)}
+                    Meta Status: {metaStatusFilter === 'ACTIVE' ? 'Active' : 'Error'}
                   </span>
                 )}
               </div>

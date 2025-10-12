@@ -8,6 +8,7 @@ export interface MRPaginationParams {
   search?: string;
   groupId?: string;
   consentStatus?: string;
+  metaStatus?: string;
   sortField?: string;
   sortDirection?: 'asc' | 'desc';
 }
@@ -33,7 +34,7 @@ export const useMRData = () => {
       setLoading(true);
       setError(null);
 
-      const { page = 1, limit = 30, search, groupId, consentStatus, sortField, sortDirection } = params;
+      const { page = 1, limit = 30, search, groupId, consentStatus, metaStatus, sortField, sortDirection } = params;
 
       const queryParams = new URLSearchParams();
       // Convert page to offset for backend compatibility
@@ -44,13 +45,16 @@ export const useMRData = () => {
       if (search) queryParams.append('search', search);
       if (groupId) queryParams.append('groupId', groupId);
       if (consentStatus) queryParams.append('consentStatus', consentStatus);
+      if (metaStatus) queryParams.append('metaStatus', metaStatus);
       if (sortField) queryParams.append('sortField', sortField);
       if (sortDirection) queryParams.append('sortDirection', sortDirection);
 
-      const response = await api.get(`/mrs?${queryParams}`);
+      const response = await api.get(`/mrs/with-status?${queryParams}`);
       const { data: mrs, pagination: paginationInfo } = response.data;
 
-      // Transform backend MR data to Contact format
+      console.log('MR API Response:', { mrs, paginationInfo });
+
+      // Transform backend MR data to Contact format with status information
       const transformedContacts: Contact[] = mrs.map((mr: any) => ({
         id: mr._id || mr.id,
         mrId: mr.mrId,
@@ -59,8 +63,15 @@ export const useMRData = () => {
         phone: mr.phone,
         group: mr.group?.groupName || 'Default Group',
         comments: mr.comments || '',
-        consentStatus: mr.consentStatus || 'not_requested'
+        consentStatus: mr.consentStatus || 'not_requested',
+        metaStatus: mr.metaStatus || 'ACTIVE',
+        appStatus: mr.appStatus || mr.consentStatus || 'not_requested',
+        lastErrorMessage: mr.lastErrorMessage,
+        lastErrorAt: mr.lastErrorAt ? new Date(mr.lastErrorAt) : undefined,
+        lastErrorCampaignId: mr.lastErrorCampaignId
       }));
+
+      console.log('Transformed Contacts:', transformedContacts);
 
       setContacts(transformedContacts);
       setPagination(paginationInfo);

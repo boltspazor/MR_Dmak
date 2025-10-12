@@ -7,6 +7,11 @@ export interface Contact {
   group: string;
   comments?: string;
   consentStatus?: 'pending' | 'approved' | 'rejected' | 'not_requested';
+  metaStatus?: 'ACTIVE' | 'ERROR'; // Previous failed message status
+  appStatus?: 'pending' | 'approved' | 'rejected' | 'not_requested'; // App status = consent status
+  lastErrorMessage?: string;
+  lastErrorAt?: Date;
+  lastErrorCampaignId?: string;
 }
 
 export interface Group {

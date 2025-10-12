@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, FileText } from 'lucide-react';
+import { Users, FileText, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { SkeletonStats } from '../ui/SkeletonLoader';
 
 interface StatCard {
@@ -18,6 +18,9 @@ interface MRStatsCardsProps {
 const iconMap = {
   Users: Users,
   FileText: FileText,
+  CheckCircle: CheckCircle,
+  XCircle: XCircle,
+  Clock: Clock,
 };
 
 const MRStatsCards: React.FC<MRStatsCardsProps> = ({ summaryItems, loading = false }) => {
@@ -26,7 +29,7 @@ const MRStatsCards: React.FC<MRStatsCardsProps> = ({ summaryItems, loading = fal
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       {summaryItems.map((item, index) => {
         const IconComponent = iconMap[item.icon as keyof typeof iconMap];
         

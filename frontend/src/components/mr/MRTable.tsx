@@ -1,5 +1,5 @@
 import React from 'react';
-import { Edit, Trash2, ChevronUp, ChevronDown, User, Phone, Users, MessageSquare, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Edit, Trash2, ChevronUp, ChevronDown, User, Phone, Users, MessageSquare, CheckCircle, XCircle, Clock, Settings } from 'lucide-react';
 import { SkeletonTable } from '../ui/SkeletonLoader';
 
 interface Contact {
@@ -11,6 +11,11 @@ interface Contact {
   group: string;
   comments?: string;
   consentStatus?: 'pending' | 'approved' | 'rejected' | 'not_requested';
+  metaStatus?: 'ACTIVE' | 'ERROR';
+  appStatus?: 'pending' | 'approved' | 'rejected' | 'not_requested';
+  lastErrorMessage?: string;
+  lastErrorAt?: Date;
+  lastErrorCampaignId?: string;
 }
 
 interface MRTableProps {
@@ -20,10 +25,12 @@ interface MRTableProps {
   onSort: (field: keyof Contact) => void;
   sortField: keyof Contact;
   sortDirection: 'asc' | 'desc';
+  onResetStatus?: (contact: Contact, statusType: 'metaStatus' | 'appStatus' | 'both') => void;
+  onManageStatus?: (contact: Contact) => void;
   loading?: boolean;
 }
 
-const MRTable: React.FC<MRTableProps> = ({ contacts, onEdit, onDelete, onSort, sortField, sortDirection, loading = false }) => {
+const MRTable: React.FC<MRTableProps> = ({ contacts, onEdit, onDelete, onSort, sortField, sortDirection, onResetStatus, onManageStatus, loading = false }) => {
   const SortableHeader: React.FC<{ field: keyof Contact; children: React.ReactNode; icon?: React.ReactNode }> = ({ field, children, icon }) => (
     <th 
       className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors duration-200"
@@ -80,7 +87,13 @@ const MRTable: React.FC<MRTableProps> = ({ contacts, onEdit, onDelete, onSort, s
             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
               <div className="flex items-center space-x-2">
                 <CheckCircle className="h-4 w-4 text-gray-400" />
-                <span>Consent Status</span>
+                <span>App Status</span>
+              </div>
+            </th>
+            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              <div className="flex items-center space-x-2">
+                <MessageSquare className="h-4 w-4 text-gray-400" />
+                <span>Meta Status</span>
               </div>
             </th>
             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
@@ -127,9 +140,9 @@ const MRTable: React.FC<MRTableProps> = ({ contacts, onEdit, onDelete, onSort, s
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 {(() => {
-                  const consentStatus = contact.consentStatus || 'not_requested';
+                  const appStatus = contact.appStatus || contact.consentStatus || 'not_requested';
                   
-                  const getStatusIcon = (status: string) => {
+                  const getAppStatusIcon = (status: string) => {
                     switch (status) {
                       case 'approved':
                         return <CheckCircle className="h-3 w-3" />;
@@ -142,7 +155,7 @@ const MRTable: React.FC<MRTableProps> = ({ contacts, onEdit, onDelete, onSort, s
                     }
                   };
                   
-                  const getStatusColor = (status: string) => {
+                  const getAppStatusColor = (status: string) => {
                     switch (status) {
                       case 'approved':
                         return 'bg-green-100 text-green-800';
@@ -155,7 +168,7 @@ const MRTable: React.FC<MRTableProps> = ({ contacts, onEdit, onDelete, onSort, s
                     }
                   };
                   
-                  const getStatusText = (status: string) => {
+                  const getAppStatusText = (status: string) => {
                     switch (status) {
                       case 'approved':
                         return 'Approved';
@@ -169,15 +182,60 @@ const MRTable: React.FC<MRTableProps> = ({ contacts, onEdit, onDelete, onSort, s
                   };
                   
                   return (
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(consentStatus)}`}>
-                      {getStatusIcon(consentStatus)}
-                      <span className="ml-1">{getStatusText(consentStatus)}</span>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getAppStatusColor(appStatus)}`}>
+                      {getAppStatusIcon(appStatus)}
+                      <span className="ml-1">{getAppStatusText(appStatus)}</span>
+                    </span>
+                  );
+                })()}
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                {(() => {
+                  const metaStatus = contact.metaStatus || 'ACTIVE';
+                  
+                  const getMetaStatusIcon = (status: string) => {
+                    switch (status) {
+                      case 'ACTIVE':
+                        return <CheckCircle className="h-3 w-3" />;
+                      case 'ERROR':
+                        return <XCircle className="h-3 w-3" />;
+                      default:
+                        return <CheckCircle className="h-3 w-3" />;
+                    }
+                  };
+                  
+                  const getMetaStatusColor = (status: string) => {
+                    switch (status) {
+                      case 'ACTIVE':
+                        return 'bg-green-100 text-green-800';
+                      case 'ERROR':
+                        return 'bg-red-100 text-red-800';
+                      default:
+                        return 'bg-green-100 text-green-800';
+                    }
+                  };
+                  
+                  const getMetaStatusText = (status: string) => {
+                    switch (status) {
+                      case 'ACTIVE':
+                        return 'Active';
+                      case 'ERROR':
+                        return 'Error';
+                      default:
+                        return 'Active';
+                    }
+                  };
+                  
+                  return (
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getMetaStatusColor(metaStatus)}`}>
+                      {getMetaStatusIcon(metaStatus)}
+                      <span className="ml-1">{getMetaStatusText(metaStatus)}</span>
                     </span>
                   );
                 })()}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <div className="flex space-x-3">
+                <div className="flex space-x-2">
                   <button
                     onClick={() => onEdit(contact)}
                     className="text-indigo-600 hover:text-indigo-900 p-2 rounded-lg hover:bg-indigo-50 transition-all duration-200"
@@ -192,6 +250,24 @@ const MRTable: React.FC<MRTableProps> = ({ contacts, onEdit, onDelete, onSort, s
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
+                  {onManageStatus && (
+                    <button
+                      onClick={() => onManageStatus(contact)}
+                      className="text-blue-600 hover:text-blue-900 p-2 rounded-lg hover:bg-blue-50 transition-all duration-200"
+                      title="Manage Status"
+                    >
+                      <Settings className="h-4 w-4" />
+                    </button>
+                  )}
+                  {contact.metaStatus === 'ERROR' && onResetStatus && (
+                    <button
+                      onClick={() => onResetStatus(contact, 'metaStatus')}
+                      className="text-green-600 hover:text-green-900 p-2 rounded-lg hover:bg-green-50 transition-all duration-200"
+                      title="Reset Meta Status"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               </td>
             </tr>

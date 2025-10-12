@@ -385,6 +385,36 @@ export class WebhookController {
                 $set: { sentCount: sent, failedCount: failed, pendingCount: pending }
               });
             }
+
+            // Update MR meta status if message failed
+            if (messageStatus.toLowerCase() === 'failed' && updatedLog.mrId) {
+              try {
+                const MRService = (await import('../../services/mr.service')).MRService;
+                const mrService = new MRService();
+                
+                const errorMessage = updateData.errorMessage || 'Message failed to deliver';
+                const campaignId = campaignIdObj.toString();
+                
+                await mrService.updateMRMetaStatus(
+                  updatedLog.mrId, 
+                  'ERROR', 
+                  errorMessage, 
+                  campaignId
+                );
+                
+                logger.info('Updated MR meta status due to message failure', {
+                  mrId: updatedLog.mrId,
+                  phoneNumber: updatedLog.phoneNumber,
+                  errorMessage,
+                  campaignId
+                });
+              } catch (error) {
+                logger.error('Failed to update MR meta status', {
+                  mrId: updatedLog.mrId,
+                  error: error.message
+                });
+              }
+            }
           }
         } else {
           logger.warn('Message log not found for webhook update', { 

@@ -985,4 +985,135 @@ export class MRService {
       throw error;
     }
   }
+
+  /**
+   * Update MR meta status when message sending fails
+   */
+  async updateMRMetaStatus(mrId: string, status: 'ACTIVE' | 'ERROR', errorMessage?: string, campaignId?: string): Promise<void> {
+    try {
+      const updateData: any = {
+        metaStatus: status,
+        lastErrorAt: new Date()
+      };
+
+      if (errorMessage) {
+        updateData.lastErrorMessage = errorMessage;
+      }
+
+      if (campaignId) {
+        updateData.lastErrorCampaignId = campaignId;
+      }
+
+      await MedicalRepresentative.findByIdAndUpdate(mrId, updateData);
+      logger.info('Updated MR meta status', { mrId, status, errorMessage, campaignId });
+    } catch (error) {
+      logger.error('Failed to update MR meta status', { mrId, status, error });
+      throw error;
+    }
+  }
+
+  /**
+   * Update MR app status (consent status)
+   */
+  async updateMRAppStatus(mrId: string, status: 'pending' | 'approved' | 'rejected' | 'not_requested'): Promise<void> {
+    try {
+      await MedicalRepresentative.findByIdAndUpdate(mrId, { appStatus: status });
+      logger.info('Updated MR app status (consent)', { mrId, status });
+    } catch (error) {
+      logger.error('Failed to update MR app status', { mrId, status, error });
+      throw error;
+    }
+  }
+
+  /**
+   * Get MRs with status information
+   */
+  async getMRsWithStatus(userId: string, groupId?: string, search?: string, limit?: number, offset?: number, statusFilter?: string, metaStatus?: string, sortField?: string, sortDirection?: 'asc' | 'desc') {
+    try {
+      const query: any = { marketingManagerId: userId, deletedAt: { $exists: false } };
+
+      if (groupId) {
+        query.groupId = groupId;
+      }
+
+      if (search) {
+        query.$or = [
+          { mrId: { $regex: search, $options: 'i' } },
+          { firstName: { $regex: search, $options: 'i' } },
+          { lastName: { $regex: search, $options: 'i' } },
+          { phone: { $regex: search, $options: 'i' } }
+        ];
+      }
+
+      // Apply status filter
+      if (statusFilter) {
+        if (statusFilter === 'metaStatus') {
+          query.metaStatus = 'ERROR';
+        } else if (statusFilter === 'appStatus') {
+          query.appStatus = { $in: ['approved', 'rejected'] };
+        }
+      }
+
+      // Apply metaStatus filter if provided
+      if (metaStatus) {
+        query.metaStatus = metaStatus;
+      }
+
+      const sortOptions: any = {};
+      if (sortField) {
+        sortOptions[sortField] = sortDirection === 'desc' ? -1 : 1;
+      }
+      sortOptions.createdAt = -1; // Default sort by creation date
+
+      const mrs = await MedicalRepresentative.find(query)
+        .populate('groupId', 'groupName description')
+        .populate('marketingManagerId', 'name email')
+        .sort(sortOptions)
+        .limit(limit || 50)
+        .skip(offset || 0);
+
+      const total = await MedicalRepresentative.countDocuments(query);
+
+      return {
+        mrs,
+        total,
+        pagination: {
+          page: Math.floor((offset || 0) / (limit || 50)) + 1,
+          limit: limit || 50,
+          total,
+          totalPages: Math.ceil(total / (limit || 50)),
+          hasMore: (offset || 0) + (limit || 50) < total
+        }
+      };
+    } catch (error) {
+      logger.error('Failed to get MRs with status', { userId, groupId, search, error });
+      throw error;
+    }
+  }
+
+  /**
+   * Reset MR status
+   */
+  async resetMRStatus(mrId: string, statusType: 'metaStatus' | 'appStatus' | 'both'): Promise<void> {
+    try {
+      const updateData: any = {};
+      
+      if (statusType === 'metaStatus' || statusType === 'both') {
+        updateData.metaStatus = 'ACTIVE';
+        updateData.lastErrorMessage = undefined;
+        updateData.lastErrorAt = undefined;
+        updateData.lastErrorCampaignId = undefined;
+      }
+      
+      if (statusType === 'appStatus' || statusType === 'both') {
+        updateData.appStatus = 'not_requested';
+      }
+
+      await MedicalRepresentative.findByIdAndUpdate(mrId, updateData);
+      logger.info('Reset MR status', { mrId, statusType });
+    } catch (error) {
+      logger.error('Failed to reset MR status', { mrId, statusType, error });
+      throw error;
+    }
+  }
 }

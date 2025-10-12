@@ -10,6 +10,11 @@ export interface IMedicalRepresentative extends Document {
   comments?: string;
   groupId?: mongoose.Types.ObjectId;
   marketingManagerId: mongoose.Types.ObjectId; // Associate MR with marketing manager
+  metaStatus?: 'ACTIVE' | 'ERROR'; // Meta status for previous failed message status
+  appStatus?: 'pending' | 'approved' | 'rejected' | 'not_requested'; // App status = consent status
+  lastErrorMessage?: string; // Last error message that caused status change
+  lastErrorAt?: Date; // When the last error occurred
+  lastErrorCampaignId?: string; // Campaign ID where last error occurred
   createdAt: Date;
   updatedAt: Date;
 }
@@ -58,6 +63,27 @@ const medicalRepresentativeSchema = new Schema<IMedicalRepresentative>({
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: true
+  },
+  metaStatus: {
+    type: String,
+    enum: ['ACTIVE', 'ERROR'],
+    default: 'ACTIVE'
+  },
+  appStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected', 'not_requested'],
+    default: 'not_requested'
+  },
+  lastErrorMessage: {
+    type: String,
+    trim: true
+  },
+  lastErrorAt: {
+    type: Date
+  },
+  lastErrorCampaignId: {
+    type: String,
+    trim: true
   }
 }, {
   timestamps: true,

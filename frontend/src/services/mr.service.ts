@@ -9,25 +9,35 @@ export interface MRData {
   phone: string;
   group: string;
   comments?: string;
+  metaStatus?: 'ACTIVE' | 'ERROR';
+  appStatus?: 'pending' | 'approved' | 'rejected' | 'not_requested';
+  lastErrorMessage?: string;
+  lastErrorAt?: Date;
+  lastErrorCampaignId?: string;
 }
 
 class MRService {
 
-  // Get all MRs from API
+  // Get all MRs from API with status information
   async getAllMRs(): Promise<MRData[]> {
     try {
-      const response = await api.get('/mrs');
+      const response = await api.get('/mrs/with-status');
       const mrsData = response.data.data || response.data || [];
       
-      // Transform the data to match the expected format
+      // Transform the data to match the expected format with status information
       return mrsData.map((mr: any) => ({
         id: mr._id || mr.id,
         mrId: mr.mrId || mr.id,
         firstName: mr.firstName || '',
         lastName: mr.lastName || '',
         phone: mr.phone || '',
-        group: mr.groupName || mr.group || 'Default Group',
-        comments: mr.comments || ''
+        group: mr.group?.groupName || mr.groupName || mr.group || 'Default Group',
+        comments: mr.comments || '',
+        metaStatus: mr.metaStatus || 'ACTIVE',
+        appStatus: mr.appStatus || mr.consentStatus || 'not_requested',
+        lastErrorMessage: mr.lastErrorMessage,
+        lastErrorAt: mr.lastErrorAt ? new Date(mr.lastErrorAt) : undefined,
+        lastErrorCampaignId: mr.lastErrorCampaignId
       }));
     } catch (error) {
       console.error('Error loading MRs from API:', error);

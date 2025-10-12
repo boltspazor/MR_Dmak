@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Contact, Group } from '../../types/mr.types';
 import AdvancedSearch from './AdvancedSearch';
 import MRTable from './MRTable';
+import MRStatusDialog from './MRStatusDialog';
 import {PaginationControls} from '../PaginationControls';
 import { useMRData, MRPaginationParams } from '../../hooks/useMRData';
+import { mrApi } from '../../api/mr';
 
 interface MRListProps {
   // Remove contacts from props since we're fetching them internally
@@ -19,6 +21,7 @@ interface MRListProps {
     searchTerm?: string,
     groupFilter?: string,
     consentStatusFilter?: string,
+    metaStatusFilter?: string,
     sortField?: string,
     sortDirection?: 'asc' | 'desc'
   ) => void;
@@ -48,6 +51,11 @@ const MRList: React.FC<MRListProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [groupFilter, setGroupFilter] = useState('');
   const [consentStatusFilter, setConsentStatusFilter] = useState('');
+  const [metaStatusFilter, setMetaStatusFilter] = useState('');
+  
+  // Status management state
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
 
   // URL parameter management
   useEffect(() => {
@@ -55,11 +63,13 @@ const MRList: React.FC<MRListProps> = ({
     const urlSearch = urlParams.get('search') || '';
     const urlGroup = urlParams.get('group') || '';
     const urlConsent = urlParams.get('consent') || '';
+    const urlMetaStatus = urlParams.get('metaStatus') || '';
     const urlPage = parseInt(urlParams.get('page') || '1');
 
     setSearchTerm(urlSearch);
     setGroupFilter(urlGroup);
     setConsentStatusFilter(urlConsent);
+    setMetaStatusFilter(urlMetaStatus);
     setCurrentPage(urlPage);
   }, []);
 
@@ -69,11 +79,12 @@ const MRList: React.FC<MRListProps> = ({
     if (searchTerm) urlParams.set('search', searchTerm);
     if (groupFilter) urlParams.set('group', groupFilter);
     if (consentStatusFilter) urlParams.set('consent', consentStatusFilter);
+    if (metaStatusFilter) urlParams.set('metaStatus', metaStatusFilter);
     if (currentPage > 1) urlParams.set('page', currentPage.toString());
 
     const newUrl = urlParams.toString() ? `${window.location.pathname}?${urlParams.toString()}` : window.location.pathname;
     window.history.replaceState({}, '', newUrl);
-  }, [searchTerm, groupFilter, consentStatusFilter, currentPage]);
+  }, [searchTerm, groupFilter, consentStatusFilter, metaStatusFilter, currentPage]);
 
   // Fetch data when filters or pagination changes
   useEffect(() => {
@@ -90,6 +101,7 @@ const MRList: React.FC<MRListProps> = ({
     // Add server-side sorting
     params.sortField = sortField;
     params.sortDirection = sortDirection;
+    if (metaStatusFilter) params.metaStatus = metaStatusFilter;
 
     console.log('MRList: Fetching with params:', params);
     fetchContacts(params);
@@ -106,6 +118,7 @@ const MRList: React.FC<MRListProps> = ({
       if (searchTerm) params.search = searchTerm;
       if (groupFilter) params.groupId = groupFilter;
       if (consentStatusFilter) params.consentStatus = consentStatusFilter;
+      if (metaStatusFilter) params.metaStatus = metaStatusFilter;
       params.sortField = sortField;
       params.sortDirection = sortDirection;
 
@@ -131,6 +144,7 @@ const MRList: React.FC<MRListProps> = ({
     if (searchTerm) params.search = searchTerm;
     if (groupFilter) params.groupId = groupFilter;
     if (consentStatusFilter) params.consentStatus = consentStatusFilter;
+    if (metaStatusFilter) params.metaStatus = metaStatusFilter;
     params.sortField = sortField;
     params.sortDirection = sortDirection;
 
@@ -158,6 +172,7 @@ const MRList: React.FC<MRListProps> = ({
           searchTerm,
           groupFilter,
           consentStatusFilter,
+          metaStatusFilter,
           sortField as string,
           sortDirection
         );
@@ -182,8 +197,48 @@ const MRList: React.FC<MRListProps> = ({
     setSearchTerm('');
     setGroupFilter('');
     setConsentStatusFilter('');
+    setMetaStatusFilter('');
     setSearchFilters({});
     setCurrentPage(1);
+  };
+
+  // Status management handlers
+  const handleManageStatus = (contact: Contact) => {
+    setSelectedContact(contact);
+    setStatusDialogOpen(true);
+  };
+
+  const handleResetStatus = async (contact: Contact, statusType: 'metaStatus' | 'appStatus' | 'both') => {
+    try {
+      await mrApi.resetStatus(contact.id, statusType);
+      // Refresh the data after status reset
+      await fetchContacts({
+        page: currentPage,
+        limit: 30,
+        search: searchTerm,
+        groupId: groupFilter,
+        consentStatus: consentStatusFilter,
+        metaStatus: metaStatusFilter,
+        sortField,
+        sortDirection
+      });
+    } catch (error) {
+      console.error('Failed to reset status:', error);
+    }
+  };
+
+  const handleStatusUpdated = async () => {
+    // Refresh the data after status update
+    await fetchContacts({
+      page: currentPage,
+      limit: 30,
+      search: searchTerm,
+      groupId: groupFilter,
+      consentStatus: consentStatusFilter,
+      metaStatus: metaStatusFilter,
+      sortField,
+      sortDirection
+    });
   };
 
   return (
@@ -193,6 +248,7 @@ const MRList: React.FC<MRListProps> = ({
         searchTerm={searchTerm}
         groupFilter={groupFilter}
         consentStatusFilter={consentStatusFilter}
+        metaStatusFilter={metaStatusFilter}
         groups={groups}
         onSearchChange={(term) => {
           setSearchTerm(term);
@@ -206,10 +262,13 @@ const MRList: React.FC<MRListProps> = ({
           setConsentStatusFilter(consentStatus);
           setCurrentPage(1); // Reset to first page
         }}
+        onMetaStatusChange={(metaStatus) => {
+          setMetaStatusFilter(metaStatus);
+          setCurrentPage(1); // Reset to first page
+        }}
         onClearFilters={clearFilters}
         filteredCount={total ?? 0}
         totalCount={total ?? 0}
-        onDownloadCSV={handleExportAll}
       />
 
       {/* MR Table */}
@@ -221,6 +280,8 @@ const MRList: React.FC<MRListProps> = ({
           onSort={handleSort}
           sortField={sortField}
           sortDirection={sortDirection}
+          onResetStatus={handleResetStatus}
+          onManageStatus={handleManageStatus}
           loading={dataLoading || loading} // Use both loading states
         />
 
@@ -237,7 +298,7 @@ const MRList: React.FC<MRListProps> = ({
         <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
           <div className="flex justify-between items-center">
             <div className="text-sm text-gray-500">
-              {(searchTerm || groupFilter || consentStatusFilter) ? (
+              {(searchTerm || groupFilter || consentStatusFilter || metaStatusFilter) ? (
                 <>
                   Found [{total ?? 0}] filtered MR{(total ?? 0) !== 1 ? 's' : ''}
                   <span className="ml-1 text-gray-400">
@@ -270,6 +331,14 @@ const MRList: React.FC<MRListProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Status Management Dialog */}
+      <MRStatusDialog
+        isOpen={statusDialogOpen}
+        onClose={() => setStatusDialogOpen(false)}
+        contact={selectedContact}
+        onStatusUpdated={handleStatusUpdated}
+      />
     </div>
   );
 };

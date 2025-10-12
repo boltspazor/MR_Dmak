@@ -9,6 +9,8 @@ export interface MRData {
   address?: string;
   comments?: string;
   groupId?: string;
+  metaStatus?: 'ACTIVE' | 'ERROR';
+  appStatus?: 'pending' | 'approved' | 'rejected' | 'not_requested';
 }
 
 export interface MRResponse {
@@ -31,6 +33,11 @@ export interface MRResponse {
     name: string;
     email: string;
   };
+  metaStatus?: 'ACTIVE' | 'ERROR';
+  appStatus?: 'pending' | 'approved' | 'rejected' | 'not_requested';
+  lastErrorMessage?: string;
+  lastErrorAt?: Date;
+  lastErrorCampaignId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -117,6 +124,46 @@ export const mrApi = {
   // Search MRs
   search: async (query: string): Promise<{ success: boolean; data: MRResponse[] }> => {
     const response = await api.get(`/mrs/search?q=${encodeURIComponent(query)}`);
+    return response.data;
+  },
+
+  // Get MRs with status information
+  getWithStatus: async (params?: {
+    groupId?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+    statusFilter?: string;
+    sortField?: string;
+    sortDirection?: 'asc' | 'desc';
+    getAll?: boolean;
+  }): Promise<{ success: boolean; data: MRResponse[]; pagination?: any; total?: number }> => {
+    const queryParams = new URLSearchParams();
+    if (params?.groupId) queryParams.append('groupId', params.groupId);
+    if (params?.search) queryParams.append('search', params.search);
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.statusFilter) queryParams.append('statusFilter', params.statusFilter);
+    if (params?.sortField) queryParams.append('sortField', params.sortField);
+    if (params?.sortDirection) queryParams.append('sortDirection', params.sortDirection);
+    if (params?.getAll) queryParams.append('getAll', 'true');
+
+    const response = await api.get(`/mrs/with-status?${queryParams.toString()}`);
+    return response.data;
+  },
+
+  // Update MR status
+  updateStatus: async (id: string, statusData: {
+    metaStatus?: 'ACTIVE' | 'ERROR';
+    appStatus?: 'pending' | 'approved' | 'rejected' | 'not_requested';
+  }): Promise<{ success: boolean; message: string }> => {
+    const response = await api.put(`/mrs/${id}/status`, statusData);
+    return response.data;
+  },
+
+  // Reset MR status
+  resetStatus: async (id: string, statusType: 'metaStatus' | 'appStatus' | 'both' = 'both'): Promise<{ success: boolean; message: string }> => {
+    const response = await api.put(`/mrs/${id}/reset-status`, { statusType });
     return response.data;
   }
 };
