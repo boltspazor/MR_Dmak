@@ -7,13 +7,15 @@ interface UseMRManagementProps {
   onUpdateContact: (id: string, contactData: Omit<Contact, 'id'>) => Promise<void>;
   onDeleteContact: (id: string) => Promise<void>;
   onDeleteSuccess?: () => void; // Add callback for successful deletion
+  onUpdateSuccess?: () => void; // Add callback for successful update
 }
 
 export const useMRManagement = ({ 
   contacts, 
   onUpdateContact, 
   onDeleteContact,
-  onDeleteSuccess
+  onDeleteSuccess,
+  onUpdateSuccess
 }: UseMRManagementProps) => {
   const { alert } = useConfirm();
   
@@ -48,6 +50,12 @@ export const useMRManagement = ({
 
       setEditingContact(null);
       setIsEditDialogOpen(false);
+      
+      // Call success callback if provided
+      if (onUpdateSuccess) {
+        onUpdateSuccess();
+      }
+      
       await alert('MR updated successfully!', 'success');
     } catch (error: any) {
       console.error('Error updating contact:', error);
@@ -69,7 +77,7 @@ export const useMRManagement = ({
       // Re-throw the error with cleaned message so EditMRDialog can catch it
       throw new Error(errorMessage);
     }
-  }, [editingContact, contacts, onUpdateContact, alert]);
+  }, [editingContact, contacts, onUpdateContact, onUpdateSuccess, alert]);
 
   const handleDeleteClick = useCallback((contact: Contact) => {
     setContactToDelete(contact);

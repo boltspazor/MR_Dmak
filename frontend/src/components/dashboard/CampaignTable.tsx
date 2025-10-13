@@ -41,6 +41,8 @@ interface CampaignTableProps {
   page?: number;
   totalPages?: number;
   onPageChange?: (page: number) => void;
+  statusFilter?: string; // Add status filter prop
+  searchTerm?: string; // Add search term prop
 }
 
 const CampaignTable: React.FC<CampaignTableProps> = ({
@@ -54,7 +56,9 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
   templateLoading = false,
   page,
   totalPages,
-  onPageChange
+  onPageChange,
+  statusFilter,
+  searchTerm
 }) => {
   // CSV Export functionality
   const { exportToCSV, canExport } = useCSVExportWithMapping({
@@ -134,15 +138,22 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
   }
 
   if (campaigns.length === 0) {
+    // Determine if filters are active
+    const hasActiveFilters = statusFilter || searchTerm;
+    
     return (
       <div className="bg-white rounded-lg border">
         <div className="p-8 text-center">
           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <MessageSquare className="h-8 w-8 text-gray-400" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No campaigns found</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            {hasActiveFilters ? 'No campaigns match your filters' : 'No campaigns found'}
+          </h3>
           <p className="text-gray-500 text-sm">
-            Create your first campaign to get started.
+            {hasActiveFilters 
+              ? `No campaigns found with ${statusFilter ? `status "${statusFilter}"` : ''}${statusFilter && searchTerm ? ' and ' : ''}${searchTerm ? `search term "${searchTerm}"` : ''}. Try adjusting your filters.`
+              : 'Create your first campaign to get started.'}
           </p>
         </div>
       </div>

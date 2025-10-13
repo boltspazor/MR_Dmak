@@ -70,7 +70,8 @@ const SimpleMRTool: React.FC = () => {
     contacts,
     onUpdateContact: updateContact,
     onDeleteContact: deleteContact,
-    onDeleteSuccess: () => setRefreshTrigger(prev => prev + 1) // Trigger refresh in MRList
+    onDeleteSuccess: () => setRefreshTrigger(prev => prev + 1), // Trigger refresh in MRList
+    onUpdateSuccess: () => setRefreshTrigger(prev => prev + 1) // Trigger refresh after update
   });
 
   // UI state
@@ -97,6 +98,7 @@ const SimpleMRTool: React.FC = () => {
   // Contact management functions
   const handleAddMRSuccess = async () => {
     await fetchContacts();
+    setRefreshTrigger(prev => prev + 1); // Trigger refresh to update MRList
   };
 
   const handleTemplateDownload = () => {

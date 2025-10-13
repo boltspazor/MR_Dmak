@@ -55,13 +55,8 @@ const StepTwoCampaignCreation: React.FC<StepTwoCampaignCreationProps> = ({
           console.log('Loaded recipient lists:', listsData);
           setRecipientLists(listsData);
           
-          // Auto-select the first recipient list if available
-          if (listsData.length > 0) {
-            console.log('Auto-selecting first recipient list:', listsData[0]);
-            setSelectedRecipientList(listsData[0]);
-          } else {
-            setSelectedRecipientList(null);
-          }
+          // Do not auto-select any recipient list - user must choose manually
+          setSelectedRecipientList(null);
         } catch (error: any) {
           console.error('Failed to load recipient lists:', error);
           toast.error('Failed to load recipient lists');

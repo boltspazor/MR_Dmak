@@ -391,6 +391,8 @@ const Dashboard: React.FC = () => {
           page={currentPage}
           totalPages={totalPages}
           onPageChange={handlePageChange}
+          statusFilter={statusFilter}
+          searchTerm={searchTerm}
         />
 
         <TemplatePreviewDialog
