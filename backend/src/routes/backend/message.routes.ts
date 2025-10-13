@@ -15,6 +15,7 @@ router.post('/campaigns', upload.any(), messageController.createCampaign);
 router.post('/upload-image', upload.single('image'), messageController.uploadImage);
 router.get('/campaigns', messageController.getAllCampaigns);
 router.get('/campaigns/stats', messageController.getCampaignStats);
+router.get('/campaigns/count', messageController.getCampaignsCount);
 router.get('/campaign/:campaignId/report', messageController.getCampaignReport);
 
 export default router;

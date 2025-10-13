@@ -138,6 +138,31 @@ export class MessageService {
     }
   }
 
+  /**
+   * Return the total number of campaigns for the given user.
+   * This is a small, fast endpoint used by the frontend to display overall totals.
+   */
+  async getCampaignsCount(userId: string) {
+    try {
+      // Build a resilient filter: match either ObjectId(_id) or string-stored createdBy
+      const mongoose = (await import('mongoose')).default;
+      const filters: any[] = [];
+      if (mongoose.isValidObjectId(userId)) {
+        filters.push({ createdBy: new mongoose.Types.ObjectId(userId) });
+      }
+      // Also match string form (in case createdBy was stored as string in some records)
+      filters.push({ createdBy: userId });
+
+      const query = filters.length > 1 ? { $or: filters } : filters[0];
+      const campaigns = await MessageCampaign.countDocuments(query);
+      logger.info('getCampaignsCount result', { userId, query, count: campaigns });
+      return campaigns;
+    } catch (error) {
+      logger.error('Failed to get campaigns count', { userId, error });
+      throw error;
+    }
+  }
+
   async getCampaignReport(campaignId: string) {
     try {
       const campaign = await MessageCampaign.findOne({ campaignId: campaignId })

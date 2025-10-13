@@ -70,6 +70,41 @@ export class MessageController {
     }
   }
 
+  async getCampaignsCount(req: any, res: Response) {
+    try {
+      const userPayload = req.user || {};
+      const userId = userPayload.userId || userPayload.id || userPayload._id;
+      if (!userId) {
+        logger.warn('getCampaignsCount: no user id found on request');
+        return res.status(400).json({ error: 'User id not found in token' });
+      }
+      logger.info('getCampaignsCount called', { userId: userId, userPayload: { email: userPayload.email, role: userPayload.role } });
+      let count = await messageService.getCampaignsCount(userId);
+
+      // If no campaigns found and we have an email in the token, try to resolve user by email
+      if ((count === 0 || count === undefined) && userPayload.email) {
+        try {
+          const User = (await import('../../models/User')).default;
+          const userDoc = await User.findOne({ email: userPayload.email }).select('_id').lean();
+          if (userDoc && userDoc._id) {
+            const altCount = await messageService.getCampaignsCount(userDoc._id.toString());
+            if (typeof altCount === 'number' && altCount > 0) {
+              logger.info('getCampaignsCount: fallback by email found campaigns', { email: userPayload.email, userIdFound: userDoc._id.toString(), count: altCount });
+              return res.json({ success: true, data: { total: altCount } });
+            }
+          }
+        } catch (fallbackError: any) {
+          logger.warn('getCampaignsCount fallback by email failed', { error: fallbackError?.message });
+        }
+      }
+
+      return res.json({ success: true, data: { total: count } });
+    } catch (error: any) {
+      logger.error('Failed to get campaigns count', { error: error.message });
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
   async createCampaign(req: any, res: Response) {
     try {
       logger.info('🚀 Campaign creation started', {

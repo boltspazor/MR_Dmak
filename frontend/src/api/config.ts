@@ -45,9 +45,9 @@ const getApiBaseUrl = () => {
     return envUrl;
   }
   
-  // Default to localhost for development
+  // Default to localhost for development (backend listens on port 5000 by default)
   console.log('🏠 Using localhost for development');
-  return 'http://localhost:5001/api';
+  return 'http://localhost:5000/api';
 };
 
 export const API_BASE_URL = getApiBaseUrl();

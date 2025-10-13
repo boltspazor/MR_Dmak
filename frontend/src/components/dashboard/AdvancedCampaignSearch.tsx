@@ -161,8 +161,17 @@ const AdvancedCampaignSearch: React.FC<AdvancedCampaignSearchProps> = ({
           <div className="flex items-center justify-between pt-4 border-t border-gray-100">
             <div className="bg-gradient-to-r from-indigo-50 to-blue-50 px-4 py-3 rounded-xl border border-indigo-100">
               <div className="text-sm text-gray-700">
-                Showing <span className="font-bold text-indigo-600">{filteredCount}</span> of{' '}
-                <span className="font-bold text-gray-900">{totalCount}</span> Campaigns
+                {hasActiveFilters ? (
+                  <>
+                    Showing <span className="font-bold text-indigo-600">{filteredCount}</span> out of{' '}
+                    <span className="font-bold text-gray-900">{totalCount}</span> total campaigns
+                  </>
+                ) : (
+                  <>
+                    Showing <span className="font-bold text-indigo-600">{filteredCount}</span>{' '}
+                    {filteredCount === 1 ? 'campaign' : 'campaigns'}
+                  </>
+                )}
               </div>
             </div>
             

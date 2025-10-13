@@ -152,6 +152,22 @@ export const campaignsAPI = {
   },
 
   /**
+   * Get campaign stats (including total campaigns for current user)
+   */
+  getCampaignStats: async (): Promise<{ campaigns: number; total: number; sent: number; successRate: string }> => {
+    const response = await api.get('/campaigns/stats');
+    return response.data;
+  },
+
+  /**
+   * Get unfiltered campaign count for current user
+   */
+  getCampaignCount: async (): Promise<{ total: number }> => {
+    const response = await api.get('/campaigns/count');
+    return response.data.data;
+  },
+
+  /**
    * Get campaign by ID with full details
    */
   getCampaignById: async (campaignId: string): Promise<CampaignProgress> => {

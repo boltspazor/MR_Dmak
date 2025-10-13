@@ -43,6 +43,7 @@ interface CampaignTableProps {
   onPageChange?: (page: number) => void;
   statusFilter?: string; // Add status filter prop
   searchTerm?: string; // Add search term prop
+  filteredTotal?: number; // number of campaigns matching current filters (server-provided total)
 }
 
 const CampaignTable: React.FC<CampaignTableProps> = ({
@@ -59,6 +60,8 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
   onPageChange,
   statusFilter,
   searchTerm
+  ,
+  filteredTotal
 }) => {
   // CSV Export functionality
   const { exportToCSV, canExport } = useCSVExportWithMapping({
@@ -138,8 +141,48 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
   }
 
   if (campaigns.length === 0) {
-    // Determine if filters are active
-    const hasActiveFilters = statusFilter || searchTerm;
+    // Create status-specific messages
+    const getStatusMessage = () => {
+      if (statusFilter) {
+        const statusMessages: { [key: string]: { title: string; description: string } } = {
+          'pending': {
+            title: 'No Pending Campaigns',
+            description: 'There are no campaigns with pending status at the moment.'
+          },
+          'completed': {
+            title: 'No Completed Campaigns',
+            description: 'There are no campaigns that have been completed yet.'
+          },
+          'in-progress': {
+            title: 'No In-Progress Campaigns',
+            description: 'There are no campaigns currently in progress.'
+          },
+          'failed': {
+            title: 'No Failed Campaigns',
+            description: 'There are no campaigns with failed status.'
+          }
+        };
+        
+        const statusKey = statusFilter.toLowerCase();
+        if (statusMessages[statusKey]) {
+          return statusMessages[statusKey];
+        }
+      }
+      
+      if (searchTerm) {
+        return {
+          title: 'No campaigns match your search',
+          description: `No campaigns found matching "${searchTerm}". Try a different search term.`
+        };
+      }
+      
+      return {
+        title: 'No campaigns found',
+        description: 'Create your first campaign to get started.'
+      };
+    };
+    
+  const message = getStatusMessage();
     
     return (
       <div className="bg-white rounded-lg border">
@@ -148,13 +191,14 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
             <MessageSquare className="h-8 w-8 text-gray-400" />
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            {hasActiveFilters ? 'No campaigns match your filters' : 'No campaigns found'}
+            {message.title}
           </h3>
           <p className="text-gray-500 text-sm">
-            {hasActiveFilters 
-              ? `No campaigns found with ${statusFilter ? `status "${statusFilter}"` : ''}${statusFilter && searchTerm ? ' and ' : ''}${searchTerm ? `search term "${searchTerm}"` : ''}. Try adjusting your filters.`
-              : 'Create your first campaign to get started.'}
+            {message.description}
           </p>
+          {typeof filteredTotal === 'number' && (
+            <p className="text-gray-400 text-xs mt-2">Showing 0 out of {filteredTotal} total campaigns</p>
+          )}
         </div>
       </div>
     );

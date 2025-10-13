@@ -44,6 +44,7 @@ const MRList: React.FC<MRListProps> = ({
 }) => {
   // Use contacts from the hook instead of props
   const { contacts, fetchContacts, fetchAllContacts, pagination, total, loading: dataLoading } = useMRData();
+  const [overallTotalMRs, setOverallTotalMRs] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchFilters, setSearchFilters] = useState<MRPaginationParams>({});
 
@@ -106,6 +107,23 @@ const MRList: React.FC<MRListProps> = ({
     console.log('MRList: Fetching with params:', params);
     fetchContacts(params);
   }, [currentPage, searchTerm, groupFilter, consentStatusFilter, sortField, sortDirection, searchFilters, fetchContacts]);
+
+  // Fetch overall MR total for AdvancedSearch (unfiltered count)
+  useEffect(() => {
+    let mounted = true;
+    const loadStats = async () => {
+      try {
+        const res = await mrApi.getStats();
+        if (mounted && res?.data?.total !== undefined) {
+          setOverallTotalMRs(res.data.total);
+        }
+      } catch (err) {
+        console.warn('Failed to load MR stats for overall total:', err);
+      }
+    };
+    loadStats();
+    return () => { mounted = false; };
+  }, []);
 
   // Refresh data when refreshTrigger changes (after deletion)
   useEffect(() => {
@@ -268,7 +286,7 @@ const MRList: React.FC<MRListProps> = ({
         }}
         onClearFilters={clearFilters}
         filteredCount={total ?? 0}
-        totalCount={total ?? 0}
+        totalCount={overallTotalMRs ?? (total ?? 0)}
       />
 
       {/* MR Table */}

@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import { CampaignController } from '../../controllers/backend/campaign.controller';
+import { MessageController } from '../../controllers/backend/message.controller';
 import { authenticateToken } from '../../middleware/auth.middleware';
 
 const router = Router();
+const messageController = new MessageController();
 
 // Apply authentication middleware to all routes
 router.use(authenticateToken);
@@ -11,6 +13,8 @@ router.use(authenticateToken);
 router.post('/', CampaignController.createCampaign);
 router.post('/with-mrs', CampaignController.createCampaignWithMRs);
 router.get('/statuses', CampaignController.getAvailableStatuses);
+// Provide a lightweight endpoint for the frontend to fetch unfiltered campaign totals
+router.get('/count', messageController.getCampaignsCount.bind(messageController));
 router.get('/export', CampaignController.exportCampaigns);
 router.get('/', CampaignController.getCampaigns);
 router.get('/:campaignId', CampaignController.getCampaignById);

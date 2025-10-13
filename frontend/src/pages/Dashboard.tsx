@@ -64,6 +64,7 @@ const Dashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [overallTotal, setOverallTotal] = useState<number>(0);
 
 
   // Enhanced campaigns hook for server-side operations
@@ -90,7 +91,7 @@ const Dashboard: React.FC = () => {
     setCurrentPage(urlPage);
     setSortField(urlSort as keyof CampaignRecord);
     setSortDirection(urlDirection);
-  }, []);
+  }, [searchTerm, statusFilter]);
 
   // Update URL when filters change
   useEffect(() => {
@@ -122,7 +123,42 @@ const Dashboard: React.FC = () => {
     console.log('Dashboard: Fetching with params:', params);
     console.log('Current filters - searchTerm:', searchTerm, 'statusFilter:', statusFilter);
     fetchCampaigns(params);
+    // Debug: log current filters and server-side totals when available
+    console.log('Dashboard: requested params', params);
+    // eslint-disable-next-line no-console
+    (async () => {
+      try {
+        const res = await campaignsAPI.getCampaigns({ page: 1, limit: 1 });
+        console.log('Dashboard: overall total (unfiltered) from /campaigns:', res?.pagination?.total);
+      } catch (err) {
+        try {
+          const stats = await campaignsAPI.getCampaignStats();
+          console.log('Dashboard: overall total (fallback) from /campaigns/stats:', stats?.campaigns || stats?.total);
+        } catch (e) {
+          console.warn('Dashboard: failed to fetch debug overall totals', e);
+        }
+      }
+    })();
   }, [currentPage, searchTerm, statusFilter, sortField, sortDirection, fetchCampaigns]);
+
+  // Fetch overall total campaigns (no filters) so UI can show "X out of Y total campaigns"
+  useEffect(() => {
+    let mounted = true;
+    const fetchOverall = async () => {
+      try {
+        const res = await campaignsAPI.getCampaignCount();
+        if (mounted && res && typeof res.total === 'number') {
+          setOverallTotal(res.total);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch overall campaigns total:', err);
+      }
+    };
+
+    fetchOverall();
+
+    return () => { mounted = false; };
+  }, []);
 
   const loadCampaigns = async () => {
     try {
@@ -168,9 +204,8 @@ const Dashboard: React.FC = () => {
 
   // Load campaigns whenever hook data changes (page changes or refetch)
   useEffect(() => {
-    if (apiCampaigns && apiCampaigns.length > 0) {
-      loadCampaigns();
-    }
+    // Always call loadCampaigns so empty API results clear the UI when filters yield no campaigns
+    loadCampaigns();
   }, [apiCampaigns]);
 
 
@@ -375,9 +410,13 @@ const Dashboard: React.FC = () => {
             window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
           }}
           onClearFilters={clearFilters}
-          filteredCount={campaigns.length}
-          totalCount={total || 0}
+          // filteredCount should be the number of campaigns matching the active filters (server-provided total)
+          filteredCount={total || 0}
+          // totalCount should be the overall number of campaigns (no filters)
+          totalCount={overallTotal}
         />
+
+        {/* Totals are shown inside the AdvancedCampaignSearch component */}
 
         <CampaignTable
           campaigns={sortedCampaigns}
@@ -393,6 +432,7 @@ const Dashboard: React.FC = () => {
           onPageChange={handlePageChange}
           statusFilter={statusFilter}
           searchTerm={searchTerm}
+          filteredTotal={total}
         />
 
         <TemplatePreviewDialog
