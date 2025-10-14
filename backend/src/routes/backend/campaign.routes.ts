@@ -13,8 +13,8 @@ router.use(authenticateToken);
 router.post('/', CampaignController.createCampaign);
 router.post('/with-mrs', CampaignController.createCampaignWithMRs);
 router.get('/statuses', CampaignController.getAvailableStatuses);
-// Provide a lightweight endpoint for the frontend to fetch unfiltered campaign totals
-router.get('/count', messageController.getCampaignsCount.bind(messageController));
+// Route to get total number of campaigns for the dashboard
+router.get('/total-count', CampaignController.getCampaignsTotalCount);
 router.get('/export', CampaignController.exportCampaigns);
 router.get('/', CampaignController.getCampaigns);
 router.get('/:campaignId', CampaignController.getCampaignById);

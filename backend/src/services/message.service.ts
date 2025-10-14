@@ -154,9 +154,15 @@ export class MessageService {
       filters.push({ createdBy: userId });
 
       const query = filters.length > 1 ? { $or: filters } : filters[0];
-      const campaigns = await MessageCampaign.countDocuments(query);
-      logger.info('getCampaignsCount result', { userId, query, count: campaigns });
-      return campaigns;
+      // Count in both MessageCampaign (legacy) and Campaign (new) collections to be safe
+      const CampaignModel = (await import('../models/Campaign')).default;
+      const [messageCampaignsCount, campaignModelCount] = await Promise.all([
+        MessageCampaign.countDocuments(query),
+        CampaignModel.countDocuments(query)
+      ]);
+      const total = (messageCampaignsCount || 0) + (campaignModelCount || 0);
+      logger.info('getCampaignsCount result', { userId, query, messageCampaignsCount, campaignModelCount, total });
+      return total;
     } catch (error) {
       logger.error('Failed to get campaigns count', { userId, error });
       throw error;

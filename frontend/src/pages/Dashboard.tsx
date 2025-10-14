@@ -128,12 +128,12 @@ const Dashboard: React.FC = () => {
     // eslint-disable-next-line no-console
     (async () => {
       try {
-        const res = await campaignsAPI.getCampaigns({ page: 1, limit: 1 });
-        console.log('Dashboard: overall total (unfiltered) from /campaigns:', res?.pagination?.total);
+        const totalRes = await campaignsAPI.getCampaignTotalCount();
+        console.log('Dashboard: overall total (unfiltered) from /campaigns/total-count:', totalRes?.total);
       } catch (err) {
         try {
-          const stats = await campaignsAPI.getCampaignStats();
-          console.log('Dashboard: overall total (fallback) from /campaigns/stats:', stats?.campaigns || stats?.total);
+          const res = await campaignsAPI.getCampaigns({ page: 1, limit: 1 });
+          console.log('Dashboard: overall total (fallback) from /campaigns:', res?.pagination?.total);
         } catch (e) {
           console.warn('Dashboard: failed to fetch debug overall totals', e);
         }
@@ -146,9 +146,17 @@ const Dashboard: React.FC = () => {
     let mounted = true;
     const fetchOverall = async () => {
       try {
-        const res = await campaignsAPI.getCampaignCount();
+        // Prefer the lightweight total-count endpoint
+        const res = await campaignsAPI.getCampaignTotalCount();
         if (mounted && res && typeof res.total === 'number') {
           setOverallTotal(res.total);
+          return;
+        }
+
+        // Fallback to older endpoint
+        const fallback = await campaignsAPI.getCampaignCount();
+        if (mounted && fallback && typeof fallback.total === 'number') {
+          setOverallTotal(fallback.total);
         }
       } catch (err) {
         console.warn('Failed to fetch overall campaigns total:', err);

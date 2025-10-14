@@ -168,6 +168,14 @@ export const campaignsAPI = {
   },
 
   /**
+   * New: Get total number of campaigns (lightweight)
+   */
+  getCampaignTotalCount: async (): Promise<{ total: number }> => {
+    const response = await api.get('/campaigns/total-count');
+    return response.data.data;
+  },
+
+  /**
    * Get campaign by ID with full details
    */
   getCampaignById: async (campaignId: string): Promise<CampaignProgress> => {

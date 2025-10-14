@@ -78,6 +78,20 @@ export class CampaignController {
   }
 
   /**
+   * Get total number of campaigns (lightweight) for the authenticated user
+   */
+  static async getCampaignsTotalCount(req: AuthenticatedRequest, res: Response): Promise<Response> {
+    try {
+      const userId = req.user?.userId;
+      const total = await Campaign.countDocuments({ createdBy: userId, isActive: true });
+      return res.json({ success: true, data: { total } });
+    } catch (error) {
+      logger.error('Error getting campaigns total count:', error);
+      return res.status(500).json({ success: false, message: 'Failed to get campaigns total count' });
+    }
+  }
+
+  /**
    * Create a new campaign
    */
   static async createCampaign(req: AuthenticatedRequest, res: Response): Promise<Response> {

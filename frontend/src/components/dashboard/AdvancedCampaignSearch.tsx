@@ -29,6 +29,7 @@ const AdvancedCampaignSearch: React.FC<AdvancedCampaignSearchProps> = ({
   const [availableStatuses, setAvailableStatuses] = useState<Array<{value: string, label: string}>>(
     CAMPAIGN_STATUSES.map(s => ({ value: s.value, label: s.label }))
   );
+  const [overallTotal, setOverallTotal] = useState<number | null>(totalCount ?? null);
 
   // Fetch available statuses from backend
   useEffect(() => {
@@ -56,6 +57,32 @@ const AdvancedCampaignSearch: React.FC<AdvancedCampaignSearchProps> = ({
   useEffect(() => {
     setSearchInput(searchTerm);
   }, [searchTerm]);
+
+  // Fetch overall unfiltered campaign total from backend
+  useEffect(() => {
+    let mounted = true;
+    const loadOverall = async () => {
+      try {
+        // Prefer the lightweight endpoint
+        const res = await campaignsAPI.getCampaignTotalCount();
+        if (mounted && res && typeof res.total === 'number') {
+          setOverallTotal(res.total);
+          return;
+        }
+
+        // Fallback
+        const fallback = await campaignsAPI.getCampaignCount();
+        if (mounted && fallback && typeof fallback.total === 'number') {
+          setOverallTotal(fallback.total);
+        }
+      } catch (err) {
+        console.warn('Failed to load overall campaign total:', err);
+        // keep prop fallback
+      }
+    };
+    loadOverall();
+    return () => { mounted = false; };
+  }, []);
 
   // Real-time search with debounce
   useEffect(() => {
@@ -164,7 +191,7 @@ const AdvancedCampaignSearch: React.FC<AdvancedCampaignSearchProps> = ({
                 {hasActiveFilters ? (
                   <>
                     Showing <span className="font-bold text-indigo-600">{filteredCount}</span> out of{' '}
-                    <span className="font-bold text-gray-900">{totalCount}</span> total campaigns
+                    <span className="font-bold text-gray-900">{overallTotal ?? totalCount}</span> total campaigns
                   </>
                 ) : (
                   <>

@@ -9,6 +9,7 @@ interface CampaignFiltersProps {
   onStatusFilterChange: (value: string) => void;
   campaigns: CampaignRecord[];
   filteredCount: number;
+  totalCount?: number | null;
 }
 
 const CampaignFilters: React.FC<CampaignFiltersProps> = ({
@@ -17,9 +18,10 @@ const CampaignFilters: React.FC<CampaignFiltersProps> = ({
   onSearchChange,
   onStatusFilterChange,
   campaigns,
-  filteredCount
+  filteredCount,
+  totalCount
 }) => {
-  const totalCount = campaigns.length;
+  const overallTotal = typeof totalCount === 'number' ? totalCount : campaigns.length;
 
   const statusOptions = [
     { value: 'all', label: 'All Campaigns' },
@@ -39,7 +41,7 @@ const CampaignFilters: React.FC<CampaignFiltersProps> = ({
           Filters
         </h3>
         <p className="text-sm text-gray-600">
-          Showing {filteredCount} of {totalCount} campaigns
+          Showing {filteredCount} of {overallTotal} campaigns
         </p>
       </div>
       

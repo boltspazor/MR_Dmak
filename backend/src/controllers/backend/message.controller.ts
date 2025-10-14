@@ -98,6 +98,17 @@ export class MessageController {
         }
       }
 
+      // Diagnostic: if still zero, sample some campaigns to inspect createdBy values
+      if (count === 0) {
+        try {
+          const MessageCampaign = (await import('../../models/MessageCampaign')).default;
+          const sample = await MessageCampaign.find().limit(10).select('createdBy campaignId').lean();
+          logger.info('getCampaignsCount diagnostic sample - createdBy values', { sample });
+        } catch (sampleError: any) {
+          logger.warn('getCampaignsCount diagnostic sample failed', { error: sampleError?.message });
+        }
+      }
+
       return res.json({ success: true, data: { total: count } });
     } catch (error: any) {
       logger.error('Failed to get campaigns count', { error: error.message });
