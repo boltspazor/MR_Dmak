@@ -20,7 +20,8 @@ import {
   campaignRoutes,
   campaignProgressRoutes,
   cacheRoutes,
-  consentRoutes
+  consentRoutes,
+  templateImageRoutes
 } from './routes/backend';
 
 // Meta routes
@@ -92,7 +93,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Static files
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/uploads', express.static(path.join(__dirname, '../src/routes/uploads')));
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -112,6 +113,7 @@ app.use('/api/cache', cacheRoutes);
 app.use('/api/consent', consentRoutes);
 app.use('/api/webhook', webhookRoutes);
 app.use('/api/whatsapp-marketing', whatsappMarketingRoutes);
+app.use('/api/templates/img', templateImageRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -109,5 +109,11 @@ export const templateApi = {
   getByCategory: async (category: string): Promise<{ success: boolean; data: TemplateResponse[] }> => {
     const response = await api.get(`/templates/category/${encodeURIComponent(category)}`);
     return response.data;
+  },
+
+  // Sync Meta templates
+  syncMetaTemplates: async (): Promise<{ success: boolean; message: string; data?: any }> => {
+    const response = await api.post('/meta-templates/sync');
+    return response.data;
   }
 };

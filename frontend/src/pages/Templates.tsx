@@ -5,24 +5,13 @@ import toast from 'react-hot-toast';
 import { Template } from '../types';
 import StandardHeader from '../components/StandardHeader';
 import CommonFeatures from '../components/CommonFeatures';
-import { useConfirm } from '../contexts/ConfirmContext';
-import TemplatePreviewDialog from '../components/ui/TemplatePreviewDialog';
-import TemplateRecipientUploadV2 from '../components/ui/TemplateRecipientUploadV2';
-import { useTemplateRecipients } from '../hooks/useTemplateRecipients';
-import { extractTemplateParameters, escapeCSV } from '../utils/csvValidation';
-
-// Import new components
 import TemplateFilters from '../components/templates/TemplateFilters';
 import TemplateTable from '../components/templates/TemplateTable';
 import DeleteConfirmationDialog from '../components/templates/DeleteConfirmationDialog';
-
-// Import custom hooks
+import TemplatePreviewManager, { useTemplatePreview } from '../components/templates/TemplatePreviewManager';
 import { useTemplates } from '../hooks/useTemplates';
 
-
 const Templates: React.FC = () => {
-  const { alert } = useConfirm();
-
   // Custom hooks
   const {
     templates,
@@ -34,50 +23,45 @@ const Templates: React.FC = () => {
     exportTemplatesToPDF
   } = useTemplates();
 
+  // Template preview hook
+  const {
+    showPreview,
+    previewTemplate,
+    showRecipientUpload,
+    uploadTemplate,
+    previewRecipients,
+    openPreview,
+    closePreview,
+    openRecipientUpload,
+    closeRecipientUpload,
+    downloadRecipientListFormat,
+    refreshRecipients,
+  } = useTemplatePreview();
+
   // Local state
   const [nameSearchTerm, setNameSearchTerm] = useState('');
   const [contentSearchTerm, setContentSearchTerm] = useState('');
   const [sortField, setSortField] = useState<'name' | 'createdAt'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [templateFilter, setTemplateFilter] = useState<'all' | 'utility' | 'marketing'>('all');
 
-  const [showPreview, setShowPreview] = useState(false);
-  const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
+  // Delete dialog state
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState<Template | null>(null);
   const [isDeletingTemplate, setIsDeletingTemplate] = useState(false);
-  const [showRecipientUpload, setShowRecipientUpload] = useState(false);
-  const [uploadTemplate, setUploadTemplate] = useState<Template | null>(null);
-  const [templateFilter, setTemplateFilter] = useState<'all' | 'utility' | 'marketing'>('all');
 
   // Helper functions to categorize templates
-  /**
-   * Determines if a template should be classified as a utility template
-   * Uses Meta platform category flags for accurate classification
-   */
   const isUtilityTemplate = (template: Template): boolean => {
-    // For Meta templates, use the official Meta category flag
-    // UTILITY and AUTHENTICATION categories are considered utility templates
     if (template.isMetaTemplate === true) {
       return template.metaCategory === 'UTILITY' || template.metaCategory === 'AUTHENTICATION';
     }
-    
-    // For non-Meta (custom) templates, default to utility
-    // This can be customized based on business requirements
     return true;
   };
 
-  /**
-   * Determines if a template should be classified as a marketing template
-   * Uses Meta platform category flags for accurate classification
-   */
   const isMarketingTemplate = (template: Template): boolean => {
-    // For Meta templates, use the official Meta category flag
     if (template.isMetaTemplate === true) {
       return template.metaCategory === 'MARKETING';
     }
-    
-    // For non-Meta (custom) templates, default behavior
-    // This can be customized based on business requirements
     return false;
   };
 
@@ -85,8 +69,6 @@ const Templates: React.FC = () => {
   useEffect(() => {
     loadTemplates();
   }, [loadTemplates]);
-
-
 
   // Memoize filtered and sorted templates
   const filteredTemplates = useMemo(() => {
@@ -105,28 +87,21 @@ const Templates: React.FC = () => {
             }
           });
 
-        // Template category filtering
         const isUtility = isUtilityTemplate(template);
         const isMarketing = isMarketingTemplate(template);
-        
 
-        
-        // For Meta templates, use strict Meta categorization
-        // For non-Meta templates, apply fallback logic
-        const finalIsUtility = template.isMetaTemplate === true 
+        const finalIsUtility = template.isMetaTemplate === true
           ? (template.metaCategory === 'UTILITY' || template.metaCategory === 'AUTHENTICATION')
           : isUtility || (!isUtility && !isMarketing);
-        const finalIsMarketing = template.isMetaTemplate === true 
-          ? template.metaCategory === 'MARKETING' 
+        const finalIsMarketing = template.isMetaTemplate === true
+          ? template.metaCategory === 'MARKETING'
           : isMarketing;
-        
+
         const matchesTemplateType = templateFilter === 'all' ||
           (templateFilter === 'utility' && finalIsUtility) ||
           (templateFilter === 'marketing' && finalIsMarketing);
 
-        const matchesMetaStatus = true; // No longer using meta status filtering
-
-        return matchesNameSearch && matchesContentSearch && matchesTemplateType && matchesMetaStatus;
+        return matchesNameSearch && matchesContentSearch && matchesTemplateType;
       })
       .sort((a, b) => {
         let aValue: string | number;
@@ -165,31 +140,27 @@ const Templates: React.FC = () => {
     if (!templateToDelete) return;
 
     setIsDeletingTemplate(true);
-    
+
     try {
       let result;
-      
-      // Use Meta API deletion for Meta templates
+
       if (templateToDelete.isMetaTemplate) {
         result = await templateApi.deleteWithMeta(templateToDelete._id);
-        
+
         if (result.metaDeletion.success) {
           console.log('Meta API deletion:', result.metaDeletion.message);
         } else {
           console.warn('Meta API deletion warning:', result.metaDeletion.message);
         }
       } else {
-        // Use regular deletion for custom templates
         result = await templateApi.delete(templateToDelete._id);
       }
-      
+
       setShowDeleteDialog(false);
       setTemplateToDelete(null);
-      
-      // Refresh templates list
+
       await loadTemplates();
-      
-      // Show success message with Meta deletion info if applicable
+
       let successMessage = 'Template deleted successfully!';
       const resultWithMeta = result as any;
       if (templateToDelete.isMetaTemplate && resultWithMeta.metaDeletion) {
@@ -201,7 +172,7 @@ const Templates: React.FC = () => {
           successMessage += ` Meta API warning: ${resultWithMeta.metaDeletion.message}`;
         }
       }
-      
+
       toast.success(successMessage, { duration: 5000 });
     } catch (error: any) {
       console.error('Error deleting template:', error);
@@ -212,39 +183,33 @@ const Templates: React.FC = () => {
     }
   };
 
-  const handlePreview = (template: Template) => {
-    setPreviewTemplate(template);
-    setShowPreview(true);
+  const handleSyncMetaTemplates = async () => {
+    try {
+      toast.loading('Syncing Meta templates...', { id: 'sync-toast' });
+
+      const result = await templateApi.syncMetaTemplates();
+
+      if (result.success) {
+        await loadTemplates();
+
+        toast.success(result.message || 'Meta templates synced successfully!', {
+          id: 'sync-toast',
+          duration: 3000
+        });
+      } else {
+        toast.error(result.error || 'Failed to sync Meta templates', {
+          id: 'sync-toast',
+          duration: 5000
+        });
+      }
+    } catch (error: any) {
+      console.error('Error syncing Meta templates:', error);
+      toast.error(error.response?.data?.error || 'Failed to sync Meta templates', {
+        id: 'sync-toast',
+        duration: 5000
+      });
+    }
   };
-
-  const handleBulkUploadRecipients = (template: Template) => {
-    setUploadTemplate(template);
-    setShowRecipientUpload(true);
-  };
-
-  const downloadRecipientListFormat = (template: Template) => {
-    const parameters = extractTemplateParameters(template.content);
-    const csvRows = [];
-
-    const row1 = [template.name, ...Array(Math.max(parameters.length + 2, 10)).fill('')];
-    csvRows.push(row1.map(escapeCSV).join(','));
-
-    const row2 = ['mrId', 'firstName', 'lastName', ...parameters];
-    csvRows.push(row2.map(escapeCSV).join(','));
-
-    const csvContent = csvRows.join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${template.name.replace(/\s+/g, '_')}_recipient_list_format.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
-
-  // Get recipients for the preview template
-  const { recipients: previewRecipients, fetchRecipients: fetchPreviewRecipients } = useTemplateRecipients(previewTemplate?._id);
 
   const summaryItems = [
     {
@@ -276,18 +241,15 @@ const Templates: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Main Content */}
       <div className="p-8">
         <StandardHeader pageTitle="Templates" />
 
-        {/* Main Content Area */}
         <CommonFeatures
           summaryItems={summaryItems}
           onExportCSV={exportTemplatesToCSV}
           onExportPDF={exportTemplatesToPDF}
         >
           <div className="space-y-6">
-            {/* Filters and Search */}
             <TemplateFilters
               nameSearchTerm={nameSearchTerm}
               setNameSearchTerm={setNameSearchTerm}
@@ -299,53 +261,30 @@ const Templates: React.FC = () => {
               totalCount={templates.length}
             />
 
-            {/* Templates Table */}
             <TemplateTable
               templates={filteredTemplates}
               sortField={sortField}
               sortDirection={sortDirection}
               onSort={handleSort}
-              onPreview={handlePreview}
+              onPreview={openPreview}
               onExportPNG={exportTemplateAsPNG}
               onDelete={handleDeleteClick}
+              onSync={handleSyncMetaTemplates}
             />
           </div>
         </CommonFeatures>
 
-        {/* Template Preview Modal */}
-        <TemplatePreviewDialog
+        {/* Template Preview Manager - handles all preview logic */}
+        <TemplatePreviewManager
           isOpen={showPreview}
-          onClose={() => setShowPreview(false)}
-          template={{
-            ...previewTemplate,
-            recipientLists: previewRecipients
-          } as Template}
-          onDownloadRecipientList={downloadRecipientListFormat}
-          onBulkUploadRecipients={handleBulkUploadRecipients}
+          template={previewTemplate}
+          onClose={closePreview}
+          variant="full"
           showDownloadButton={true}
           showBulkUploadButton={true}
-          variant="full"
           onUpdateTemplate={updateTemplate}
+          onUploadSuccess={() => loadTemplates()}
         />
-
-        {/* Recipient Upload Modal */}
-        {showRecipientUpload && uploadTemplate && (
-          <TemplateRecipientUploadV2
-            template={uploadTemplate}
-            showError={(_title: string, message: string, isError?: boolean) => {
-              alert(message, isError ? 'error' : 'info');
-            }}
-            onUploadSuccess={() => {
-              if (previewTemplate?._id === uploadTemplate._id) {
-                fetchPreviewRecipients(previewTemplate._id);
-              }
-            }}
-            onClose={() => {
-              setShowRecipientUpload(false);
-              setUploadTemplate(null);
-            }}
-          />
-        )}
 
         {/* Delete Confirmation Dialog */}
         <DeleteConfirmationDialog

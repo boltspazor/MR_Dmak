@@ -12,3 +12,4 @@ export { default as reportRoutes } from './report.routes';
 export { default as superAdminRoutes } from './super-admin.routes';
 export { default as templateCampaignRoutes } from './template-campaign.routes';
 export { default as templateRoutes } from './template.routes';
+export { default as templateImageRoutes } from './templateImageUpload';

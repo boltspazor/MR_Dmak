@@ -20,11 +20,11 @@ class MetaTemplateSyncService {
 
     this.businessAccountId = cloudConfig.businessAccountId;
     this.graphAPIBaseURL = cloudConfig.graphAPIBaseURL;
-    
+
     // Initialize headers lazily to avoid errors during startup
     this.headers = { Authorization: '', 'Content-Type': 'application/json' };
-    
-    logger.info('MetaTemplateSyncService initialized', { 
+
+    logger.info('MetaTemplateSyncService initialized', {
       businessAccountId: this.businessAccountId ? 'configured' : 'not configured',
       apiVersion: cloudConfig.apiVersion,
       accessTokenConfigured: !!cloudConfig.accessToken
@@ -49,28 +49,28 @@ class MetaTemplateSyncService {
   async fetchMetaTemplates(): Promise<any[]> {
     try {
       logger.info('Fetching templates from Meta WhatsApp Business Platform');
-      
+
       // Check if access token is configured
       const headers = this.getHeaders();
       if (!headers.Authorization || headers.Authorization === 'Bearer ') {
         logger.warn('WhatsApp Cloud API access token not configured - returning empty template list');
         return [];
       }
-      
+
       const response = await axios.get(
         `${this.graphAPIBaseURL}/${this.businessAccountId}/message_templates`,
         { headers }
       );
 
       const templates = response.data.data || [];
-      
+
       if (templates.length === 0) {
         logger.info('No templates found in Meta WhatsApp Business Platform');
       } else {
-        logger.info(`Fetched ${templates.length} templates from Meta`, { 
+        logger.info(`Fetched ${templates.length} templates from Meta`, {
           templates: templates.map((t: any) => ({ name: t.name, status: t.status }))
         });
-        
+
         // Log detailed structure of templates with IMAGE components for debugging
         templates.forEach((template: any) => {
           if (template.components?.some((comp: any) => comp.type === 'HEADER' && comp.format === 'IMAGE')) {
@@ -95,7 +95,7 @@ class MetaTemplateSyncService {
         logger.warn('Meta WhatsApp Business Platform endpoint not found - returning empty template list');
         return [];
       }
-      
+
       logger.error('Error fetching Meta templates:', error.response?.data || error.message);
       throw new Error(`Failed to fetch Meta templates: ${error.response?.data?.error?.message || error.message}`);
     }
@@ -107,21 +107,21 @@ class MetaTemplateSyncService {
   async syncMetaTemplates(): Promise<{ synced: number; updated: number; created: number; errors: number }> {
     try {
       logger.info('Starting Meta template synchronization');
-      
+
       const metaTemplates = await this.fetchMetaTemplates();
-      
+
       // Handle case when no templates are found
       if (metaTemplates.length === 0) {
         logger.info('No Meta templates found to sync');
         return { synced: 0, updated: 0, created: 0, errors: 0 };
       }
-      
+
       let synced = 0, updated = 0, created = 0, errors = 0;
 
       for (const metaTemplate of metaTemplates) {
         try {
           await this.syncSingleMetaTemplate(metaTemplate);
-          
+
           // Check if this was an update or creation
           const existingTemplate = await Template.findOne({ metaTemplateId: metaTemplate.id });
           if (existingTemplate) {
@@ -129,7 +129,7 @@ class MetaTemplateSyncService {
           } else {
             created++;
           }
-          
+
           synced++;
         } catch (error: any) {
           logger.error(`Failed to sync template ${metaTemplate.name}:`, error.message);
@@ -168,9 +168,13 @@ class MetaTemplateSyncService {
         // Continue with basic template info
       }
 
-      // Extract image information from components (now with detailed info)
+      // Check if template already exists (DO THIS ONCE AT THE TOP)
+      const existingTemplate = await Template.findOne({ metaTemplateId: metaTemplate.id });
+
+      // Extract image information from components
       const imageInfo = await this.extractImageFromMetaComponents(detailedTemplate.components);
 
+      // Prepare base template data (WITHOUT image fields)
       const templateData = {
         name: metaTemplate.name,
         metaTemplateId: metaTemplate.id,
@@ -183,30 +187,49 @@ class MetaTemplateSyncService {
         type: 'template' as const,
         content: this.extractContentFromMetaComponents(detailedTemplate.components || metaTemplate.components),
         parameters: this.extractParametersFromMetaComponents(detailedTemplate.components || metaTemplate.components),
-        createdBy: null as any, // Meta templates are not created by a specific user
+        createdBy: null as any,
         isActive: metaTemplate.status === 'APPROVED',
         lastSyncedAt: new Date(),
         syncStatus: 'synced' as const,
-        // Add image information if present
-        ...imageInfo
       };
 
-      // Find existing template by Meta template ID
-      const existingTemplate = await Template.findOne({ metaTemplateId: metaTemplate.id });
-
       if (existingTemplate) {
-        // Update existing template
+        // ===== UPDATE EXISTING TEMPLATE =====
+
+        // Check if user has uploaded a custom image
+        const hasCustomImage = existingTemplate.imageUrl &&
+          existingTemplate.imageUrl.includes('/uploads/template-images/');
+
+        // Update all fields EXCEPT image fields if custom image exists
         Object.assign(existingTemplate, templateData);
+
+        // Only update image fields if NO custom image exists
+        if (!hasCustomImage) {
+          if (imageInfo.imageUrl) existingTemplate.imageUrl = imageInfo.imageUrl;
+          if (imageInfo.imageFileName) existingTemplate.imageFileName = imageInfo.imageFileName;
+        } else {
+          logger.info(`Preserving custom uploaded image for template: ${metaTemplate.name}`);
+        }
+
         await existingTemplate.save();
         logger.info(`Updated Meta template: ${metaTemplate.name}`);
         return existingTemplate;
+
       } else {
-        // Create new template
-        const newTemplate = new Template(templateData);
+        // ===== CREATE NEW TEMPLATE =====
+
+        // For new templates, include image info from Meta
+        const newTemplateData = {
+          ...templateData,
+          ...imageInfo // Add Meta's image info for new templates
+        };
+
+        const newTemplate = new Template(newTemplateData);
         await newTemplate.save();
         logger.info(`Created new Meta template: ${metaTemplate.name}`);
         return newTemplate;
       }
+
     } catch (error: any) {
       logger.error(`Error syncing single Meta template ${metaTemplate.name}:`, {
         error: error.message,
@@ -241,7 +264,7 @@ class MetaTemplateSyncService {
     if (!components || components.length === 0) return {};
 
     // Find the header component with IMAGE format
-    const headerComponent = components.find(comp => 
+    const headerComponent = components.find(comp =>
       comp.type === 'HEADER' && comp.format === 'IMAGE'
     );
 
@@ -255,7 +278,7 @@ class MetaTemplateSyncService {
 
       // Check different possible structures for media handle
       let mediaHandle = null;
-      
+
       if (headerComponent.example?.header_handle?.[0]?.handle) {
         mediaHandle = headerComponent.example.header_handle[0].handle;
       } else if (headerComponent.example?.header_handle) {
@@ -273,7 +296,7 @@ class MetaTemplateSyncService {
         if (Array.isArray(mediaHandle)) {
           imageUrl = mediaHandle[0]; // Take the first URL if it's an array
         }
-        
+
         logger.info(`Found Meta image URL: ${imageUrl}`);
         return {
           imageUrl: imageUrl,
@@ -312,7 +335,7 @@ class MetaTemplateSyncService {
         logger.info(`Fetched detailed template info for ${templateId}:`, {
           hasComponents: !!response.data.components,
           componentCount: response.data.components?.length || 0,
-          hasImageComponents: response.data.components?.some((comp: any) => 
+          hasImageComponents: response.data.components?.some((comp: any) =>
             comp.type === 'HEADER' && comp.format === 'IMAGE'
           ) || false
         });
@@ -330,11 +353,11 @@ class MetaTemplateSyncService {
   /**
    * Extract parameters from Meta template components and categorize them by type
    */
-  private extractParametersFromMetaComponents(components: any[]): Array<{name: string, type: 'text' | 'number'}> {
+  private extractParametersFromMetaComponents(components: any[]): Array<{ name: string, type: 'text' | 'number' }> {
     if (!components || components.length === 0) return [];
 
-    const parameters: Array<{name: string, type: 'text' | 'number'}> = [];
-    
+    const parameters: Array<{ name: string, type: 'text' | 'number' }> = [];
+
     // Extract parameters from all components that have text
     components.forEach(component => {
       if (component.text) {
@@ -343,7 +366,7 @@ class MetaTemplateSyncService {
         if (matches) {
           matches.forEach((match: any) => {
             const paramName = match.replace(/[{}]/g, '');
-            
+
             // Check if parameter already exists (case-insensitive)
             const existingParam = parameters.find(p => p.name.toLowerCase() === paramName.toLowerCase());
             if (!existingParam) {
@@ -360,16 +383,16 @@ class MetaTemplateSyncService {
       const templateContent = components.find(c => c.text)?.text || '';
       const aIndex = templateContent.indexOf(`{{${a.name}}}`);
       const bIndex = templateContent.indexOf(`{{${b.name}}}`);
-      
+
       // If both parameters are found in the content, sort by their position
       if (aIndex !== -1 && bIndex !== -1) {
         return aIndex - bIndex;
       }
-      
+
       // If only one is found, prioritize it
       if (aIndex !== -1) return -1;
       if (bIndex !== -1) return 1;
-      
+
       // If neither is found, sort alphabetically
       return a.name.localeCompare(b.name);
     });
@@ -414,29 +437,29 @@ class MetaTemplateSyncService {
       }
 
       const template = checkResponse.data.data[0];
-      logger.info(`Found template in Meta API:`, { 
-        id: template.id, 
-        name: template.name, 
-        status: template.status 
+      logger.info(`Found template in Meta API:`, {
+        id: template.id,
+        name: template.name,
+        status: template.status
       });
 
       // Use the correct Meta API endpoint for template deletion
       // Based on Postman documentation: DELETE /{whatsapp-business-account-id}/message_templates
       const deleteUrl = `${this.graphAPIBaseURL}/${this.businessAccountId}/message_templates`;
-      
+
       try {
         // Delete by template name as per Meta API documentation
-        const deleteResponse = await axios.delete(deleteUrl, { 
+        const deleteResponse = await axios.delete(deleteUrl, {
           headers,
           data: {
             name: templateName
           }
         });
-        
-        logger.info(`Template deleted from Meta API:`, { 
-          templateId: template.id, 
+
+        logger.info(`Template deleted from Meta API:`, {
+          templateId: template.id,
           templateName: template.name,
-          response: deleteResponse.data 
+          response: deleteResponse.data
         });
 
         // Verify deletion by checking if template still exists
@@ -476,7 +499,7 @@ class MetaTemplateSyncService {
             };
           }
         }
-        
+
         // Re-throw other errors
         throw deleteError;
       }

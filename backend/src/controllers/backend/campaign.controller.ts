@@ -169,22 +169,18 @@ export class CampaignController {
     try {
       const userId = req.user?.userId;
       const { page = 1, limit = 10, status, search, sortField, sortDirection } = req.query;
-
+  
       console.log('🔍 Backend getCampaigns - Received params:', { page, limit, status, search, sortField, sortDirection });
-
-      // Build query - we'll handle status filtering after calculating dynamic status
+  
+      // Build query
       const baseQuery: any = { createdBy: userId, isActive: true };
       console.log('🔍 Backend - Base query:', baseQuery);
       console.log('🔍 Backend - Requested status filter:', status);
-
-      // First, get campaigns with populated data for search
+  
+      // Handle search
       let searchQuery = baseQuery;
       if (search) {
-        // For comprehensive search including template and recipient list names,
-        // we need to use aggregation pipeline
         const searchStr = String(search);
-        
-        // Build the initial match query for user and active campaigns only
         const initialMatch: any = { createdBy: userId, isActive: true };
         
         console.log('🔍 Backend - Performing search with term:', searchStr);
@@ -224,85 +220,53 @@ export class CampaignController {
         console.log('🔍 Backend - Search found campaigns:', campaigns.length);
         
         const campaignIds = campaigns.map(c => c._id);
-        // Only filter by campaign IDs from search results
         searchQuery = { createdBy: userId, isActive: true, _id: { $in: campaignIds } };
-      } else {
-        searchQuery = baseQuery;
       }
-
+  
       // Build sort options
       const sortOptions: any = {};
       if (sortField && sortDirection) {
-        // Map frontend sort fields to database fields
         const fieldMap: { [key: string]: string } = {
           'campaignName': 'name',
-          'template': 'templateId.name', // Will be handled after population
-          'recipientList': 'recipientListId.name', // Will be handled after population
+          'template': 'templateId',
+          'recipientList': 'recipientListId',
           'date': 'createdAt',
           'sendStatus': 'status'
         };
         
         const sortFieldStr = String(sortField);
         const dbField = fieldMap[sortFieldStr] || sortFieldStr || 'createdAt';
-        // For nested fields, use simple field for initial sort, then sort in memory after population
         const actualSortField = dbField.includes('.') ? dbField.split('.')[0] : dbField;
         sortOptions[actualSortField] = sortDirection === 'asc' ? 1 : -1;
       } else {
-        // Default sort
         sortOptions.createdAt = -1;
       }
-
+  
       console.log('🔍 Backend - Final searchQuery:', searchQuery);
       console.log('🔍 Backend - Sort options:', sortOptions);
       
-      // Get campaigns with populated data
+      // ✅ Get ALL campaigns (no limit yet) with populated data
       let campaigns = await Campaign.find(searchQuery)
         .populate('templateId', 'name metaTemplateName metaStatus isMetaTemplate type imageUrl')
         .populate('recipientListId', 'name description recipients')
         .populate('createdBy', 'name email')
-        .sort(sortOptions)
-        .limit(Number(limit) * 1)
-        .skip((Number(page) - 1) * Number(limit));
-
-      // Handle client-side sorting for nested fields that require populated data
-      if (sortField && sortDirection) {
-        if (sortField === 'template' || sortField === 'recipientList') {
-          campaigns = campaigns.sort((a, b) => {
-            let aValue = '';
-            let bValue = '';
-            
-            if (sortField === 'template') {
-              aValue = (a.templateId as any)?.name || '';
-              bValue = (b.templateId as any)?.name || '';
-            } else if (sortField === 'recipientList') {
-              aValue = (a.recipientListId as any)?.name || '';
-              bValue = (b.recipientListId as any)?.name || '';
-            }
-            
-            if (sortDirection === 'asc') {
-              return aValue.localeCompare(bValue);
-            } else {
-              return bValue.localeCompare(aValue);
-            }
-          });
-        }
-      }
-
-      const total = await Campaign.countDocuments(searchQuery);
-
-      // Calculate progress for each campaign
+        .sort(sortOptions);
+  
+      const totalCampaigns = campaigns.length;
+      console.log('🔍 Backend - Total campaigns fetched:', totalCampaigns);
+  
+      // ✅ Calculate progress for ALL campaigns
       const campaignsWithProgress = await Promise.all(
         campaigns.map(async (campaign) => {
-          // Prefer recipients stored on campaign
           const recipients = (campaign as any).recipients && (campaign as any).recipients.length > 0
             ? (campaign as any).recipients
             : [];
-
+  
           let total = recipients.length || campaign.totalRecipients || 0;
-          let receivedCount = 0; // delivered or read
+          let receivedCount = 0;
           let failedCount = 0;
-          let pendingCount = 0; // pending/queued/sent
-
+          let pendingCount = 0;
+  
           if (recipients.length > 0) {
             for (const r of recipients as any[]) {
               const status = (r.status || '').toLowerCase();
@@ -311,7 +275,6 @@ export class CampaignController {
               else pendingCount++;
             }
           } else {
-            // Fallback to MessageLog when recipients not yet seeded
             const messageLogs = await MessageLog.find({ campaignId: campaign._id });
             total = messageLogs.length || total;
             messageLogs.forEach(log => {
@@ -321,30 +284,25 @@ export class CampaignController {
               else pendingCount++;
             });
           }
-
+  
           const successRate = total > 0 ? Math.round((receivedCount / total) * 100) : 0;
-
-          // Compute campaign status based on message outcomes:
-          // - pending: new campaign in queue (not started)
-          // - in-progress: still hitting the APIs (has pending messages)
-          // - completed: all MRs have a final status (delivered/read/failed)
-          // - failed: all MRs failed to receive the message
+  
+          // Calculate dynamic status
           let apiStatus = campaign.status;
           if (total > 0) {
             if (receivedCount + failedCount === total) {
-              // All messages processed
               if (failedCount === total) {
-                apiStatus = 'failed'; // All failed
+                apiStatus = 'failed';
               } else {
-                apiStatus = 'completed'; // All have status (mix of success/failed)
+                apiStatus = 'completed';
               }
             } else if (pendingCount > 0) {
-              apiStatus = 'in-progress'; // Still processing
+              apiStatus = 'in-progress';
             } else {
-              apiStatus = 'pending'; // Not started
+              apiStatus = 'pending';
             }
           }
-
+  
           return {
             id: campaign._id,
             campaignId: campaign.campaignId,
@@ -363,10 +321,9 @@ export class CampaignController {
               isMetaTemplate: (campaign.templateId as any).isMetaTemplate,
               type: (campaign.templateId as any).type
             } : null,
-            // recipientList removed as requested
             progress: {
               total,
-              sent: receivedCount, // treat delivered/read as successful sends
+              sent: receivedCount,
               failed: failedCount,
               pending: pendingCount,
               successRate
@@ -379,31 +336,52 @@ export class CampaignController {
           };
         })
       );
-
-      // Apply status filtering after calculating dynamic statuses
+  
+      // ✅ Apply status filtering AFTER calculating dynamic statuses
       let filteredCampaigns = campaignsWithProgress;
       if (status) {
         console.log('🔍 Backend - Applying status filter:', status);
         filteredCampaigns = campaignsWithProgress.filter(campaign => {
           const matches = campaign.status === status;
-          console.log(`Campaign ${campaign.name} status: ${campaign.status}, requested: ${status}, matches: ${matches}`);
           return matches;
         });
         console.log('🔍 Backend - Campaigns after status filter:', filteredCampaigns.length);
       }
-
-      // Update pagination based on filtered results
+  
+      // ✅ Apply sorting if needed (for nested fields)
+      if (sortField && sortDirection) {
+        if (sortField === 'template' || sortField === 'recipientList') {
+          filteredCampaigns = filteredCampaigns.sort((a, b) => {
+            let aValue = '';
+            let bValue = '';
+            
+            if (sortField === 'template') {
+              aValue = a.template?.name || '';
+              bValue = b.template?.name || '';
+            }
+            
+            if (sortDirection === 'asc') {
+              return aValue.localeCompare(bValue);
+            } else {
+              return bValue.localeCompare(aValue);
+            }
+          });
+        }
+      }
+  
+      // ✅ Calculate total AFTER filtering
       const filteredTotal = filteredCampaigns.length;
+  
+      // ✅ Apply pagination LAST
       const paginatedCampaigns = filteredCampaigns.slice(
         (Number(page) - 1) * Number(limit),
         Number(page) * Number(limit)
       );
-
-      console.log('🔍 Backend - Returning campaigns count:', paginatedCampaigns.length);
-      console.log('🔍 Backend - Total from DB:', total);
+  
+      console.log('🔍 Backend - Total campaigns from DB:', totalCampaigns);
       console.log('🔍 Backend - Filtered total:', filteredTotal);
-      console.log('🔍 Backend - Final campaign statuses:', paginatedCampaigns.map(c => ({ id: c.id, name: c.name, status: c.status })));
-
+      console.log('🔍 Backend - Paginated campaigns count:', paginatedCampaigns.length);
+  
       return res.json({
         success: true,
         data: {
@@ -416,7 +394,7 @@ export class CampaignController {
           }
         }
       });
-
+  
     } catch (error) {
       logger.error('Error getting campaigns:', error);
       return res.status(500).json({
@@ -426,6 +404,7 @@ export class CampaignController {
       });
     }
   }
+  
 
   /**
    * Get available campaign statuses

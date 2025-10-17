@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { FileText, CheckCircle, Clock, XCircle, RefreshCw } from 'lucide-react';
 import { Template } from '../../types';
 import TemplateActions from './TemplateActions';
 
@@ -11,6 +11,7 @@ interface TemplateTableProps {
   onPreview: (template: Template) => void;
   onExportPNG: (template: Template) => void;
   onDelete: (template: Template) => void;
+  onSync?: () => Promise<void>;
 }
 
 const TemplateTable: React.FC<TemplateTableProps> = ({
@@ -21,6 +22,7 @@ const TemplateTable: React.FC<TemplateTableProps> = ({
   onPreview,
   onExportPNG,
   onDelete,
+  onSync,
 }) => {
 
   // ✅ If no templates, show empty state
@@ -48,48 +50,65 @@ const TemplateTable: React.FC<TemplateTableProps> = ({
   // ✅ Otherwise, show table
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-      {/* Icon Descriptions */}
+      {/* Header with Sync Button */}
       <div className="bg-gray-50 border-b border-gray-200 p-4">
-        <h4 className="text-sm font-medium text-gray-700 mb-3">Icon Legend:</h4>
-        <div className="flex flex-wrap gap-4 text-xs text-gray-600">
-          <div className="flex items-center space-x-2">
-            <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
-              <span className="text-blue-700 font-bold text-xs">M</span>
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="text-sm font-medium text-gray-700 mb-3">Icon Legend:</h4>
+            <div className="flex flex-wrap gap-4 text-xs text-gray-600">
+              <div className="flex items-center space-x-2">
+                <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
+                  <span className="text-blue-700 font-bold text-xs">M</span>
+                </div>
+                <span>Meta Template</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
+                  <CheckCircle className="h-3 w-3 text-green-700" />
+                </div>
+                <span>Approved</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-5 h-5 bg-yellow-100 rounded-full flex items-center justify-center">
+                  <Clock className="h-3 w-3 text-yellow-700" />
+                </div>
+                <span>Pending</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center">
+                  <XCircle className="h-3 w-3 text-red-700" />
+                </div>
+                <span>Rejected</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-5 h-5 bg-purple-100 rounded-full flex items-center justify-center">
+                  <span className="text-purple-700 font-bold text-xs">I</span>
+                </div>
+                <span>Has Image</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center">
+                  <span className="text-orange-700 font-bold text-xs">P</span>
+                </div>
+                <span>Has Parameters</span>
+              </div>
             </div>
-            <span>Meta Template</span>
           </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
-              <CheckCircle className="h-3 w-3 text-green-700" />
-            </div>
-            <span>Approved</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-5 h-5 bg-yellow-100 rounded-full flex items-center justify-center">
-              <Clock className="h-3 w-3 text-yellow-700" />
-            </div>
-            <span>Pending</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center">
-              <XCircle className="h-3 w-3 text-red-700" />
-            </div>
-            <span>Rejected</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-5 h-5 bg-purple-100 rounded-full flex items-center justify-center">
-              <span className="text-purple-700 font-bold text-xs">I</span>
-            </div>
-            <span>Has Image</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center">
-              <span className="text-orange-700 font-bold text-xs">P</span>
-            </div>
-            <span>Has Parameters</span>
-          </div>
+
+          {/* Sync Button */}
+          {onSync && (
+            <button
+              onClick={onSync}
+              className="flex items-center space-x-2 px-3 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              <RefreshCw className="h-4 w-4" />
+              <span>Sync</span>
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Icon Descriptions */}
 
       {/* Table */}
       <div className="overflow-x-auto">
