@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+// pages/Dashboard.tsx
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import TemplatePreviewManager, { useTemplatePreview } from '../components/templates/TemplatePreviewManager';
 import RecipientListModal from '../components/ui/RecipientListModal';
@@ -12,23 +13,16 @@ import { useCampaigns } from '../hooks/useCampaigns';
 import { CampaignFilterParams } from '../types/campaign.types';
 import { Template } from '../types';
 
+type SendStatus = 'pending' | 'in-progress' | 'completed' | 'failed';
+
 interface CampaignRecord {
   id: string;
   campaignName: string;
   campaignId: string;
-  template: {
-    id: string;
-    name: string;
-    metaTemplateName?: string;
-    isMetaTemplate: boolean;
-    metaStatus?: string;
-  };
-  recipientList: {
-    name: string;
-    recipientCount: number;
-  } | null;
+  template: { id: string; name: string; metaTemplateName?: string; isMetaTemplate: boolean; metaStatus?: string };
+  recipientList: { name: string; recipientCount: number } | null;
   date: string;
-  sendStatus: 'pending' | 'in-progress' | 'completed' | 'failed';
+  sendStatus: SendStatus;
   totalRecipients: number;
   sentCount: number;
   failedCount: number;
@@ -37,199 +31,109 @@ interface CampaignRecord {
 }
 
 interface GroupMember {
-  id: string;
-  mrId: string;
-  firstName: string;
-  lastName: string;
-  name: string;
-  phone: string;
-  email?: string;
-  group: string;
-  status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
-  sentAt?: string;
-  errorMessage?: string;
-  errorCode?: number;
-  errorTitle?: string;
-  errorDetails?: string;
-  messageId?: string;
+  id: string; mrId: string; firstName: string; lastName: string; name: string; phone: string; email?: string;
+  group: string; status: 'pending'|'sent'|'delivered'|'read'|'failed'; sentAt?: string; errorMessage?: string;
+  errorCode?: number; errorTitle?: string; errorDetails?: string; messageId?: string;
 }
 
 const Dashboard: React.FC = () => {
+  // URL params
   const [searchParams, setSearchParams] = useSearchParams();
-  const [campaigns, setCampaigns] = useState<CampaignRecord[]>([]);
-  const [sortField, setSortField] = useState<keyof CampaignRecord>('date');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [loading, setLoading] = useState(true);
+  const [hydrated, setHydrated] = useState(false);
 
-  // Filter states
+  // Filters/sort/pagination
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortField, setSortField] = useState<keyof CampaignRecord>('date');
+  const [sortDirection, setSortDirection] = useState<'asc'|'desc'>('desc');
+
+  // Totals
   const [overallTotal, setOverallTotal] = useState<number>(0);
 
-  // Template preview hook
-  const {
-    showPreview,
-    previewTemplate,
-    closePreview,
-    openPreview,
-  } = useTemplatePreview();
+  // API hook
+  const { campaigns: apiCampaigns, loading: apiLoading, totalPages, total, fetchCampaigns } = useCampaigns();
 
-  // Enhanced campaigns hook for server-side operations
-  const {
-    campaigns: apiCampaigns,
-    loading: apiLoading,
-    totalPages,
-    total,
-    fetchCampaigns,
-  } = useCampaigns();
+  // Template preview
+  const { showPreview, previewTemplate, closePreview, openPreview } = useTemplatePreview();
+  const [templateLoading, setTemplateLoading] = useState(false);
 
-  // Recipient list popup states
+  // Recipient list modal
   const [showRecipientPopup, setShowRecipientPopup] = useState(false);
   const [selectedRecipients, setSelectedRecipients] = useState<GroupMember[]>([]);
   const [selectedCampaign, setSelectedCampaign] = useState<CampaignRecord | null>(null);
-  const [templateLoading, setTemplateLoading] = useState(false);
 
-  // URL parameter management
+  // 1) Hydrate from URL once
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlSearch = urlParams.get('search') || '';
-    const urlStatus = urlParams.get('status') || '';
-    const urlPage = parseInt(urlParams.get('page') || '1');
-    const urlSort = urlParams.get('sortField') || 'date';
-    const urlDirection = (urlParams.get('sortDirection') as 'asc' | 'desc') || 'desc';
-
-    setSearchTerm(urlSearch);
-    setStatusFilter(urlStatus);
-    setCurrentPage(urlPage);
-    setSortField(urlSort as keyof CampaignRecord);
-    setSortDirection(urlDirection);
+    const url = new URLSearchParams(window.location.search);
+    setSearchTerm(url.get('search') || '');
+    setStatusFilter(url.get('status') || '');
+    setCurrentPage(parseInt(url.get('page') || '1', 10));
+    setSortField((url.get('sortField') as keyof CampaignRecord) || 'date');
+    setSortDirection((url.get('sortDirection') as 'asc'|'desc') || 'desc');
+    setHydrated(true);
   }, []);
 
-  // Update URL when filters change
+  // 2) Reflect state back to URL (single writer)
   useEffect(() => {
-    const urlParams = new URLSearchParams();
-    if (searchTerm) urlParams.set('search', searchTerm);
-    if (statusFilter) urlParams.set('status', statusFilter);
-    if (currentPage > 1) urlParams.set('page', currentPage.toString());
-    if (sortField !== 'date') urlParams.set('sortField', sortField);
-    if (sortDirection !== 'desc') urlParams.set('sortDirection', sortDirection);
-
-    const newUrl = urlParams.toString() ? `${window.location.pathname}?${urlParams.toString()}` : window.location.pathname;
+    if (!hydrated) return;
+    const url = new URLSearchParams();
+    if (searchTerm) url.set('search', searchTerm);
+    if (statusFilter) url.set('status', statusFilter);
+    if (currentPage > 1) url.set('page', String(currentPage));
+    if (sortField !== 'date') url.set('sortField', String(sortField));
+    if (sortDirection !== 'desc') url.set('sortDirection', sortDirection);
+    const newUrl = url.toString() ? `${window.location.pathname}?${url}` : window.location.pathname;
     window.history.replaceState({}, '', newUrl);
-  }, [searchTerm, statusFilter, currentPage, sortField, sortDirection]);
+  }, [hydrated, searchTerm, statusFilter, currentPage, sortField, sortDirection]);
 
-  // Fetch data when filters or pagination changes
+  // 3) Fetch when hydrated and filters change (single fetch path)
   useEffect(() => {
+    if (!hydrated) return;
     const params: CampaignFilterParams = {
       page: currentPage,
-      limit: 10
+      limit: 10,
+      ...(searchTerm ? { search: searchTerm } : {}),
+      ...(statusFilter ? { status: statusFilter } : {}),
+      sortField,
+      sortDirection
     };
-
-    if (searchTerm) params.search = searchTerm;
-    if (statusFilter) params.status = statusFilter;
-
-    params.sortField = sortField;
-    params.sortDirection = sortDirection;
-
-    console.log('Dashboard: Fetching with params:', params);
     fetchCampaigns(params);
+  }, [hydrated, currentPage, searchTerm, statusFilter, sortField, sortDirection, fetchCampaigns]);
 
-    (async () => {
-      try {
-        const totalRes = await campaignsAPI.getCampaignTotalCount();
-        console.log('Dashboard: overall total (unfiltered):', totalRes?.total);
-      } catch (err) {
-        console.warn('Dashboard: failed to fetch debug overall totals', err);
-      }
-    })();
-  }, [currentPage, searchTerm, statusFilter, sortField, sortDirection, fetchCampaigns]);
-
-  // Fetch overall total campaigns
-  useEffect(() => {
-    let mounted = true;
-    const fetchOverall = async () => {
-      try {
-        const res = await campaignsAPI.getCampaignTotalCount();
-        if (mounted && res && typeof res.total === 'number') {
-          setOverallTotal(res.total);
-          return;
-        }
-
-        const fallback = await campaignsAPI.getCampaignCount();
-        if (mounted && fallback && typeof fallback.total === 'number') {
-          setOverallTotal(fallback.total);
-        }
-      } catch (err) {
-        console.warn('Failed to fetch overall campaigns total:', err);
-      }
-    };
-
-    fetchOverall();
-
-    return () => { mounted = false; };
-  }, []);
-
-  const loadCampaigns = async () => {
-    try {
-      setLoading(true);
-
-      const transformedCampaigns = (apiCampaigns || []).map((campaign: Campaign) => ({
-        id: campaign.id,
-        campaignName: campaign.name,
-        campaignId: campaign.campaignId,
-        template: campaign.template ? {
-          id: campaign.template.id,
-          name: campaign.template.name,
-          metaTemplateName: campaign.template.metaTemplateName,
-          isMetaTemplate: campaign.template.isMetaTemplate,
-          metaStatus: campaign.template.metaStatus
-        } : {
-          id: '',
-          name: 'Unknown Template',
-          metaTemplateName: undefined,
-          isMetaTemplate: false,
-          metaStatus: undefined
-        },
-        recipientList: campaign.recipientList ? {
-          name: campaign.recipientList.name,
-          recipientCount: campaign.recipientList.recipientCount
-        } : null,
-        date: new Date(campaign.createdAt).toISOString().split('T')[0],
-        sendStatus: campaign.status as 'pending' | 'in-progress' | 'completed' | 'failed',
-        totalRecipients: campaign.progress?.total || 0,
-        sentCount: campaign.progress?.sent || 0,
-        failedCount: campaign.progress?.failed || 0,
-        successRate: campaign.progress?.successRate || 0,
-        status: campaign.status
-      }));
-
-      setCampaigns(transformedCampaigns);
-    } catch (error) {
-      setCampaigns([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadCampaigns();
+  // Map API -> UI without extra setState
+  const campaigns: CampaignRecord[] = useMemo(() => {
+    return (apiCampaigns || []).map((c: Campaign) => ({
+      id: c.id,
+      campaignName: c.name,
+      campaignId: c.campaignId,
+      template: c.template ? {
+        id: c.template.id,
+        name: c.template.name,
+        metaTemplateName: c.template.metaTemplateName,
+        isMetaTemplate: c.template.isMetaTemplate,
+        metaStatus: c.template.metaStatus
+      } : { id: '', name: 'Unknown Template', metaTemplateName: undefined, isMetaTemplate: false, metaStatus: undefined },
+      recipientList: c.recipientList ? { name: c.recipientList.name, recipientCount: c.recipientList.recipientCount } : null,
+      date: new Date(c.createdAt).toISOString().split('T')[0],
+      sendStatus: c.status as SendStatus,
+      totalRecipients: c.progress?.total || 0,
+      sentCount: c.progress?.sent || 0,
+      failedCount: c.progress?.failed || 0,
+      successRate: c.progress?.successRate || 0,
+      status: c.status
+    }));
   }, [apiCampaigns]);
 
-  const sortedCampaigns = campaigns;
-
+  // Handlers: state-only; no URL writes here
   const handleSort = (field: keyof CampaignRecord) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
-    }
+    if (sortField === field) setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    else { setSortField(field); setSortDirection('asc'); }
     setCurrentPage(1);
   };
 
   const handlePageChange = (page: number) => {
-    setCurrentPage(page);
+    if (page !== currentPage) setCurrentPage(page);
   };
 
   const clearFilters = () => {
@@ -241,36 +145,25 @@ const Dashboard: React.FC = () => {
   const handleTemplatePreview = async (campaign: CampaignRecord) => {
     try {
       setTemplateLoading(true);
-
       const templateId = campaign.template?.id;
-
       if (!templateId) {
-        // Fallback to basic template info
-        const basicTemplate: Partial<Template> = {
+        openPreview({
           name: campaign.template.name,
           metaTemplateName: campaign.template.metaTemplateName,
           isMetaTemplate: campaign.template.isMetaTemplate,
-          metaStatus: campaign.template.metaStatus,
-        };
-        openPreview(basicTemplate as Template);
+          metaStatus: campaign.template.metaStatus
+        } as Template);
         return;
       }
-
-      console.log('Fetching template for preview with ID:', templateId);
       const response = await templateApi.getById(templateId);
-      const template = response.data;
-
-      openPreview(template as Template);
-    } catch (error) {
-      console.error('Failed to load template preview:', error);
-      // Fallback to basic template info on error
-      const basicTemplate: Partial<Template> = {
+      openPreview((response.data ?? response) as Template);
+    } catch {
+      openPreview({
         name: campaign.template.name,
         metaTemplateName: campaign.template.metaTemplateName,
         isMetaTemplate: campaign.template.isMetaTemplate,
-        metaStatus: campaign.template.metaStatus,
-      };
-      openPreview(basicTemplate as Template);
+        metaStatus: campaign.template.metaStatus
+      } as Template);
     } finally {
       setTemplateLoading(false);
     }
@@ -279,115 +172,59 @@ const Dashboard: React.FC = () => {
   const handleRecipientListClick = useCallback(async (campaign: CampaignRecord) => {
     try {
       setSelectedCampaign(campaign);
-
       const campaignData = await campaignsAPI.getCampaignById(campaign.id);
-      if (!campaignData) {
-        setSelectedRecipients([]);
-        setShowRecipientPopup(true);
-        return;
-      }
-
-      const groupMembers: GroupMember[] = (campaignData.recipients || []).map((recipient: any) => ({
-        id: recipient.id,
-        mrId: recipient.mrId,
-        firstName: recipient.firstName,
-        lastName: recipient.lastName,
-        name: `${recipient.firstName || ''} ${recipient.lastName || ''}`.trim() || 'Unknown',
-        phone: recipient.phone || 'N/A',
-        email: recipient.email || '',
-        group: recipient.group || 'Default Group',
-        status: recipient.status || 'pending',
-        sentAt: recipient.sentAt,
-        errorMessage: recipient.errorMessage,
-        errorCode: recipient.errorCode,
-        errorTitle: recipient.errorTitle,
-        errorDetails: recipient.errorDetails,
-        messageId: recipient.messageId
+      const recs = (campaignData?.data?.recipients ?? campaignData?.recipients ?? []) as any[];
+      const groupMembers: GroupMember[] = recs.map((r) => ({
+        id: r.id, mrId: r.mrId, firstName: r.firstName, lastName: r.lastName,
+        name: `${r.firstName || ''} ${r.lastName || ''}`.trim() || 'Unknown',
+        phone: r.phone || 'N/A', email: r.email || '', group: r.group || 'Default Group',
+        status: r.status || 'pending', sentAt: r.sentAt, errorMessage: r.errorMessage,
+        errorCode: r.errorCode, errorTitle: r.errorTitle, errorDetails: r.errorDetails, messageId: r.messageId
       }));
-
       setSelectedRecipients(groupMembers);
       setShowRecipientPopup(true);
-    } catch (error) {
-      console.error('Error fetching campaign recipients:', error);
+    } catch {
       setSelectedRecipients([]);
       setShowRecipientPopup(true);
     }
   }, []);
 
-  // Handle URL parameters to auto-open recipient list modal
+  // URL-triggered modal open
   useEffect(() => {
-    const shouldShowRecipientList = searchParams.get('showRecipientList');
-    const campaignId = searchParams.get('campaignId');
-
-    if (shouldShowRecipientList === 'true' && campaignId && campaigns.length > 0) {
-      const campaign = campaigns.find(c => c.id === campaignId || c.campaignId === campaignId);
-      if (campaign) {
-        handleRecipientListClick(campaign);
+    if (!hydrated) return;
+    const show = searchParams.get('showRecipientList');
+    const id = searchParams.get('campaignId');
+    if (show === 'true' && id && campaigns.length > 0) {
+      const c = campaigns.find(x => x.id === id || x.campaignId === id);
+      if (c) {
+        handleRecipientListClick(c);
         setSearchParams(new URLSearchParams());
       }
     }
-  }, [searchParams, campaigns, setSearchParams, handleRecipientListClick]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-left">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
+  }, [hydrated, searchParams, campaigns, setSearchParams, handleRecipientListClick]);
 
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="p-8">
         <StandardHeader pageTitle="Dashboard" />
-
-        <CampaignStats campaigns={sortedCampaigns} loading={loading} />
-
+        <CampaignStats campaigns={campaigns} loading={apiLoading} />
         <AdvancedCampaignSearch
           searchTerm={searchTerm}
           statusFilter={statusFilter}
-          onSearchChange={(term) => {
-            console.log('🔍 Dashboard - onSearchChange called with term:', term);
-            setSearchTerm(term);
-            setCurrentPage(1);
-            const params = new URLSearchParams(window.location.search);
-            if (term) {
-              params.set('search', term);
-            } else {
-              params.delete('search');
-            }
-            params.set('page', '1');
-            window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
-          }}
-          onStatusChange={(status) => {
-            console.log('🔍 Dashboard - onStatusChange called with status:', status);
-            setStatusFilter(status);
-            setCurrentPage(1);
-            const params = new URLSearchParams(window.location.search);
-            if (status) {
-              params.set('status', status);
-            } else {
-              params.delete('status');
-            }
-            params.set('page', '1');
-            window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
-          }}
+          onSearchChange={(term) => { if (term !== searchTerm) { setSearchTerm(term); setCurrentPage(1); } }}
+          onStatusChange={(status) => { if (status !== statusFilter) { setStatusFilter(status); setCurrentPage(1); } }}
           onClearFilters={clearFilters}
           filteredCount={total || 0}
           totalCount={overallTotal}
         />
-
         <CampaignTable
-          campaigns={sortedCampaigns}
+          campaigns={campaigns}
           onRecipientListClick={handleRecipientListClick}
           onTemplatePreview={handleTemplatePreview}
           sortField={sortField}
           sortDirection={sortDirection}
           onSort={handleSort}
-          loading={loading || apiLoading}
+          loading={apiLoading || templateLoading}
           templateLoading={templateLoading}
           page={currentPage}
           totalPages={totalPages}
@@ -396,27 +233,21 @@ const Dashboard: React.FC = () => {
           searchTerm={searchTerm}
           filteredTotal={total}
         />
-
-        {/* Template Preview Manager - uses compact variant for dashboard */}
         <TemplatePreviewManager
           isOpen={showPreview}
           template={previewTemplate}
           onClose={closePreview}
           variant="full"
-          showDownloadButton={true}
-          showBulkUploadButton={true}
+          showDownloadButton
+          showBulkUploadButton
         />
-
         <RecipientListModal
           isOpen={showRecipientPopup}
-          onClose={() => {
-            setShowRecipientPopup(false);
-            setSelectedCampaign(null);
-          }}
+          onClose={() => { setShowRecipientPopup(false); setSelectedCampaign(null); }}
           recipients={selectedRecipients}
           campaignName={selectedCampaign?.campaignName || 'Campaign Recipients'}
           campaignId={selectedCampaign?.id}
-          showExportButton={true}
+          showExportButton
         />
       </div>
     </div>

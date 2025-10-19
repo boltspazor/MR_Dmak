@@ -5,6 +5,7 @@ import { formatErrorMessage, getErrorTooltip } from '../../utils/whatsappErrorCo
 import { campaignsAPI } from '../../api/campaigns-new';
 import { useSearchParams } from 'react-router-dom';
 import { exportToCSV } from '../../utils/csvExport';
+import {DebouncedInput} from './DebouncedInput';
 
 export interface GroupMember {
   id: string;
@@ -47,7 +48,7 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
 }) => {
   // URL search parameters for persistent state
   const [searchParams, setSearchParams] = useSearchParams();
-  
+
   // Search and filter states - initialize from URL params
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -78,9 +79,9 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
       const urlSearch = searchParams.get('recipientSearch') || '';
       const urlStatus = searchParams.get('recipientStatus') || 'all';
       const urlPage = parseInt(searchParams.get('recipientPage') || '1');
-      
+
       console.log('🔍 RecipientListModal - Initializing from URL params:', { urlSearch, urlStatus, urlPage });
-      
+
       setSearchTerm(urlSearch);
       setStatusFilter(urlStatus);
       setPagination(prev => ({ ...prev, page: urlPage }));
@@ -97,69 +98,69 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
   // Update URL parameters when search/filter state changes
   useEffect(() => {
     if (!isOpen || !campaignId) return;
-    
+
     const newParams = new URLSearchParams(searchParams);
-    
+
     if (searchTerm.trim()) {
       newParams.set('recipientSearch', searchTerm.trim());
     } else {
       newParams.delete('recipientSearch');
     }
-    
+
     if (statusFilter && statusFilter !== 'all') {
       newParams.set('recipientStatus', statusFilter);
     } else {
       newParams.delete('recipientStatus');
     }
-    
+
     if (pagination.page > 1) {
       newParams.set('recipientPage', pagination.page.toString());
     } else {
       newParams.delete('recipientPage');
     }
-    
-    console.log('🔍 RecipientListModal - Updating URL params:', { 
-      search: searchTerm, 
-      status: statusFilter, 
-      page: pagination.page 
+
+    console.log('🔍 RecipientListModal - Updating URL params:', {
+      search: searchTerm,
+      status: statusFilter,
+      page: pagination.page
     });
-    
+
     setSearchParams(newParams, { replace: true });
   }, [searchTerm, statusFilter, pagination.page, isOpen, campaignId, searchParams, setSearchParams]);
 
   // Use API recipients if campaignId is provided, otherwise use prop recipients
   const currentRecipients = campaignId ? apiRecipients : recipients;
-  
+
   // Debounced search
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-  
+
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
     }, 300);
-    
+
     return () => clearTimeout(timeoutId);
   }, [searchTerm]);
 
   // Fetch recipients from API when campaignId is available
   const fetchRecipients = useCallback(async () => {
     if (!campaignId) return;
-    
+
     try {
       setLoading(true);
-      console.log('🔍 Frontend RecipientListModal - Fetching recipients with:', { 
-        search: debouncedSearchTerm, 
+      console.log('🔍 Frontend RecipientListModal - Fetching recipients with:', {
+        search: debouncedSearchTerm,
         status: statusFilter !== 'all' ? statusFilter : undefined,
-        page: pagination.page 
+        page: pagination.page
       });
-      
+
       const response = await campaignsAPI.searchCampaignRecipients(campaignId, {
         search: debouncedSearchTerm || undefined,
         status: statusFilter !== 'all' ? statusFilter : undefined,
         page: pagination.page,
         limit: pagination.limit
       });
-      
+
       console.log('🔍 Frontend RecipientListModal - API response:', response);
       setApiRecipients(response.recipients);
       setPagination(response.pagination);
@@ -262,13 +263,13 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
         successRate: backendStats.successRate
       };
     }
-    
+
     // For prop-based recipients (non-paginated), calculate normally
     const total = actualRecipients.length;
     const received = actualRecipients.filter(r => r.status === 'delivered' || r.status === 'read').length;
     const failed = actualRecipients.filter(r => r.status === 'failed').length;
     const successRate = total > 0 ? Math.round((received / total) * 100) : 0;
-    
+
     return { total, received, failed, successRate };
   }, [actualRecipients, backendStats]);
 
@@ -295,7 +296,7 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
             <X className="h-6 w-6" />
           </button>
         </div>
-        
+
         {/* Summary Section */}
         <div className="bg-indigo-50 p-4 rounded-lg mb-6">
           {loading ? (
@@ -336,11 +337,11 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
           <div className="relative">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <input
-                type="text"
-                placeholder="Search by name or phone number..."
+              <DebouncedInput
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onDebouncedChange={(v) => setSearchTerm(v)}
+                delay={300}
+                placeholder="Search by name or phone number..."
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
             </div>
@@ -356,7 +357,7 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
               <span>Advanced Filters</span>
               <ChevronDown className={`h-4 w-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
             </button>
-            
+
             {(searchTerm || statusFilter !== 'all') && (
               <button
                 onClick={() => {
@@ -426,7 +427,7 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
           <div className="p-4 border-b bg-indigo-50">
             <h3 className="text-lg font-semibold text-gray-900">Recipients</h3>
           </div>
-          
+
           <div className="overflow-x-auto max-h-96 overflow-y-auto">
             {loading ? (
               // Skeleton Loading State
@@ -470,17 +471,16 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
                       <td className="py-3 px-6 text-sm text-gray-900">{recipient.name}</td>
                       <td className="py-3 px-6 text-sm text-gray-900">{recipient.phone}</td>
                       <td className="py-3 px-6 text-sm">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          recipient.status === 'read'
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${recipient.status === 'read'
                             ? 'bg-green-200 text-green-900'
                             : recipient.status === 'delivered'
-                            ? 'bg-green-100 text-green-800'
-                            : recipient.status === 'sent'
-                            ? 'bg-blue-100 text-blue-800'
-                            : recipient.status === 'failed'
-                            ? 'bg-red-100 text-red-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
+                              ? 'bg-green-100 text-green-800'
+                              : recipient.status === 'sent'
+                                ? 'bg-blue-100 text-blue-800'
+                                : recipient.status === 'failed'
+                                  ? 'bg-red-100 text-red-800'
+                                  : 'bg-yellow-100 text-yellow-800'
+                          }`}>
                           {recipient.status}
                         </span>
                       </td>
@@ -489,8 +489,8 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
                           <div className="flex items-start space-x-2">
                             <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0 mt-0.5" />
                             <div className="flex-1">
-                              <div 
-                                className="text-red-700 text-xs cursor-help" 
+                              <div
+                                className="text-red-700 text-xs cursor-help"
                                 title={getErrorTooltip(recipient.errorCode)}
                               >
                                 {formatErrorMessage(recipient.errorMessage, recipient.errorCode, recipient.errorTitle)}
@@ -529,7 +529,7 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
                 >
                   Previous
                 </button>
-                
+
                 {/* Page Numbers */}
                 <div className="flex space-x-1">
                   {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
@@ -540,11 +540,10 @@ const RecipientListModal: React.FC<RecipientListModalProps> = ({
                         key={pageNum}
                         onClick={() => setPagination(prev => ({ ...prev, page: pageNum }))}
                         disabled={loading}
-                        className={`px-3 py-1 border rounded-md text-sm font-medium ${
-                          pagination.page === pageNum
+                        className={`px-3 py-1 border rounded-md text-sm font-medium ${pagination.page === pageNum
                             ? 'bg-indigo-600 text-white border-indigo-600'
                             : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
                       >
                         {pageNum}
                       </button>

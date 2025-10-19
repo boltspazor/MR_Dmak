@@ -27,10 +27,10 @@ export class CampaignController {
       }
 
       // Validate MRs exist
-      const mrs = await MedicalRep.find({ 
+      const mrs = await MedicalRep.find({
         _id: { $in: mrIds }
       });
-      
+
       if (mrs.length !== mrIds.length) {
         return res.status(404).json({
           success: false,
@@ -54,8 +54,8 @@ export class CampaignController {
         scheduledAt: scheduledAt ? new Date(scheduledAt) : undefined
       });
 
-      logger.info('Campaign created successfully with direct MRs', { 
-        campaignId: campaign.campaignId, 
+      logger.info('Campaign created successfully with direct MRs', {
+        campaignId: campaign.campaignId,
         name: campaign.name,
         templateId: campaign.templateId,
         mrCount: mrs.length
@@ -139,8 +139,8 @@ export class CampaignController {
         scheduledAt: scheduledAt ? new Date(scheduledAt) : undefined
       });
 
-      logger.info('Campaign created successfully', { 
-        campaignId: campaign.campaignId, 
+      logger.info('Campaign created successfully', {
+        campaignId: campaign.campaignId,
         name: campaign.name,
         templateId: campaign.templateId,
         recipientListId: campaign.recipientListId
@@ -168,231 +168,394 @@ export class CampaignController {
   static async getCampaigns(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const userId = req.user?.userId;
-      const { page = 1, limit = 10, status, search, sortField, sortDirection } = req.query;
+      const {
+        page = 1,
+        limit = 10,
+        status,
+        search,
+        sortField,
+        sortDirection
+      } = req.query as any;
   
-      console.log('🔍 Backend getCampaigns - Received params:', { page, limit, status, search, sortField, sortDirection });
+      const pageNum = Math.max(Number(page) || 1, 1);
+      const limitNum = Math.min(Math.max(Number(limit) || 10, 1), 100);
   
-      // Build query
-      const baseQuery: any = { createdBy: userId, isActive: true };
-      console.log('🔍 Backend - Base query:', baseQuery);
-      console.log('🔍 Backend - Requested status filter:', status);
+      // map UI sort to DB fields; nested fields handled below
+      const fieldMap: Record<string, string> = {
+        campaignName: 'name',
+        template: 'template.name',           // sort after $unwind or via $ifNull
+        recipientList: 'recipientList.name', // same
+        date: 'createdAt',
+        sendStatus: 'status',
+      };
   
-      // Handle search
-      let searchQuery = baseQuery;
+      const sortFieldStr = fieldMap[String(sortField)] || String(sortField) || 'createdAt';
+      const sortDir = String(sortDirection) === 'asc' ? 1 : -1;
+  
+      // Build base match
+      const baseMatch: any = { createdBy: userId, isActive: true };
+  
+      // Build search expression using $regexMatch to avoid $unwind by array-evaluating with $map + $anyElementTrue
+      let searchExpr: any = null;
       if (search) {
-        const searchStr = String(search);
-        const initialMatch: any = { createdBy: userId, isActive: true };
-        
-        console.log('🔍 Backend - Performing search with term:', searchStr);
-        const campaigns = await Campaign.aggregate([
-          { $match: initialMatch },
-          {
-            $lookup: {
-              from: 'templates',
-              localField: 'templateId',
-              foreignField: '_id',
-              as: 'template'
+        const regex = { $regex: String(search), $options: 'i' };
+        searchExpr = {
+          $or: [
+            { name: regex },
+            { description: regex },
+            { campaignId: regex },
+            {
+              $expr: {
+                $anyElementTrue: [
+                  {
+                    $map: {
+                      input: { $ifNull: ['$template.name', []] },
+                      as: 't',
+                      in: { $regexMatch: { input: '$$t', regex: String(search), options: 'i' } }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              $expr: {
+                $anyElementTrue: [
+                  {
+                    $map: {
+                      input: { $ifNull: ['$template.metaTemplateName', []] },
+                      as: 't',
+                      in: { $regexMatch: { input: '$$t', regex: String(search), options: 'i' } }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              $expr: {
+                $anyElementTrue: [
+                  {
+                    $map: {
+                      input: { $ifNull: ['$recipientList.name', []] },
+                      as: 'r',
+                      in: { $regexMatch: { input: '$$r', regex: String(search), options: 'i' } }
+                    }
+                  }
+                ]
+              }
             }
-          },
-          {
-            $lookup: {
-              from: 'templaterecipients',
-              localField: 'recipientListId', 
-              foreignField: '_id',
-              as: 'recipientList'
-            }
-          },
-          {
-            $match: {
-              $or: [
-                { name: { $regex: searchStr, $options: 'i' } },
-                { description: { $regex: searchStr, $options: 'i' } },
-                { campaignId: { $regex: searchStr, $options: 'i' } },
-                { 'template.name': { $regex: searchStr, $options: 'i' } },
-                { 'template.metaTemplateName': { $regex: searchStr, $options: 'i' } },
-                { 'recipientList.name': { $regex: searchStr, $options: 'i' } }
+          ]
+        };
+      }
+  
+      // Build sort stage; if sorting by nested names, compute scalar fields before $sort
+      const needsTemplateSort = sortFieldStr === 'template.name';
+      const needsRecipientSort = sortFieldStr === 'recipientList.name';
+  
+      const pipeline: any[] = [
+        { $match: baseMatch },
+  
+        // Lookups return arrays; we keep as arrays for search via $regexMatch + $map, no unwind needed
+        {
+          $lookup: {
+            from: 'templates',
+            localField: 'templateId',
+            foreignField: '_id',
+            as: 'template',
+            pipeline: [
+              { $project: { name: 1, metaTemplateName: 1, metaStatus: 1, isMetaTemplate: 1, type: 1, imageUrl: 1 } }
+            ]
+          }
+        },
+        {
+          $lookup: {
+            from: 'templaterecipients',
+            localField: 'recipientListId',
+            foreignField: '_id',
+            as: 'recipientList',
+            pipeline: [
+              { $project: { name: 1, description: 1, recipients: 1 } }
+            ]
+          }
+        },
+  
+        // Optional search
+        ...(searchExpr ? [{ $match: searchExpr }] : []),
+  
+        // Compute scalar template/recipient fields for sort and response
+        {
+          $addFields: {
+            templateObj: { $first: '$template' },
+            recipientListObj: { $first: '$recipientList' },
+          }
+        },
+        {
+          $addFields: {
+            templateNameForSort: { $ifNull: ['$templateObj.name', ''] },
+            recipientNameForSort: { $ifNull: ['$recipientListObj.name', ''] },
+          }
+        },
+  
+        // Compute campaign progress from MessageLog if needed; avoid heavy joins by summarizing with a correlated subpipeline
+        {
+          $lookup: {
+            from: 'messagelogs',
+            let: { cid: '$_id' },
+            pipeline: [
+              { $match: { $expr: { $eq: ['$campaignId', '$$cid'] } } },
+              {
+                $group: {
+                  _id: null,
+                  total: { $sum: 1 },
+                  delivered: {
+                    $sum: {
+                      $cond: [
+                        {
+                          $in: [
+                            { $toLower: { $ifNull: ['$status', ''] } },
+                            ['delivered', 'read']
+                          ]
+                        },
+                        1, 0
+                      ]
+                    }
+                  },
+                  failed: {
+                    $sum: {
+                      $cond: [
+                        { $eq: [{ $toLower: { $ifNull: ['$status', ''] } }, 'failed'] },
+                        1, 0
+                      ]
+                    }
+                  }
+                }
+              }
+            ],
+            as: 'msgAgg'
+          }
+        },
+        {
+          $addFields: {
+            msgAgg: { $first: '$msgAgg' },
+            // Support legacy embedded recipients on campaign doc if present
+            embeddedRecipients: {
+              $cond: [
+                { $gt: [{ $size: { $ifNull: ['$recipients', []] } }, 0] },
+                '$recipients',
+                []
               ]
             }
-          },
-          { $project: { _id: 1 } }
-        ]);
-        
-        console.log('🔍 Backend - Search found campaigns:', campaigns.length);
-        
-        const campaignIds = campaigns.map(c => c._id);
-        searchQuery = { createdBy: userId, isActive: true, _id: { $in: campaignIds } };
-      }
-  
-      // Build sort options
-      const sortOptions: any = {};
-      if (sortField && sortDirection) {
-        const fieldMap: { [key: string]: string } = {
-          'campaignName': 'name',
-          'template': 'templateId',
-          'recipientList': 'recipientListId',
-          'date': 'createdAt',
-          'sendStatus': 'status'
-        };
-        
-        const sortFieldStr = String(sortField);
-        const dbField = fieldMap[sortFieldStr] || sortFieldStr || 'createdAt';
-        const actualSortField = dbField.includes('.') ? dbField.split('.')[0] : dbField;
-        sortOptions[actualSortField] = sortDirection === 'asc' ? 1 : -1;
-      } else {
-        sortOptions.createdAt = -1;
-      }
-  
-      console.log('🔍 Backend - Final searchQuery:', searchQuery);
-      console.log('🔍 Backend - Sort options:', sortOptions);
-      
-      // ✅ Get ALL campaigns (no limit yet) with populated data
-      let campaigns = await Campaign.find(searchQuery)
-        .populate('templateId', 'name metaTemplateName metaStatus isMetaTemplate type imageUrl')
-        .populate('recipientListId', 'name description recipients')
-        .populate('createdBy', 'name email')
-        .sort(sortOptions);
-  
-      const totalCampaigns = campaigns.length;
-      console.log('🔍 Backend - Total campaigns fetched:', totalCampaigns);
-  
-      // ✅ Calculate progress for ALL campaigns
-      const campaignsWithProgress = await Promise.all(
-        campaigns.map(async (campaign) => {
-          const recipients = (campaign as any).recipients && (campaign as any).recipients.length > 0
-            ? (campaign as any).recipients
-            : [];
-  
-          let total = recipients.length || campaign.totalRecipients || 0;
-          let receivedCount = 0;
-          let failedCount = 0;
-          let pendingCount = 0;
-  
-          if (recipients.length > 0) {
-            for (const r of recipients as any[]) {
-              const status = (r.status || '').toLowerCase();
-              if (status === 'delivered' || status === 'read') receivedCount++;
-              else if (status === 'failed') failedCount++;
-              else pendingCount++;
-            }
-          } else {
-            const messageLogs = await MessageLog.find({ campaignId: campaign._id });
-            total = messageLogs.length || total;
-            messageLogs.forEach(log => {
-              const s = (log.status || '').toLowerCase();
-              if (s === 'delivered' || s === 'read') receivedCount++;
-              else if (s === 'failed') failedCount++;
-              else pendingCount++;
-            });
           }
-  
-          const successRate = total > 0 ? Math.round((receivedCount / total) * 100) : 0;
-  
-          // Calculate dynamic status
-          let apiStatus = campaign.status;
-          if (total > 0) {
-            if (receivedCount + failedCount === total) {
-              if (failedCount === total) {
-                apiStatus = 'failed';
-              } else {
-                apiStatus = 'completed';
-              }
-            } else if (pendingCount > 0) {
-              apiStatus = 'in-progress';
-            } else {
-              apiStatus = 'pending';
+        },
+        {
+          $addFields: {
+            // If embedded recipients exist, compute counts client-equivalent
+            embeddedCounts: {
+              $cond: [
+                { $gt: [{ $size: '$embeddedRecipients' }, 0] },
+                {
+                  total: { $size: '$embeddedRecipients' },
+                  delivered: {
+                    $size: {
+                      $filter: {
+                        input: '$embeddedRecipients',
+                        as: 'r',
+                        cond: {
+                          $in: [
+                            { $toLower: { $ifNull: ['$$r.status', ''] } },
+                            ['delivered', 'read']
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  failed: {
+                    $size: {
+                      $filter: {
+                        input: '$embeddedRecipients',
+                        as: 'r',
+                        cond: {
+                          $eq: [{ $toLower: { $ifNull: ['$$r.status', ''] } }, 'failed']
+                        }
+                      }
+                    }
+                  }
+                },
+                null
+              ]
             }
           }
-  
-          return {
-            id: campaign._id,
-            campaignId: campaign.campaignId,
-            name: campaign.name,
-            description: campaign.description,
-            status: apiStatus,
-            createdAt: campaign.createdAt,
-            scheduledAt: campaign.scheduledAt,
-            startedAt: campaign.startedAt,
-            completedAt: campaign.completedAt,
-            template: campaign.templateId ? {
-              id: campaign.templateId._id,
-              name: (campaign.templateId as any).name,
-              metaTemplateName: (campaign.templateId as any).metaTemplateName,
-              metaStatus: (campaign.templateId as any).metaStatus,
-              isMetaTemplate: (campaign.templateId as any).isMetaTemplate,
-              type: (campaign.templateId as any).type
-            } : null,
-            progress: {
-              total,
-              sent: receivedCount,
-              failed: failedCount,
-              pending: pendingCount,
-              successRate
+        },
+        {
+          $addFields: {
+            totalCount: {
+              $cond: [
+                { $ifNull: ['$embeddedCounts.total', false] },
+                '$embeddedCounts.total',
+                { $ifNull: ['$msgAgg.total', 0] }
+              ]
             },
-            createdBy: campaign.createdBy ? {
-              id: campaign.createdBy._id,
-              name: (campaign.createdBy as any).name,
-              email: (campaign.createdBy as any).email
-            } : null
-          };
-        })
-      );
-  
-      // ✅ Apply status filtering AFTER calculating dynamic statuses
-      let filteredCampaigns = campaignsWithProgress;
-      if (status) {
-        console.log('🔍 Backend - Applying status filter:', status);
-        filteredCampaigns = campaignsWithProgress.filter(campaign => {
-          const matches = campaign.status === status;
-          return matches;
-        });
-        console.log('🔍 Backend - Campaigns after status filter:', filteredCampaigns.length);
-      }
-  
-      // ✅ Apply sorting if needed (for nested fields)
-      if (sortField && sortDirection) {
-        if (sortField === 'template' || sortField === 'recipientList') {
-          filteredCampaigns = filteredCampaigns.sort((a, b) => {
-            let aValue = '';
-            let bValue = '';
-            
-            if (sortField === 'template') {
-              aValue = a.template?.name || '';
-              bValue = b.template?.name || '';
+            deliveredCount: {
+              $cond: [
+                { $ifNull: ['$embeddedCounts.delivered', false] },
+                '$embeddedCounts.delivered',
+                { $ifNull: ['$msgAgg.delivered', 0] }
+              ]
+            },
+            failedCount: {
+              $cond: [
+                { $ifNull: ['$embeddedCounts.failed', false] },
+                '$embeddedCounts.failed',
+                { $ifNull: ['$msgAgg.failed', 0] }
+              ]
             }
-            
-            if (sortDirection === 'asc') {
-              return aValue.localeCompare(bValue);
-            } else {
-              return bValue.localeCompare(aValue);
+          }
+        },
+        {
+          $addFields: {
+            pendingCount: {
+              $cond: [
+                { $gt: ['$totalCount', 0] },
+                { $max: [0, { $subtract: ['$totalCount', { $add: ['$deliveredCount', '$failedCount'] }] }] },
+                0
+              ]
+            },
+            successRate: {
+              $cond: [
+                { $gt: ['$totalCount', 0] },
+                {
+                  $round: [
+                    { $multiply: [{ $divide: ['$deliveredCount', '$totalCount'] }, 100] },
+                    0
+                  ]
+                },
+                0
+              ]
             }
-          });
+          }
+        },
+        {
+          $addFields: {
+            apiStatus: {
+              $cond: [
+                { $gt: ['$totalCount', 0] },
+                {
+                  $switch: {
+                    branches: [
+                      {
+                        case: { $eq: ['$failedCount', '$totalCount'] },
+                        then: 'failed'
+                      },
+                      {
+                        case: { $eq: [{ $add: ['$deliveredCount', '$failedCount'] }, '$totalCount'] },
+                        then: 'completed'
+                      },
+                      {
+                        case: { $gt: ['$pendingCount', 0] },
+                        then: 'in-progress'
+                      }
+                    ],
+                    default: 'pending'
+                  }
+                },
+                '$status' // if totalCount=0, retain original status as fallback
+              ]
+            }
+          }
+        },
+  
+        // Optional status filter AFTER dynamic status computed
+        ...(status ? [{ $match: { apiStatus: String(status) } }] : []),
+  
+        // Prepare scalar fields for sorting safely
+        {
+          $addFields: {
+            sortKey: (() => {
+              if (needsTemplateSort) return '$templateNameForSort';
+              if (needsRecipientSort) return '$recipientNameForSort';
+              // direct fields fallback
+              return `$${sortFieldStr}`;
+            })()
+          }
+        },
+  
+        // Pagination via $facet; include $sort inside items facet to avoid memory bloat
+        {
+          $facet: {
+            meta: [
+              { $count: 'total' }
+            ],
+            items: [
+              { $sort: { sortKey: sortDir, createdAt: -1 } }, // tie-breaker
+              { $skip: (pageNum - 1) * limitNum },
+              { $limit: limitNum },
+              {
+                $project: {
+                  _id: 0,
+                  id: '$_id',
+                  campaignId: 1,
+                  name: 1,
+                  description: 1,
+                  status: '$apiStatus',
+                  createdAt: 1,
+                  template: {
+                    id: '$templateObj._id',
+                    name: '$templateObj.name',
+                    metaTemplateName: '$templateObj.metaTemplateName',
+                    metaStatus: '$templateObj.metaStatus',
+                    isMetaTemplate: '$templateObj.isMetaTemplate',
+                    type: '$templateObj.type',
+                  },
+                  recipientList: {
+                    name: '$recipientListObj.name',
+                    recipientCount: {
+                      $size: { $ifNull: ['$recipientListObj.recipients', []] }
+                    }
+                  },
+                  progress: {
+                    total: '$totalCount',
+                    sent: '$deliveredCount',
+                    failed: '$failedCount',
+                    pending: '$pendingCount',
+                    successRate: '$successRate'
+                  },
+                  createdBy: 1 // if you want name/email, add a small $lookup to users here
+                }
+              }
+            ]
+          }
+        },
+        {
+          $project: {
+            campaigns: '$items',
+            pagination: {
+              page: pageNum,
+              limit: limitNum,
+              total: { $ifNull: [{ $arrayElemAt: ['$meta.total', 0] }, 0] },
+              totalPages: {
+                $cond: [
+                  { $gt: [{ $ifNull: [{ $arrayElemAt: ['$meta.total', 0] }, 0] }, 0] },
+                  {
+                    $ceil: {
+                      $divide: [
+                        { $ifNull: [{ $arrayElemAt: ['$meta.total', 0] }, 0] },
+                        limitNum
+                      ]
+                    }
+                  },
+                  0
+                ]
+              }
+            }
+          }
         }
-      }
+      ];
   
-      // ✅ Calculate total AFTER filtering
-      const filteredTotal = filteredCampaigns.length;
-  
-      // ✅ Apply pagination LAST
-      const paginatedCampaigns = filteredCampaigns.slice(
-        (Number(page) - 1) * Number(limit),
-        Number(page) * Number(limit)
-      );
-  
-      console.log('🔍 Backend - Total campaigns from DB:', totalCampaigns);
-      console.log('🔍 Backend - Filtered total:', filteredTotal);
-      console.log('🔍 Backend - Paginated campaigns count:', paginatedCampaigns.length);
+      const result = await Campaign.aggregate(pipeline).allowDiskUse(true);
+      const payload = result[0] || { campaigns: [], pagination: { page: pageNum, limit: limitNum, total: 0, totalPages: 0 } };
   
       return res.json({
         success: true,
-        data: {
-          campaigns: paginatedCampaigns,
-          pagination: {
-            page: Number(page),
-            limit: Number(limit),
-            total: filteredTotal,
-            totalPages: Math.ceil(filteredTotal / Number(limit))
-          }
-        }
+        data: payload
       });
   
     } catch (error) {
@@ -403,8 +566,8 @@ export class CampaignController {
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
-  }
-  
+  }  
+
 
   /**
    * Get available campaign statuses
@@ -412,22 +575,22 @@ export class CampaignController {
   static async getAvailableStatuses(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const userId = req.user?.userId;
-      
+
       // Get distinct statuses from the database for this user
-      const dbStatuses = await Campaign.distinct('status', { 
-        createdBy: userId, 
-        isActive: true 
+      const dbStatuses = await Campaign.distinct('status', {
+        createdBy: userId,
+        isActive: true
       });
-      
+
       // Only include allowed statuses for filtering
       const allowedStatuses = ['pending', 'in-progress', 'completed', 'failed'];
-      
+
       // Get distinct statuses from database and filter to only allowed ones
       const availableStatuses = dbStatuses.filter(status => allowedStatuses.includes(status));
-      
+
       // Ensure all allowed statuses are included even if not in database
       const allStatuses = [...new Set([...availableStatuses, ...allowedStatuses])];
-      
+
       return res.json({
         success: true,
         data: {
@@ -455,7 +618,7 @@ export class CampaignController {
       const userId = req.user?.userId;
 
       // Try to find by MongoDB _id first, then by custom campaignId
-      const campaign = await Campaign.findOne({ 
+      const campaign = await Campaign.findOne({
         $or: [
           { _id: campaignId, createdBy: userId, isActive: true },
         ]
@@ -473,7 +636,7 @@ export class CampaignController {
 
       // Get campaign recipients - handle both recipient list campaigns and direct MR campaigns  
       let campaignRecipients: any[] = [];
-      
+
       if ((campaign as any).recipients && (campaign as any).recipients.length > 0) {
         // Campaign has seeded recipients (after being activated)
         campaignRecipients = (campaign as any).recipients;
@@ -482,10 +645,10 @@ export class CampaignController {
         campaignRecipients = ((campaign.recipientListId as any).recipients || []);
       } else if (campaign.mrIds && campaign.mrIds.length > 0) {
         // Campaign with direct MRs - fetch MRs from database
-        const mrs = await MedicalRep.find({ 
+        const mrs = await MedicalRep.find({
           _id: { $in: campaign.mrIds }
         });
-        
+
         campaignRecipients = mrs.map((mr: any) => ({
           mrId: mr._id,
           firstName: mr.firstName,
@@ -497,7 +660,7 @@ export class CampaignController {
       }
 
       console.log('🔍 getCampaignById - Found campaign recipients:', campaignRecipients.length);
-      
+
       // Get message logs for this campaign to find status
       const messageLogs = await MessageLog.find({ campaignId: campaign._id });
 
@@ -518,7 +681,7 @@ export class CampaignController {
           let realTimeTimestamp = null;
           let errorMessage = null;
           let messageId = null;
-          
+
           // If we have a message log for this recipient, use webhook-updated status
           if (messageLog) {
             // Always prioritize webhook-updated status (most reliable)
@@ -526,7 +689,7 @@ export class CampaignController {
             realTimeTimestamp = messageLog.sentAt || messageLog.deliveredAt;
             errorMessage = messageLog.errorMessage;
             messageId = messageLog.messageId;
-            
+
             logger.info('Using webhook status for recipient', {
               mrId: recipient.mrId,
               status: realTimeStatus,
@@ -541,7 +704,7 @@ export class CampaignController {
             });
           }
 
-          return  {
+          return {
             id: recipient._id || recipient.mrId,
             mrId: recipient.mrId,
             firstName: recipient.firstName,
@@ -563,12 +726,12 @@ export class CampaignController {
       // Calculate progress based on real-time status
       const sentCount = recipientsWithRealTimeStatus.filter((r: any) => r.status === 'sent' || r.status === 'delivered' || r.status === 'read').length;
       const failedCount = recipientsWithRealTimeStatus.filter((r: any) => r.status === 'failed').length;
-      const pendingCount = recipientsWithRealTimeStatus.filter((r: any) => 
+      const pendingCount = recipientsWithRealTimeStatus.filter((r: any) =>
         r.status === 'pending'
       ).length;
 
-      const successRate = campaign.totalRecipients > 0 
-        ? Math.round((sentCount / campaign.totalRecipients) * 100) 
+      const successRate = campaign.totalRecipients > 0
+        ? Math.round((sentCount / campaign.totalRecipients) * 100)
         : 0;
 
       return res.json({
@@ -634,14 +797,14 @@ export class CampaignController {
       }
 
       // Find the campaign first to get full details
-      const campaign = await Campaign.findOne({ 
-        campaignId, 
-        createdBy: userId, 
-        isActive: true 
+      const campaign = await Campaign.findOne({
+        campaignId,
+        createdBy: userId,
+        isActive: true
       })
-      .populate('templateId', 'name metaTemplateName metaLanguage metaStatus isMetaTemplate imageUrl')
-      .populate('recipientListId', 'name recipients')
-      .populate('mrIds', 'mrId firstName lastName phone');
+        .populate('templateId', 'name metaTemplateName metaLanguage metaStatus isMetaTemplate imageUrl')
+        .populate('recipientListId', 'name recipients')
+        .populate('mrIds', 'mrId firstName lastName phone');
 
       if (!campaign) {
         return res.status(404).json({
@@ -651,7 +814,7 @@ export class CampaignController {
       }
 
       const updateData: any = { status };
-      
+
       if (status === 'in-progress') {
         // Check if campaign is already in progress state
         if (campaign.status === 'in-progress') {
@@ -670,7 +833,7 @@ export class CampaignController {
         }
 
         updateData.startedAt = new Date();
-        
+
         // Validate template before sending
         if (!campaign.templateId) {
           return res.status(400).json({
@@ -709,11 +872,11 @@ export class CampaignController {
           recipients = recipientList.recipients;
         } else if (campaign.mrIds && campaign.mrIds.length > 0) {
           // Campaign with direct MRs - get MRs from database (exclude soft deleted)
-          const mrs = await MedicalRep.find({ 
-            _id: { $in: campaign.mrIds }, 
+          const mrs = await MedicalRep.find({
+            _id: { $in: campaign.mrIds },
 
           });
-          
+
           if (mrs.length === 0) {
             return res.status(400).json({
               success: false,
@@ -829,16 +992,16 @@ export class CampaignController {
 
       } else if (status === 'completed' || status === 'failed') {
         updateData.completedAt = new Date();
-        
+
         const updatedCampaign = await Campaign.findByIdAndUpdate(
           campaign._id,
           updateData,
           { new: true }
         );
 
-        logger.info('Campaign status updated', { 
-          campaignId: campaign.campaignId, 
-          status: updatedCampaign?.status 
+        logger.info('Campaign status updated', {
+          campaignId: campaign.campaignId,
+          status: updatedCampaign?.status
         });
 
         return res.json({
@@ -854,9 +1017,9 @@ export class CampaignController {
           { new: true }
         );
 
-        logger.info('Campaign status updated', { 
-          campaignId: campaign.campaignId, 
-          status: updatedCampaign?.status 
+        logger.info('Campaign status updated', {
+          campaignId: campaign.campaignId,
+          status: updatedCampaign?.status
         });
 
         return res.json({
@@ -930,7 +1093,7 @@ export class CampaignController {
 
       // Get message status from database (webhook-updated data)
       const messageLog = await MessageLog.findOne({ messageId });
-      
+
       if (!messageLog) {
         return res.status(404).json({
           success: false,
@@ -1047,21 +1210,21 @@ export class CampaignController {
       }
 
       const allLogs = await MessageLog.find({ campaignId: campaign._id });
-      const allProcessed = allLogs.every(log => 
+      const allProcessed = allLogs.every(log =>
         log.status === 'sent' || log.status === 'failed' || log.status === 'delivered' || log.status === 'read'
       );
 
       if (allProcessed && allLogs.length > 0) {
         const sentCount = allLogs.filter(log => log.status === 'sent' || log.status === 'delivered' || log.status === 'read').length;
         const failedCount = allLogs.filter(log => log.status === 'failed').length;
-        
+
         // Determine final status: failed if all failed, otherwise completed
         const finalStatus = failedCount === allLogs.length ? 'failed' : 'completed';
-        
+
         campaign.status = finalStatus;
         campaign.completedAt = new Date();
         await campaign.save();
-        logger.info('Campaign marked as final status', { 
+        logger.info('Campaign marked as final status', {
           campaignId: campaign.campaignId,
           finalStatus,
           totalMessages: allLogs.length,
@@ -1083,7 +1246,7 @@ export class CampaignController {
       const userId = req.user?.userId;
 
       // Find campaign
-      const campaign = await Campaign.findOne({ 
+      const campaign = await Campaign.findOne({
         $or: [
           { campaignId, createdBy: userId, isActive: true },
           { _id: campaignId, createdBy: userId, isActive: true }
@@ -1150,7 +1313,7 @@ export class CampaignController {
           'date': 'createdAt',
           'sendStatus': 'status'
         };
-        
+
         const sortFieldStr = String(sortField);
         const dbField = fieldMap[sortFieldStr] || 'createdAt';
         sortOptions[dbField] = sortDirection === 'asc' ? 1 : -1;
@@ -1184,7 +1347,7 @@ export class CampaignController {
           },
           { $project: { _id: 1 } }
         ]);
-        
+
         const campaignIds = campaigns.map(c => c._id);
         searchQuery = { createdBy: userId, isActive: true, _id: { $in: campaignIds } };
       }
@@ -1272,14 +1435,14 @@ export class CampaignController {
       // Import ExcelService for CSV generation
       const { ExcelService } = await import('../../services/excel.service');
       const excelService = new ExcelService();
-      
+
       // Generate CSV from filtered results
       const csvData = excelService.generateCSV(filteredCampaigns, 'campaign');
-      
+
       // Set headers for CSV download
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', `attachment; filename=campaigns-${new Date().toISOString().split('T')[0]}.csv`);
-      
+
       return res.send(csvData);
     } catch (error) {
       logger.error('Error exporting campaigns:', error);
@@ -1303,7 +1466,7 @@ export class CampaignController {
       console.log('🔍 Backend searchCampaignRecipients - Received params:', { campaignId, search, status, page, limit });
 
       // Find campaign and verify ownership
-      const campaign = await Campaign.findOne({ 
+      const campaign = await Campaign.findOne({
         $or: [
           { _id: campaignId, createdBy: userId, isActive: true },
           { campaignId: campaignId, createdBy: userId, isActive: true }
@@ -1319,7 +1482,7 @@ export class CampaignController {
 
       // Get campaign recipients - handle both recipient list campaigns and direct MR campaigns
       let campaignRecipients: any[] = [];
-      
+
       if ((campaign as any).recipients && (campaign as any).recipients.length > 0) {
         // Campaign has seeded recipients (after being activated)
         campaignRecipients = (campaign as any).recipients;
@@ -1338,10 +1501,10 @@ export class CampaignController {
         }
       } else if (campaign.mrIds && campaign.mrIds.length > 0) {
         // Campaign with direct MRs - fetch MRs from database
-        const mrs = await MedicalRep.find({ 
+        const mrs = await MedicalRep.find({
           _id: { $in: campaign.mrIds }
         });
-        
+
         campaignRecipients = mrs.map((mr: any) => ({
           mrId: mr._id,
           firstName: mr.firstName,
@@ -1353,7 +1516,7 @@ export class CampaignController {
       }
 
       console.log('🔍 Backend - Found campaign recipients:', campaignRecipients.length);
-      
+
       // Get message logs for this campaign to find status
       const messageLogs = await MessageLog.find({ campaignId: campaign._id });
 
@@ -1373,7 +1536,7 @@ export class CampaignController {
         let realTimeTimestamp = null;
         let errorMessage = null;
         let messageId = null;
-        
+
         if (messageLog) {
           realTimeStatus = messageLog.status;
           realTimeTimestamp = messageLog.sentAt || messageLog.deliveredAt;
@@ -1409,7 +1572,7 @@ export class CampaignController {
           const phoneMatch = (recipient.phone || '').toLowerCase().includes(searchStr);
           const firstNameMatch = (recipient.firstName || '').toLowerCase().includes(searchStr);
           const lastNameMatch = (recipient.lastName || '').toLowerCase().includes(searchStr);
-          
+
           return nameMatch || phoneMatch || firstNameMatch || lastNameMatch;
         });
         console.log('🔍 Backend - Recipients after search filtering:', recipients.length, 'search term:', searchStr);
@@ -1434,7 +1597,7 @@ export class CampaignController {
       const delivered = recipients.filter(r => r.status === 'delivered').length;
       const read = recipients.filter(r => r.status === 'read').length;
       const successCount = delivered + read;
-      
+
       const stats = {
         total: totalFiltered,
         pending: recipients.filter(r => r.status === 'pending').length,
@@ -1488,7 +1651,7 @@ export class CampaignController {
       const userId = req.user?.userId;
 
       // Find campaign
-      const campaign = await Campaign.findOne({ 
+      const campaign = await Campaign.findOne({
         $or: [
           { _id: campaignId, createdBy: userId, isActive: true },
           { campaignId: campaignId, createdBy: userId, isActive: true }
@@ -1506,7 +1669,7 @@ export class CampaignController {
       const campaignRecipients = campaign.recipientListId
         ? ((campaign.recipientListId as any).recipients || [])
         : [];
-      
+
       // Get message logs for this campaign to find status
       const messageLogs = await MessageLog.find({ campaignId: campaign._id });
 
@@ -1527,7 +1690,7 @@ export class CampaignController {
           let realTimeTimestamp = null;
           let errorMessage = null;
           let messageId = null;
-          
+
           // If we have a message log for this recipient, use webhook-updated status
           if (messageLog) {
             // Always prioritize webhook-updated status (most reliable)
@@ -1535,7 +1698,7 @@ export class CampaignController {
             realTimeTimestamp = messageLog.sentAt || messageLog.deliveredAt;
             errorMessage = messageLog.errorMessage;
             messageId = messageLog.messageId;
-            
+
             logger.info('Using webhook status for recipient in real-time status', {
               mrId: recipient.mrId,
               status: realTimeStatus,
