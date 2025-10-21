@@ -28,11 +28,12 @@ export interface CampaignRecord {
 interface CampaignStatsProps {
   campaigns: CampaignRecord[];
   loading?: boolean;
+  allTotal?: number;
 }
 
-const CampaignStats: React.FC<CampaignStatsProps> = ({ campaigns, loading = false }) => {
+const CampaignStats: React.FC<CampaignStatsProps> = ({ campaigns, loading = false, allTotal = 0 }) => {
   const stats = React.useMemo(() => {
-    const total = campaigns.length;
+    const total = allTotal;
     
     // Campaign status counting based on new 4-status system
     const completed = campaigns.filter(c => c.status === 'completed').length;

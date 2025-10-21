@@ -48,11 +48,8 @@ const Dashboard: React.FC = () => {
   const [sortField, setSortField] = useState<keyof CampaignRecord>('date');
   const [sortDirection, setSortDirection] = useState<'asc'|'desc'>('desc');
 
-  // Totals
-  const [overallTotal, setOverallTotal] = useState<number>(0);
-
   // API hook
-  const { campaigns: apiCampaigns, loading: apiLoading, totalPages, total, fetchCampaigns } = useCampaigns();
+  const { campaigns: apiCampaigns, loading: apiLoading, totalPages, total, allTotal, fetchCampaigns } = useCampaigns();
 
   // Template preview
   const { showPreview, previewTemplate, closePreview, openPreview } = useTemplatePreview();
@@ -207,7 +204,7 @@ const Dashboard: React.FC = () => {
     <div className="min-h-screen bg-gray-100">
       <div className="p-8">
         <StandardHeader pageTitle="Dashboard" />
-        <CampaignStats campaigns={campaigns} loading={apiLoading} />
+        <CampaignStats campaigns={campaigns} loading={apiLoading} allTotal={allTotal} />
         <AdvancedCampaignSearch
           searchTerm={searchTerm}
           statusFilter={statusFilter}
@@ -215,7 +212,7 @@ const Dashboard: React.FC = () => {
           onStatusChange={(status) => { if (status !== statusFilter) { setStatusFilter(status); setCurrentPage(1); } }}
           onClearFilters={clearFilters}
           filteredCount={total || 0}
-          totalCount={overallTotal}
+          totalCount={allTotal}
         />
         <CampaignTable
           campaigns={campaigns}

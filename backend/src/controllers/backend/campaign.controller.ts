@@ -7,6 +7,7 @@ import MessageLog from '../../models/MessageLog';
 import MedicalRep from '../../models/MedicalRepresentative';
 import logger from '../../utils/logger';
 import whatsappCloudAPIService from '../../services/whatsapp-cloud-api.service';
+import { ObjectId } from 'mongodb';
 
 export class CampaignController {
   /**
@@ -167,6 +168,7 @@ export class CampaignController {
    */
   static async getCampaigns(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
+      logger.info('Getting campaigns');
       const userId = req.user?.userId;
       const {
         page = 1,
@@ -192,8 +194,8 @@ export class CampaignController {
       const sortFieldStr = fieldMap[String(sortField)] || String(sortField) || 'createdAt';
       const sortDir = String(sortDirection) === 'asc' ? 1 : -1;
   
-      // Build base match
-      const baseMatch: any = { createdBy: userId, isActive: true };
+      const userObjectId = new ObjectId(String(userId));
+      const baseMatch = { createdBy: userObjectId, isActive: true };
   
       // Build search expression using $regexMatch to avoid $unwind by array-evaluating with $map + $anyElementTrue
       let searchExpr: any = null;
@@ -258,28 +260,25 @@ export class CampaignController {
         {
           $lookup: {
             from: 'templates',
-            localField: 'templateId',
-            foreignField: '_id',
-            as: 'template',
+            let: { tid: '$templateId' },
             pipeline: [
+              { $match: { $expr: { $eq: ['$_id', { $cond: [{ $eq: [{ $type: '$$tid' }, 'string'] }, { $toObjectId: '$$tid' }, '$$tid'] }] } } },
               { $project: { name: 1, metaTemplateName: 1, metaStatus: 1, isMetaTemplate: 1, type: 1, imageUrl: 1 } }
-            ]
+            ],
+            as: 'template'
           }
         },
         {
           $lookup: {
             from: 'templaterecipients',
-            localField: 'recipientListId',
-            foreignField: '_id',
-            as: 'recipientList',
+            let: { rid: '$recipientListId' },
             pipeline: [
+              { $match: { $expr: { $eq: ['$_id', { $cond: [{ $eq: [{ $type: '$$rid' }, 'string'] }, { $toObjectId: '$$rid' }, '$$rid'] }] } } },
               { $project: { name: 1, description: 1, recipients: 1 } }
-            ]
+            ],
+            as: 'recipientList'
           }
         },
-  
-        // Optional search
-        ...(searchExpr ? [{ $match: searchExpr }] : []),
   
         // Compute scalar template/recipient fields for sort and response
         {
@@ -477,15 +476,26 @@ export class CampaignController {
             })()
           }
         },
+        {
+          $lookup: {
+            from: 'users', // adjust if your users collection is named differently
+            let: { uid: '$createdBy' },
+            pipeline: [
+              { $match: { $expr: { $eq: ['$_id', '$$uid'] } } },
+              { $project: { name: 1, email: 1 } }
+            ],
+            as: 'creator'
+          }
+        },
+        { $addFields: { createdByObj: { $first: '$creator' } } },
+        
   
         // Pagination via $facet; include $sort inside items facet to avoid memory bloat
         {
           $facet: {
-            meta: [
-              { $count: 'total' }
-            ],
             items: [
-              { $sort: { sortKey: sortDir, createdAt: -1 } }, // tie-breaker
+              ...(searchExpr ? [{ $match: searchExpr }] : []),
+              { $sort: { sortKey: sortDir, createdAt: -1 } },
               { $skip: (pageNum - 1) * limitNum },
               { $limit: limitNum },
               {
@@ -497,18 +507,20 @@ export class CampaignController {
                   description: 1,
                   status: '$apiStatus',
                   createdAt: 1,
+                  scheduledAt: 1,
+                  startedAt: 1,
+                  completedAt: 1,
                   template: {
-                    id: '$templateObj._id',
-                    name: '$templateObj.name',
-                    metaTemplateName: '$templateObj.metaTemplateName',
-                    metaStatus: '$templateObj.metaStatus',
-                    isMetaTemplate: '$templateObj.isMetaTemplate',
-                    type: '$templateObj.type',
-                  },
-                  recipientList: {
-                    name: '$recipientListObj.name',
-                    recipientCount: {
-                      $size: { $ifNull: ['$recipientListObj.recipients', []] }
+                    $let: {
+                      vars: { t: { $first: '$template' } },
+                      in: {
+                        id: '$$t._id',
+                        name: '$$t.name',
+                        metaTemplateName: '$$t.metaTemplateName',
+                        metaStatus: '$$t.metaStatus',
+                        isMetaTemplate: '$$t.isMetaTemplate',
+                        type: '$$t.type'
+                      }
                     }
                   },
                   progress: {
@@ -518,9 +530,20 @@ export class CampaignController {
                     pending: '$pendingCount',
                     successRate: '$successRate'
                   },
-                  createdBy: 1 // if you want name/email, add a small $lookup to users here
+                  createdBy: {
+                    id: '$createdByObj._id',
+                    name: '$createdByObj.name',
+                    email: '$createdByObj.email'
+                  }
                 }
               }
+            ],
+            meta: [
+              ...(searchExpr ? [{ $match: searchExpr }] : []),
+              { $count: 'total' }
+            ],
+            allMeta: [
+              { $count: 'total' }
             ]
           }
         },
@@ -531,6 +554,7 @@ export class CampaignController {
               page: pageNum,
               limit: limitNum,
               total: { $ifNull: [{ $arrayElemAt: ['$meta.total', 0] }, 0] },
+              allTotal: { $ifNull: [{ $arrayElemAt: ['$allMeta.total', 0] }, 0] },
               totalPages: {
                 $cond: [
                   { $gt: [{ $ifNull: [{ $arrayElemAt: ['$meta.total', 0] }, 0] }, 0] },
@@ -547,7 +571,7 @@ export class CampaignController {
               }
             }
           }
-        }
+        }        
       ];
   
       const result = await Campaign.aggregate(pipeline).allowDiskUse(true);
@@ -658,8 +682,6 @@ export class CampaignController {
           status: 'pending' // Default status for non-activated campaigns
         }));
       }
-
-      console.log('🔍 getCampaignById - Found campaign recipients:', campaignRecipients.length);
 
       // Get message logs for this campaign to find status
       const messageLogs = await MessageLog.find({ campaignId: campaign._id });
@@ -1463,8 +1485,6 @@ export class CampaignController {
       const { search, status, page = 1, limit = 10 } = req.query;
       const userId = req.user?.userId;
 
-      console.log('🔍 Backend searchCampaignRecipients - Received params:', { campaignId, search, status, page, limit });
-
       // Find campaign and verify ownership
       const campaign = await Campaign.findOne({
         $or: [
@@ -1515,8 +1535,6 @@ export class CampaignController {
         }));
       }
 
-      console.log('🔍 Backend - Found campaign recipients:', campaignRecipients.length);
-
       // Get message logs for this campaign to find status
       const messageLogs = await MessageLog.find({ campaignId: campaign._id });
 
@@ -1562,8 +1580,6 @@ export class CampaignController {
         };
       });
 
-      console.log('🔍 Backend - Total recipients before filtering:', recipients.length);
-
       // Apply search filter
       if (search && search.toString().trim() !== '') {
         const searchStr = search.toString().toLowerCase();
@@ -1575,13 +1591,11 @@ export class CampaignController {
 
           return nameMatch || phoneMatch || firstNameMatch || lastNameMatch;
         });
-        console.log('🔍 Backend - Recipients after search filtering:', recipients.length, 'search term:', searchStr);
       }
 
       // Apply status filter
       if (status && status.toString().trim() !== '' && status !== 'all') {
         recipients = recipients.filter((recipient: any) => recipient.status === status);
-        console.log('🔍 Backend - Recipients after status filtering:', recipients.length, 'status:', status);
       }
 
       // Calculate pagination
@@ -1608,10 +1622,6 @@ export class CampaignController {
         received: successCount, // Combined delivered + read
         successRate: totalFiltered > 0 ? Math.round((successCount / totalFiltered) * 100) : 0
       };
-
-      console.log('🔍 Backend - Pagination:', { page: pageNum, limit: limitNum, totalFiltered, totalPages, startIndex, endIndex });
-      console.log('🔍 Backend - Returning recipients count:', paginatedRecipients.length);
-      console.log('🔍 Backend - Aggregate stats:', stats);
 
       return res.json({
         success: true,

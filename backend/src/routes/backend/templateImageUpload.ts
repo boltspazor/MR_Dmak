@@ -16,7 +16,7 @@ const upload = multer({
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB limit
   },
-  fileFilter: (req, file, cb) => {
+  fileFilter: (req: any, file: Express.Multer.File, cb: (error: Error | null, acceptFile: boolean) => void) => {
     // Only accept images
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
@@ -30,7 +30,7 @@ const upload = multer({
  * POST /api/templates/:templateId/upload-image
  * Upload and link image to template
  */
-router.post('/:templateId/upload-image', upload.single('image'), async (req, res) => {
+router.post('/:templateId/upload-image', upload.single('image'), async (req: express.Request, res: express.Response) => {
   try {
     const { templateId } = req.params;
 
@@ -73,17 +73,17 @@ router.post('/:templateId/upload-image', upload.single('image'), async (req, res
     template.imageUrl = imageUrl;
     await template.save();
 
-    res.json({
+    return res.json({
       success: true,
       imageUrl,
       message: 'Image uploaded and linked to template successfully',
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Image upload error:', error);
-    res.status(500).json({ 
+    return res.status(500).json({ 
       error: 'Failed to upload image', 
-      details: error.message 
+      details: error instanceof Error ? error.message : String(error)
     });
   }
 });
@@ -92,7 +92,7 @@ router.post('/:templateId/upload-image', upload.single('image'), async (req, res
  * DELETE /api/templates/:templateId/delete-image
  * Remove image from template and delete file
  */
-router.delete('/:templateId/delete-image', async (req, res) => {
+router.delete('/:templateId/delete-image', async (req: express.Request, res: express.Response) => {
   try {
     const { templateId } = req.params;
 
@@ -116,16 +116,16 @@ router.delete('/:templateId/delete-image', async (req, res) => {
     template.imageUrl = '';
     await template.save();
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Image deleted successfully',
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Image delete error:', error);
-    res.status(500).json({ 
+    return res.status(500).json({ 
       error: 'Failed to delete image', 
-      details: error.message 
+      details: error instanceof Error ? error.message : String(error)
     });
   }
 });

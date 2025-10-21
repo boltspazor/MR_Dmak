@@ -3,7 +3,7 @@ import { useCallback, useRef, useState } from 'react';
 import { campaignsAPI, Campaign } from '../api/campaigns-new';
 import { CampaignFilterParams } from '../types/campaign.types';
 
-type Pagination = { page: number; totalPages: number; total: number };
+type Pagination = { page: number; totalPages: number; total: number; allTotal: number };
 
 export const useCampaigns = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -11,6 +11,7 @@ export const useCampaigns = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
+  const [allTotal, setAllTotal] = useState(0);
   const reqKeyRef = useRef<string>('');
 
   const fetchCampaigns = useCallback(async (params: CampaignFilterParams) => {
@@ -45,16 +46,18 @@ export const useCampaigns = () => {
       setCampaigns(items);
       setTotalPages(pagination.totalPages || 1);
       setTotal(pagination.total || items.length || 0);
+      setAllTotal(pagination.allTotal || pagination.total || items.length || 0);
     } catch (e: any) {
       if (e?.name !== 'CanceledError' && e?.name !== 'AbortError') {
         setCampaigns([]);
         setTotal(0);
         setTotalPages(1);
+        setAllTotal(0);
       }
     } finally {
       if (reqKeyRef.current === key) setLoading(false);
     }
   }, []);
 
-  return { campaigns, loading, totalPages, total, fetchCampaigns };
+  return { campaigns, loading, totalPages, total, allTotal, fetchCampaigns };
 };
