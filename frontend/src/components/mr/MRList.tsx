@@ -106,7 +106,7 @@ const MRList: React.FC<MRListProps> = ({
 
     console.log('MRList: Fetching with params:', params);
     fetchContacts(params);
-  }, [currentPage, searchTerm, groupFilter, consentStatusFilter, sortField, sortDirection, searchFilters, fetchContacts]);
+  }, [currentPage, searchTerm, groupFilter, consentStatusFilter, metaStatusFilter, sortField, sortDirection, searchFilters, fetchContacts]);
 
   // Fetch overall MR total for AdvancedSearch (unfiltered count)
   useEffect(() => {

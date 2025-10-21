@@ -57,17 +57,15 @@ if (!BASE_URL) {
 app.locals.BASE_URL = BASE_URL;
 
 // Create necessary directories
-const UPLOADS_DIR = process.env.UPLOADS_DIR;
+// Provide a safe default for uploads when environment variable is missing
+const DEFAULT_UPLOADS = path.join(process.cwd(), 'uploads');
+const UPLOADS_DIR = process.env.UPLOADS_DIR || DEFAULT_UPLOADS;
 const LOGS_DIR = path.join(process.cwd(), 'logs');
 
-if (UPLOADS_DIR) {
-  try {
-    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-  } catch (error) {
-    console.warn('Failed to create UPLOADS_DIR:', UPLOADS_DIR, error);
-  }
-} else {
-  console.warn('UPLOADS_DIR environment variable is not set');
+try {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+} catch (error) {
+  console.warn('Failed to create UPLOADS_DIR:', UPLOADS_DIR, error);
 }
 
 if (!fs.existsSync(LOGS_DIR)) {
@@ -110,7 +108,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Static files
-app.use('/uploads/template-images', express.static(process.env.UPLOADS_DIR));
+app.use('/uploads/template-images', express.static(UPLOADS_DIR));
 
 // API Routes
 app.use('/api/auth', authRoutes);

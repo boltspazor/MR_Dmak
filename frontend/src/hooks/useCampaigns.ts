@@ -46,7 +46,21 @@ export const useCampaigns = () => {
       setCampaigns(items);
       setTotalPages(pagination.totalPages || 1);
       setTotal(pagination.total || items.length || 0);
-      setAllTotal(pagination.allTotal || pagination.total || items.length || 0);
+      // If backend provides an explicit allTotal use it, otherwise request lightweight total-count endpoint
+      const inferredAllTotal = pagination.allTotal || pagination.total || items.length || 0;
+      setAllTotal(inferredAllTotal);
+
+      // Try to fetch the true unfiltered total from the lightweight endpoint. Do this after setting current page state
+      // so we don't block the main request; failures are non-fatal.
+      try {
+        const totalRes = await campaignsAPI.getCampaignTotalCount();
+        if (totalRes && typeof totalRes.total === 'number') {
+          setAllTotal(totalRes.total);
+        }
+      } catch (err) {
+        // ignore - keep inferredAllTotal
+        // console.debug('Failed to fetch campaign total-count:', err);
+      }
     } catch (e: any) {
       if (e?.name !== 'CanceledError' && e?.name !== 'AbortError') {
         setCampaigns([]);

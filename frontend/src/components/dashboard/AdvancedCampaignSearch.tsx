@@ -61,7 +61,25 @@ const AdvancedCampaignSearch: React.FC<AdvancedCampaignSearchProps> = ({
   // Fetch overall unfiltered campaign total from backend
   useEffect(() => {
     // Use the totalCount prop (which is now allTotal from pagination)
-    setOverallTotal(totalCount || null);
+    if (totalCount && totalCount > 0) {
+      setOverallTotal(totalCount);
+      return;
+    }
+
+    // If parent didn't provide an overall total, fetch the lightweight total-count endpoint
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await campaignsAPI.getCampaignTotalCount();
+        if (mounted && res && typeof res.total === 'number') {
+          setOverallTotal(res.total);
+        }
+      } catch (err) {
+        // ignore - leave overallTotal as null
+        // console.debug('Failed to fetch campaign total-count:', err);
+      }
+    })();
+    return () => { mounted = false; };
   }, [totalCount]);
 
   // Real-time search with debounce

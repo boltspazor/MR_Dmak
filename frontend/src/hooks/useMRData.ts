@@ -138,11 +138,26 @@ export const useMRData = () => {
       const transformedGroups: Group[] = backendGroups.map((group: any) => ({
         id: group._id || group.id,
         name: group.groupName,
-        contactCount: 0 // Will be updated by useEffect
+        contactCount: typeof group.contactCount === 'number' ? group.contactCount : 0
       }));
 
       console.log('Transformed groups:', transformedGroups);
       setGroups(transformedGroups);
+
+      // Attempt to fetch MR stats to enrich group contact counts (backend may provide counts per group)
+      try {
+        const statsRes = await api.get('/mrs/stats');
+        const stats = statsRes.data?.data;
+        if (stats && stats.byGroup) {
+          setGroups(prev => prev.map(g => ({
+            ...g,
+            contactCount: typeof stats.byGroup[g.name] === 'number' ? stats.byGroup[g.name] : g.contactCount
+          })));
+        }
+      } catch (err) {
+        // non-fatal - keep transformedGroups as-is
+        // console.debug('Failed to fetch MR stats for group counts:', err);
+      }
     } catch (error: any) {
       console.error('Error fetching groups from backend:', error);
     }
