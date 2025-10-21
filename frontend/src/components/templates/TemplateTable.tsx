@@ -60,7 +60,19 @@ const TemplateTable: React.FC<TemplateTableProps> = ({
                 <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
                   <span className="text-blue-700 font-bold text-xs">M</span>
                 </div>
-                <span>Meta Template</span>
+                <span>Marketing</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
+                  <span className="text-blue-600 font-bold text-xs">U</span>
+                </div>
+                <span>Utility</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
+                  <span className="text-blue-500 font-bold text-xs">A</span>
+                </div>
+                <span>Authentication</span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
@@ -157,13 +169,33 @@ const TemplateTable: React.FC<TemplateTableProps> = ({
                       </p>
                     </div>
                     <div className="flex items-center space-x-1 flex-shrink-0">
-                      {template.isMetaTemplate && (
+                      {template.metaCategory == "MARKETING" && (
                         <div
                           className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center"
                           title="Meta Template"
                         >
                           <span className="text-blue-700 font-bold text-xs">
                             M
+                          </span>
+                        </div>
+                      )}
+                      {template.metaCategory == "UTILITY" && (
+                        <div
+                          className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center"
+                          title="Meta Template"
+                        >
+                          <span className="text-blue-600 font-bold text-xs">
+                            U
+                          </span>
+                        </div>
+                      )}
+                      {template.metaCategory == "AUTHENTICATION" && (
+                        <div
+                          className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center"
+                          title="Meta Template"
+                        >
+                          <span className="text-blue-500 font-bold text-xs">
+                            A
                           </span>
                         </div>
                       )}

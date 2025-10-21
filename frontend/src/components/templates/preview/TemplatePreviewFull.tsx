@@ -118,7 +118,7 @@ const TemplatePreviewFull: React.FC<TemplatePreviewFullProps> = ({
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Type:</span>
-                    <span className="text-sm font-medium text-gray-900">{template.type || 'text'}</span>
+                    <span className="text-sm font-medium text-gray-900">{template.metaCategory || 'text'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Created:</span>
@@ -140,7 +140,7 @@ const TemplatePreviewFull: React.FC<TemplatePreviewFullProps> = ({
               </div>
 
               {/* Recipient Lists */}
-              <RecipientListsSection template={template} isOpen={isOpen} />
+              <RecipientListsSection template={template} />
             </div>
           </div>
         </div>
