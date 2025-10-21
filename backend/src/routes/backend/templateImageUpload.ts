@@ -8,8 +8,7 @@ import Template from '../../models/Template';
 
 const router = express.Router();
 
-const UPLOADS_DIR = path.join(__dirname, '../uploads/template-images');
-fs.mkdir(UPLOADS_DIR, { recursive: true }).catch(console.error);
+const UPLOADS_DIR = process.env.UPLOADS_DIR;
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -60,9 +59,9 @@ router.post('/:templateId/upload-image', upload.single('image'), async (req: exp
       .toFile(filepath);
 
     // Generate public URL
-    const imageUrl = `${req.protocol}://${req.get('host')}/uploads/template-images/${filename}`;
+    const BASE_URL = `${req.protocol}://${req.get('host')}`;
+    const imageUrl = `${BASE_URL}/uploads/template-images/${filename}`;
 
-    // Delete old image if exists
     if (template.imageUrl && template.imageUrl.includes('/uploads/template-images/')) {
       const oldFilename = path.basename(template.imageUrl);
       const oldFilepath = path.join(UPLOADS_DIR, oldFilename);

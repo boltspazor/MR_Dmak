@@ -49,13 +49,30 @@ const app = express();
 // Trust proxy for Railway deployment (fixes rate limiting issue)
 app.set('trust proxy', 1);
 
+// Add BASE_URL to app locals for consistent URL generation
+const BASE_URL = process.env.FRONTEND_URL;
+if (!BASE_URL) {
+  console.warn('FRONTEND_URL environment variable is not set');
+}
+app.locals.BASE_URL = BASE_URL;
+
 // Create necessary directories
-const dirs = ['uploads', 'logs'];
-dirs.forEach(dir => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+const UPLOADS_DIR = process.env.UPLOADS_DIR;
+const LOGS_DIR = path.join(process.cwd(), 'logs');
+
+if (UPLOADS_DIR) {
+  try {
+    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+  } catch (error) {
+    console.warn('Failed to create UPLOADS_DIR:', UPLOADS_DIR, error);
   }
-});
+} else {
+  console.warn('UPLOADS_DIR environment variable is not set');
+}
+
+if (!fs.existsSync(LOGS_DIR)) {
+  fs.mkdirSync(LOGS_DIR, { recursive: true });
+}
 
 // Security middleware
 app.use(helmet({
@@ -93,7 +110,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Static files
-app.use('/uploads', express.static(path.join(__dirname, '../src/routes/uploads')));
+app.use('/uploads/template-images', express.static(process.env.UPLOADS_DIR));
 
 // API Routes
 app.use('/api/auth', authRoutes);
