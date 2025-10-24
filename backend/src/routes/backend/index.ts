@@ -1,3 +1,13 @@
+/**
+ * @swagger
+ * /user:
+ *   get:
+ *     summary: Get user information
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved user data
+ */
+import 'swagger-jsdoc';
 // Backend routes
 export { default as authRoutes } from './auth.routes';
 export { default as cacheRoutes } from './cache.routes';

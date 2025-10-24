@@ -1,3 +1,13 @@
+/**
+ * @swagger
+ * /user:
+ *   get:
+ *     summary: Get user information
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved user data
+ */
+import 'swagger-jsdoc';
 import { Router } from 'express';
 import { MRController } from '../../controllers/backend/mr.controller';
 import { authenticateToken } from '../../middleware/auth.middleware';

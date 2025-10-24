@@ -1,3 +1,13 @@
+/**
+ * @swagger
+ * /user:
+ *   get:
+ *     summary: Get user information
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved user data
+ */
+import 'swagger-jsdoc';
 import express from 'express';
 import { authenticateToken, requireRole } from '../../middleware/auth.middleware';
 import recipientListController from '../../controllers/backend/recipient-list.controller';

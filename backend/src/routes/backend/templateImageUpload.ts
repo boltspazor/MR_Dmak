@@ -1,3 +1,13 @@
+/**
+ * @swagger
+ * /user:
+ *   get:
+ *     summary: Get user information
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved user data
+ */
+import 'swagger-jsdoc';
 import express from 'express';
 import multer from 'multer';
 import sharp from 'sharp';

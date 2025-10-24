@@ -1,7 +1,7 @@
 import { AppConfig } from '../types/common';
 
 export const config: AppConfig = {
-  port: parseInt(process.env.PORT || '5000', 10),
+  port: parseInt(process.env.PORT || '3000', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
   
   database: {
@@ -24,6 +24,7 @@ export const config: AppConfig = {
     origins: [
       'http://localhost:3000',
       'http://localhost:3001',
+      'http://localhost:5001',
       'https://mrfrontend-production.up.railway.app',
       'https://mrfrontend-production.up.railway.app/',
       ...(process.env.ALLOWED_ORIGINS?.split(',') || [])

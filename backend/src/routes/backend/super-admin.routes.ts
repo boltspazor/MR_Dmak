@@ -1,16 +1,28 @@
+/**
+ * @swagger
+ * /user:
+ *   get:
+ *     summary: Get user information
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved user data
+ */
+import 'swagger-jsdoc';
 import { Router } from 'express';
 import { SuperAdminController } from '../../controllers/backend/super-admin.controller';
+import { authenticateToken, requireRole } from '../../middleware/auth.middleware';
 
 const router = Router();
 const superAdminController = new SuperAdminController();
 
-// Public routes for super admin management (no authentication required for setup)
+// Public setup routes
 router.post('/create', superAdminController.createOrUpdateSuperAdmin);
 router.get('/info', superAdminController.getSuperAdminInfo);
 router.post('/reset-password', superAdminController.resetSuperAdminPassword);
 router.get('/credentials', superAdminController.getSuperAdminCredentials);
 
-// Protected routes for super admin dashboard
+// Protected admin routes
+router.use(authenticateToken, requireRole(['super-admin']));
 router.get('/stats', superAdminController.getStats);
 router.get('/performance', superAdminController.getPerformance);
 router.get('/marketing-managers', superAdminController.getMarketingManagers);

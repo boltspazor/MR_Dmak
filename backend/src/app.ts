@@ -5,6 +5,8 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
+import swaggerUi from 'swagger-ui-express';
+import swaggerJsdoc from 'swagger-jsdoc';
 
 // Backend routes
 import {
@@ -129,6 +131,28 @@ app.use('/api/consent', consentRoutes);
 app.use('/api/webhook', webhookRoutes);
 app.use('/api/whatsapp-marketing', whatsappMarketingRoutes);
 app.use('/api/templates/img', templateImageRoutes);
+
+// Swagger (OpenAPI) setup - serves interactive API docs at /api-docs
+const swaggerOptions = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'MR Communication Tool API',
+      version: process.env.npm_package_version || '1.0.0',
+      description: 'API documentation for the MR Communication Tool',
+    },
+    servers: [
+      {
+        url: `http://localhost:${config.port}`,
+      },
+    ],
+  },
+  // Look for JSDoc/OpenAPI comments in compiled JS/TS route files
+  apis: [path.join(__dirname, 'routes/**/*.ts'), path.join(__dirname, 'routes/**/*.js')],
+};
+
+const swaggerSpec = swaggerJsdoc(swaggerOptions);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Health check
 app.get('/api/health', (req, res) => {
