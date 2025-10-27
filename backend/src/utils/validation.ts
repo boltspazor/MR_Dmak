@@ -16,16 +16,16 @@ export const schemas = {
   mr: {
     create: Joi.object({
       mrId: Joi.string().required(),
-      firstName: Joi.string().min(2).required(),
-      lastName: Joi.string().min(2).required(),
+      firstName: Joi.string().min(1).required(),
+      lastName: Joi.string().min(1).required(),
       phone: Joi.string().pattern(/^\+?[1-9]\d{1,14}$/).required(),
       groupId: Joi.string().allow('', null),
       comments: Joi.string().allow('', null),
     }),
     update: Joi.object({
       mrId: Joi.string(),
-      firstName: Joi.string().min(2),
-      lastName: Joi.string().min(2),
+      firstName: Joi.string().min(1),
+      lastName: Joi.string().min(1),
       phone: Joi.string().pattern(/^\+?[1-9]\d{1,14}$/),
       groupId: Joi.string(),
       comments: Joi.string().allow('', null),
