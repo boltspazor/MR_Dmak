@@ -242,6 +242,13 @@ const AddMRDialog: React.FC<AddMRDialogProps> = ({ isOpen, onClose, onSuccess, c
       console.error('Error adding MR:', error);
       let errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Failed to add MR';
       
+      // Check if there are validation details
+      const validationDetails = error.response?.data?.details;
+      if (validationDetails && Array.isArray(validationDetails) && validationDetails.length > 0) {
+        // If validation failed, show the main error with details
+        errorMessage = 'Validation failed: ' + validationDetails.join(', ');
+      }
+      
       // Clean up error messages
       errorMessage = errorMessage
         .replace(/app\.railway\.app/gi, 'D-MAK')
@@ -255,7 +262,7 @@ const AddMRDialog: React.FC<AddMRDialogProps> = ({ isOpen, onClose, onSuccess, c
         .replace(/D-MAK\s+server/gi, 'D-MAK server')
         .trim();
       
-      setErrorMessage(`❌ Error: ${errorMessage}`);
+      setErrorMessage(`❌ ${errorMessage}`);
     } finally {
       setSubmitting(false);
     }

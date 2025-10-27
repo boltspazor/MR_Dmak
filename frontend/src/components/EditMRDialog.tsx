@@ -161,6 +161,15 @@ const EditMRDialog: React.FC<EditMRDialogProps> = ({
     } catch (error: any) {
       let errorMessage = error.message || 'Failed to update MR';
       
+      // Check if there are validation details from the API response
+      const validationDetails = error.response?.data?.details;
+      if (validationDetails && Array.isArray(validationDetails) && validationDetails.length > 0) {
+        // If validation failed, show the main error with details
+        errorMessage = 'Validation failed: ' + validationDetails.join(', ');
+      } else if (error.response?.data?.message || error.response?.data?.error) {
+        errorMessage = error.response.data.message || error.response.data.error;
+      }
+      
       // Clean up error messages to replace technical details with app name
       errorMessage = errorMessage
         .replace(/app\.railway\.app/gi, 'D-MAK')
@@ -174,7 +183,7 @@ const EditMRDialog: React.FC<EditMRDialogProps> = ({
         .replace(/D-MAK\s+server/gi, 'D-MAK server')
         .trim();
       
-      setErrorMessage(`❌ Error: ${errorMessage}`);
+      setErrorMessage(`❌ ${errorMessage}`);
     }
   };
 
