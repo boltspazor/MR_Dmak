@@ -46,12 +46,17 @@ export class AuthService {
       }
 
       const token = jwt.sign(
-        { userId: user._id.toString(), email: user.email, role: user.role },
+        { 
+          userId: user._id.toString(), 
+          email: user.email, 
+          role: user.role,
+          isMarketingManager: user.isMarketingManager 
+        },
         process.env.JWT_SECRET!,
         { expiresIn: process.env.JWT_EXPIRES_IN || '7d' } as jwt.SignOptions
       );
 
-      logger.info('User logged in successfully', { userId: user._id, email });
+      logger.info('User logged in successfully', { userId: user._id, email, role: user.role });
 
       return {
         user: {

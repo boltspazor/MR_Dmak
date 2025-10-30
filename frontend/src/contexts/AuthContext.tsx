@@ -3,8 +3,8 @@ import { User, AuthContextType } from '../types';
 import { api } from '../lib/api';
 import toast from 'react-hot-toast';
 
-// Define user roles
-export type UserRole = 'super_admin' | 'marketing_manager' | 'admin' | 'user';
+// Define user roles (marketing_manager is treated as admin with restrictions)
+export type UserRole = 'super_admin' | 'admin' | 'user';
 
 // Define permissions for each role
 export const ROLE_PERMISSIONS = {
@@ -13,19 +13,11 @@ export const ROLE_PERMISSIONS = {
     'campaign-wizard',
     'campaigns',
     'templates',
+    'template-create', // Only super admin can create templates
     'dmak',
     'mrs',
+    'bulk-upload', // Only super admin can bulk upload
     'super-admin',
-    'consent-form',
-    'simple-tool'
-  ],
-  marketing_manager: [
-    'dashboard',
-    'campaign-wizard',
-    'campaigns',
-    'templates',
-    'dmak',
-    'mrs',
     'consent-form',
     'simple-tool'
   ],
@@ -33,7 +25,9 @@ export const ROLE_PERMISSIONS = {
     'dashboard',
     'campaign-wizard',
     'campaigns',
-    'templates',
+    'templates', // Can view templates but not create
+    'dmak',
+    'mrs',
     'consent-form',
     'simple-tool'
   ],
@@ -46,15 +40,15 @@ export const ROLE_PERMISSIONS = {
 
 // Define page access requirements
 export const PAGE_ROLES: Record<string, UserRole[]> = {
-  '/dashboard': ['super_admin', 'marketing_manager', 'admin', 'user'],
-  '/campaign-wizard': ['super_admin', 'marketing_manager', 'admin'],
-  '/campaigns': ['super_admin', 'marketing_manager', 'admin'],
-  '/templates': ['super_admin', 'marketing_manager', 'admin'],
-  '/dmak': ['super_admin', 'marketing_manager'],
-  '/mrs': ['super_admin', 'marketing_manager'],
+  '/dashboard': ['super_admin', 'admin', 'user'],
+  '/campaign-wizard': ['super_admin', 'admin'],
+  '/campaigns': ['super_admin', 'admin'],
+  '/templates': ['super_admin', 'admin'],
+  '/dmak': ['super_admin', 'admin'],
+  '/mrs': ['super_admin', 'admin'],
   '/super-admin': ['super_admin'],
-  '/consent-form': ['super_admin', 'marketing_manager', 'admin', 'user'],
-  '/simple-tool': ['super_admin', 'marketing_manager', 'admin', 'user']
+  '/consent-form': ['super_admin', 'admin', 'user'],
+  '/simple-tool': ['super_admin', 'admin', 'user']
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -85,9 +79,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       case 'super admin':
       case 'super_admin':
         return 'super_admin';
-      case 'marketing manager':
-      case 'marketing_manager':
-        return 'marketing_manager';
       case 'admin':
         return 'admin';
       default:
@@ -108,7 +99,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const isSuperAdmin = (): boolean => userRole === 'super_admin';
-  const isMarketingManager = (): boolean => userRole === 'marketing_manager';
+  const isMarketingManager = (): boolean => user?.isMarketingManager || false;
   const isAdmin = (): boolean => userRole === 'admin';
   const isUser = (): boolean => userRole === 'user';
 

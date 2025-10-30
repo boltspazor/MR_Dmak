@@ -2,6 +2,7 @@ import React from 'react';
 import { ExternalLink, RefreshCw, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { MetaTemplateStats } from '../../hooks/useMetaTemplates';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface MetaIntegrationProps {
   metaTemplateStats: MetaTemplateStats | null;
@@ -18,6 +19,8 @@ const MetaIntegration: React.FC<MetaIntegrationProps> = ({
   onSyncTemplatesWithMeta,
   onRefreshTemplates
 }) => {
+  const { isSuperAdmin } = useAuth();
+
   const handleSyncTemplates = async () => {
     try {
       await onSyncTemplatesWithMeta();
@@ -38,13 +41,15 @@ const MetaIntegration: React.FC<MetaIntegrationProps> = ({
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-blue-900">Meta Template Statistics</h3>
             <div className="flex space-x-3">
-              <button
-                onClick={onGetMetaTemplateCreationUrl}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 flex items-center space-x-2 transition-colors"
-              >
-                <ExternalLink className="h-4 w-4" />
-                <span>Create Meta Template</span>
-              </button>
+              {isSuperAdmin() && (
+                <button
+                  onClick={onGetMetaTemplateCreationUrl}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 flex items-center space-x-2 transition-colors"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  <span>Create Meta Template</span>
+                </button>
+              )}
 
               <button
                 onClick={handleSyncTemplates}
@@ -81,13 +86,15 @@ const MetaIntegration: React.FC<MetaIntegrationProps> = ({
       {!metaTemplateStats && (
         <div className="flex justify-end">
           <div className="flex space-x-3">
-            <button
-              onClick={onGetMetaTemplateCreationUrl}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 flex items-center space-x-2 transition-colors"
-            >
-              <ExternalLink className="h-4 w-4" />
-              <span>Create Meta Template</span>
-            </button>
+            {isSuperAdmin() && (
+              <button
+                onClick={onGetMetaTemplateCreationUrl}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 flex items-center space-x-2 transition-colors"
+              >
+                <ExternalLink className="h-4 w-4" />
+                <span>Create Meta Template</span>
+              </button>
+            )}
 
             <button
               onClick={onSyncTemplatesWithMeta}

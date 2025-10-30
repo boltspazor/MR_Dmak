@@ -131,6 +131,18 @@ export class TemplateController {
   async createTemplate(req: Request, res: Response): Promise<void> {
     try {
       const userId = (req as any).user.userId;
+      const isMarketingManager = (req as any).user.isMarketingManager;
+      const userRole = (req as any).user.role;
+
+      // Restrict template creation to super_admin only
+      if (userRole !== 'super_admin') {
+        res.status(403).json({ 
+          success: false, 
+          error: 'Access denied. Only Super Admin can create templates.' 
+        });
+        return;
+      }
+
       const { name, content, type, parameters, imageUrl, imageFileName, footerImageUrl, footerImageFileName } = req.body;
 
       // Check if template name already exists

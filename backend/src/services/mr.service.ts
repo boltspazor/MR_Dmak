@@ -191,11 +191,14 @@ export class MRService {
     }
   }
 
-  async getMRs(userId: string, groupId?: string, search?: string, limit?: number, offset?: number, consentStatus?: string, sortField?: string, sortDirection?: 'asc' | 'desc') {
+  async getMRs(userId: string, groupId?: string, search?: string, limit?: number, offset?: number, consentStatus?: string, sortField?: string, sortDirection?: 'asc' | 'desc', userRole?: string, isMarketingManager?: boolean) {
     try {
-      const query: any = { 
-        marketingManagerId: userId
-      };
+      const query: any = {};
+
+      // Super admins can see all MRs, marketing managers/admins only see their own
+      if (userRole !== 'super_admin') {
+        query.marketingManagerId = userId;
+      }
 
       if (groupId) {
         query.groupId = groupId;
@@ -376,22 +379,53 @@ export class MRService {
     }
   }
 
-  async getGroups(userId: string) {
+  async getGroups(userId: string, userRole?: string, isMarketingManager?: boolean) {
     try {
-      const groups = await Group.find({ createdBy: userId });
+      let groups;
+      
+      if (userRole === 'super_admin') {
+        // Super admin sees all groups
+        groups = await Group.find({});
+      } else {
+        // Marketing managers and admins see groups that have MRs assigned to them
+        // First, get all MRs for this user
+        const userMRs = await MedicalRepresentative.find({ 
+          marketingManagerId: userId 
+        }).select('groupId');
+        
+        // Extract unique group IDs
+        const groupIds = [...new Set(userMRs.map(mr => mr.groupId.toString()))];
+        
+        // Get groups that either:
+        // 1. Were created by the user, OR
+        // 2. Have MRs assigned to the user
+        groups = await Group.find({
+          $or: [
+            { createdBy: userId },
+            { _id: { $in: groupIds } }
+          ]
+        });
+      }
 
-      // Get MR count for each group
-        const groupsWithCounts = await Promise.all(
-          groups.map(async (group) => {
-            const mrCount = await MedicalRepresentative.countDocuments({ 
-              groupId: group._id
-            });
-            return {
-              ...group.toObject(),
-              mrCount
-            };
-          })
-        );      return groupsWithCounts;
+      // Get MR count for each group (only count MRs the user has access to)
+      const groupsWithCounts = await Promise.all(
+        groups.map(async (group) => {
+          const mrQuery: any = { groupId: group._id };
+          
+          // For non-super admins, only count their own MRs
+          if (userRole !== 'super_admin') {
+            mrQuery.marketingManagerId = userId;
+          }
+          
+          const mrCount = await MedicalRepresentative.countDocuments(mrQuery);
+          return {
+            ...group.toObject(),
+            mrCount
+          };
+        })
+      );
+      
+      return groupsWithCounts;
     } catch (error) {
       logger.error('Failed to get groups', { userId, error });
       throw error;
@@ -775,14 +809,31 @@ export class MRService {
     }
   }
 
-  async getMRStats(userId: string) {
+  async getMRStats(userId: string, userRole?: string, isMarketingManager?: boolean) {
     try {
-      const totalMRs = await MedicalRepresentative.countDocuments({ marketingManagerId: userId });
-      const totalGroups = await Group.countDocuments({ createdBy: userId });
+      // Build query based on role
+      const query: any = {};
+      if (userRole !== 'super_admin') {
+        query.marketingManagerId = userId;
+      }
+
+      const totalMRs = await MedicalRepresentative.countDocuments(query);
+      
+      // For groups, always filter by creator unless super admin
+      const groupQuery: any = {};
+      if (userRole !== 'super_admin') {
+        groupQuery.createdBy = userId;
+      }
+      const totalGroups = await Group.countDocuments(groupQuery);
       
       // Get MRs by group
+      const matchQuery: any = {};
+      if (userRole !== 'super_admin') {
+        matchQuery.marketingManagerId = new mongoose.Types.ObjectId(userId);
+      }
+      
       const mrsByGroup = await MedicalRepresentative.aggregate([
-        { $match: { marketingManagerId: new mongoose.Types.ObjectId(userId) } },
+        { $match: matchQuery },
         { $group: { _id: '$groupId', count: { $sum: 1 } } },
         { $lookup: { from: 'groups', localField: '_id', foreignField: '_id', as: 'group' } },
         { $unwind: '$group' },
@@ -790,7 +841,7 @@ export class MRService {
       ]);
 
       // Get consent status summary by fetching all MRs with consent status
-      const allMRs = await MedicalRepresentative.find({ marketingManagerId: userId }).select('phone');
+      const allMRs = await MedicalRepresentative.find(query).select('phone');
       
       // Initialize consent counters
       let consentedCount = 0;
@@ -855,12 +906,11 @@ export class MRService {
     }
   }
 
-  async searchMRs(userId: string, query: string) {
+  async searchMRs(userId: string, query: string, userRole?: string, isMarketingManager?: boolean) {
     try {
       const searchRegex = new RegExp(query, 'i');
 
-      const mrs = await MedicalRepresentative.find({
-        marketingManagerId: userId,
+      const searchQuery: any = {
         $or: [
           { mrId: searchRegex },
           { firstName: searchRegex },
@@ -868,7 +918,14 @@ export class MRService {
           { phone: searchRegex },
           { email: searchRegex }
         ]
-      })
+      };
+
+      // Super admins see all MRs, marketing managers/admins only see their own
+      if (userRole !== 'super_admin') {
+        searchQuery.marketingManagerId = userId;
+      }
+
+      const mrs = await MedicalRepresentative.find(searchQuery)
       .populate('groupId', 'groupName')
       .sort({ createdAt: -1 })
       .limit(50);
@@ -1028,9 +1085,14 @@ export class MRService {
   /**
    * Get MRs with status information
    */
-  async getMRsWithStatus(userId: string, groupId?: string, search?: string, limit?: number, offset?: number, statusFilter?: string, metaStatus?: string, sortField?: string, sortDirection?: 'asc' | 'desc') {
+  async getMRsWithStatus(userId: string, groupId?: string, search?: string, limit?: number, offset?: number, statusFilter?: string, metaStatus?: string, sortField?: string, sortDirection?: 'asc' | 'desc', userRole?: string, isMarketingManager?: boolean) {
     try {
-      const query: any = { marketingManagerId: userId, deletedAt: { $exists: false } };
+      const query: any = { deletedAt: { $exists: false } };
+
+      // Super admins can see all MRs, marketing managers/admins only see their own
+      if (userRole !== 'super_admin') {
+        query.marketingManagerId = userId;
+      }
 
       if (groupId) {
         query.groupId = groupId;

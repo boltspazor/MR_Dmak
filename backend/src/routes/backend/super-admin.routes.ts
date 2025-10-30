@@ -22,7 +22,7 @@ router.post('/reset-password', superAdminController.resetSuperAdminPassword);
 router.get('/credentials', superAdminController.getSuperAdminCredentials);
 
 // Protected admin routes
-router.use(authenticateToken, requireRole(['super-admin']));
+router.use(authenticateToken, requireRole(['super_admin']));
 router.get('/stats', superAdminController.getStats);
 router.get('/performance', superAdminController.getPerformance);
 router.get('/marketing-managers', superAdminController.getMarketingManagers);

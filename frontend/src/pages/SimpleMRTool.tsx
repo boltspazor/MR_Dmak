@@ -12,11 +12,14 @@ import { useMRManagement } from '../hooks/useMRManagement';
 import { useMRExport } from '../hooks/useMRExport';
 import { useMRStats } from '../hooks/useMRStats';
 import { useMRSorting } from '../hooks/useMRSorting';
+import { useAuth } from '../contexts/AuthContext';
 
 
 // Real API calls using the configured API instance
 
 const SimpleMRTool: React.FC = () => {
+  // Get authentication context to check user role
+  const { isSuperAdmin } = useAuth();
 
   // Data management
   const {
@@ -175,6 +178,7 @@ const SimpleMRTool: React.FC = () => {
               onAddIndividual={() => setIsAddMRDialogOpen(true)}
               onCSVImport={handleCSVImport}
               onDownloadTemplate={handleTemplateDownload}
+              showBulkImport={isSuperAdmin()} 
             />
           </div>
 

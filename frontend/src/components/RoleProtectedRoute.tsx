@@ -30,11 +30,7 @@ const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
     if (userRole === 'super_admin') {
       redirectPath = '/dashboard';
     }
-    // Marketing manager can access most things except super admin
-    else if (userRole === 'marketing_manager') {
-      redirectPath = '/dashboard';
-    }
-    // Admin has limited access
+    // Admin/Marketing manager can access most things except super admin
     else if (userRole === 'admin') {
       redirectPath = '/dashboard';
     }

@@ -108,7 +108,9 @@ export class MRController {
           undefined, // No offset for getAll
           consentStatus,
           sortField,
-          sortDirection
+          sortDirection,
+          req.user.role, // Pass user role
+          req.user.isMarketingManager // Pass marketing manager flag
         );
         return res.json({
           message: 'MRs retrieved successfully',
@@ -129,7 +131,9 @@ export class MRController {
         actualOffset,
         consentStatus,
         sortField,
-        sortDirection
+        sortDirection,
+        req.user.role, // Pass user role
+        req.user.isMarketingManager // Pass marketing manager flag
       );
 
       return res.json({
@@ -202,7 +206,7 @@ export class MRController {
 
   async getGroups(req: any, res: Response) {
     try {
-      const groups = await mrService.getGroups(req.user.userId);
+      const groups = await mrService.getGroups(req.user.userId, req.user.role);
       return res.json({ 
         message: 'Groups retrieved successfully',
         data: groups 
@@ -266,7 +270,7 @@ export class MRController {
 
   async getMRStats(req: any, res: Response) {
     try {
-      const stats = await mrService.getMRStats(req.user.userId);
+      const stats = await mrService.getMRStats(req.user.userId, req.user.role);
       
       // Transform mrsByGroup array to byGroup object for frontend compatibility
       const byGroup: Record<string, number> = {};
@@ -299,7 +303,7 @@ export class MRController {
         return res.status(400).json({ error: 'Search query is required' });
       }
 
-      const result = await mrService.searchMRs(req.user.userId, q);
+      const result = await mrService.searchMRs(req.user.userId, q, req.user.role);
       return res.json({
         message: 'MR search completed successfully',
         data: result.mrs,
@@ -378,7 +382,8 @@ export class MRController {
           statusFilter,
           metaStatus,
           sortField,
-          sortDirection
+          sortDirection,
+          req.user.role // Pass user role
         );
         return res.json({
           message: 'MRs with status retrieved successfully',
@@ -400,7 +405,8 @@ export class MRController {
         statusFilter,
         metaStatus,
         sortField,
-        sortDirection
+        sortDirection,
+        req.user.role // Pass user role
       );
 
       return res.json({

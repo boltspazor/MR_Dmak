@@ -88,7 +88,7 @@ function App() {
             <Route
               path="/campaign-wizard"
               element={
-                <RoleProtectedRoute requiredRoles={['admin', 'marketing_manager', 'super_admin']}>
+                <RoleProtectedRoute requiredRoles={['admin', 'super_admin']}>
                   <RouteWrapper>
                     <CampaignWizard />
                   </RouteWrapper>
@@ -98,7 +98,7 @@ function App() {
             <Route
               path="/templates"
               element={
-                <RoleProtectedRoute requiredRoles={['admin', 'marketing_manager', 'super_admin']}>
+                <RoleProtectedRoute requiredRoles={['admin', 'super_admin']}>
                   <RouteWrapper>
                     <Templates />
                   </RouteWrapper>
@@ -110,7 +110,7 @@ function App() {
             <Route
               path="/dmak"
               element={
-                <RoleProtectedRoute requiredRoles={['marketing_manager', 'super_admin']}>
+                <RoleProtectedRoute requiredRoles={['admin', 'super_admin']}>
                   <RouteWrapper>
                     <SimpleMRTool />
                   </RouteWrapper>
@@ -120,7 +120,7 @@ function App() {
             <Route
               path="/mrs"
               element={
-                <RoleProtectedRoute requiredRoles={['marketing_manager', 'super_admin']}>
+                <RoleProtectedRoute requiredRoles={['admin', 'super_admin']}>
                   <RouteWrapper>
                     <MedicalReps />
                   </RouteWrapper>

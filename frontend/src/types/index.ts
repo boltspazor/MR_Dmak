@@ -17,11 +17,11 @@ export interface AuthContextType {
   loading: boolean;
   isAuthenticated: boolean;
   // Role management
-  userRole: 'super_admin' | 'marketing_manager' | 'admin' | 'user';
+  userRole: 'super_admin' | 'admin' | 'user';
   hasPermission: (page: string) => boolean;
   canAccess: (page: string) => boolean;
   isSuperAdmin: () => boolean;
-  isMarketingManager: () => boolean;
+  isMarketingManager: () => boolean; // Based on user.isMarketingManager flag
   isAdmin: () => boolean;
   isUser: () => boolean;
 }

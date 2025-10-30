@@ -237,7 +237,7 @@ export class SuperAdminService {
         email: data.email,
         password: hashedPassword,
         isMarketingManager: true,
-        role: 'marketing_manager'
+        role: 'admin'
       });
 
       logger.info('Marketing manager created successfully', { 
