@@ -35,7 +35,10 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const { canAccess } = useAuth();
+  const { canAccess, isMarketingManager } = useAuth();
+
+  // Display "Marketing Manager" role if user is a marketing manager
+  const displayRole = isMarketingManager && isMarketingManager() ? 'Marketing Manager' : userRole;
 
   const navigationItems = [
     { name: 'Dashboard', route: '/dashboard', icon: Home },
@@ -47,7 +50,21 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
     { name: 'Super Admin', route: '/super-admin', icon: Shield },
   ];
 
-  const filteredItems = navigationItems.filter(item => canAccess(item.route));
+  // If the current user is a marketing manager, explicitly allow only dashboard and campaign-wizard
+  const MARKETING_MANAGER_ALLOWED_ROUTES = ['/dashboard', '/campaign-wizard'];
+
+  const filteredItems = navigationItems.filter(item => {
+    // Check if user is a marketing manager
+    const isMM = isMarketingManager ? isMarketingManager() : false;
+    
+    if (isMM) {
+      // Marketing managers can ONLY see Dashboard and Campaign Wizard
+      return MARKETING_MANAGER_ALLOWED_ROUTES.includes(item.route);
+    }
+
+    // For non-marketing managers, use normal canAccess check
+    return canAccess(item.route);
+  });
 
   const toggleCollapse = () => {
     setIsCollapsed(!isCollapsed);
@@ -156,7 +173,7 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
             {!isCollapsed && (
               <div className="text-black">
                 <div className="text-sm font-medium">{userName}</div>
-                <div className="text-xs text-black/70 capitalize">{userRole}</div>
+                <div className="text-xs text-black/70 capitalize">{displayRole}</div>
               </div>
             )}
           </div>

@@ -26,6 +26,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         role: user.role,
+        isMarketingManager: user.isMarketingManager || false,
       };
     } catch (error) {
       logger.error('Registration failed', { email, error });
@@ -64,6 +65,7 @@ export class AuthService {
           email: user.email,
           name: user.name,
           role: user.role,
+          isMarketingManager: user.isMarketingManager || false, // Include the marketing manager flag
         },
         token,
       };
@@ -83,6 +85,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         role: user.role,
+        isMarketingManager: user.isMarketingManager || false,
       };
     } catch (error) {
       logger.error('Failed to get user by ID', { id, error });

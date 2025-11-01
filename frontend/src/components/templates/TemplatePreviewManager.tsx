@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Template } from '../../types';
 import { useConfirm } from '../../contexts/ConfirmContext';
+import { useAuth } from '../../contexts/AuthContext';
 import TemplatePreviewDialog from './preview/TemplatePreviewDialog';
 import TemplateRecipientUploadV2 from '../ui/TemplateRecipientUploadV2';
 import { useTemplatePreview } from '../../hooks/useTemplatePreview';
@@ -71,7 +72,7 @@ const TemplatePreviewManager: React.FC<TemplatePreviewManagerProps> = ({
   const fetchLatestTemplate = async (templateId: string) => {
     try {
       const response = await templateApi.getById(templateId);
-      setRefreshedTemplate(response.data as Template);
+  setRefreshedTemplate(response.data as any as Template);
     } catch (error) {
       console.error('Failed to fetch latest template:', error);
       // Fallback to base template if fetch fails
@@ -92,6 +93,9 @@ const TemplatePreviewManager: React.FC<TemplatePreviewManagerProps> = ({
     // Call external callback if provided
     onUploadSuccess?.();
   };
+
+  const { isSuperAdmin } = useAuth();
+  const canBulkUpload = Boolean(showBulkUploadButton && isSuperAdmin && isSuperAdmin());
 
   // Wrapper for onUpdateTemplate that refreshes the template after update
   const handleUpdateTemplate = async (templateId: string, updates: Partial<Template>) => {
@@ -116,7 +120,7 @@ const TemplatePreviewManager: React.FC<TemplatePreviewManagerProps> = ({
         onDownloadRecipientList={downloadRecipientListFormat}
         onBulkUploadRecipients={handleBulkUploadRecipients}
         showDownloadButton={showDownloadButton}
-        showBulkUploadButton={showBulkUploadButton}
+        showBulkUploadButton={canBulkUpload}
         variant={variant}
         onUpdateTemplate={handleUpdateTemplate}
       />

@@ -89,11 +89,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const userRole = getUserRole();
 
   const hasPermission = (page: string): boolean => {
+    // If this user is a marketing manager, restrict permissions to a small set
+    const isMM = user?.isMarketingManager || false;
+    const MARKETING_MANAGER_PERMISSIONS = ['dashboard', 'campaign-wizard'];
+
+    if (isMM) return MARKETING_MANAGER_PERMISSIONS.includes(page);
+
     const permissions = ROLE_PERMISSIONS[userRole] || [];
     return permissions.includes(page);
   };
 
   const canAccess = (page: string): boolean => {
+    // If this user is a marketing manager, allow only dashboard and campaign wizard routes
+    const isMM = user?.isMarketingManager || false;
+    const MARKETING_MANAGER_ALLOWED_PAGES = ['/dashboard', '/campaign-wizard'];
+
+    if (isMM) return MARKETING_MANAGER_ALLOWED_PAGES.includes(page);
+
     const allowedRoles = PAGE_ROLES[page] || [];
     return allowedRoles.includes(userRole);
   };
@@ -147,8 +159,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const register = async (email: string, password: string, name: string) => {
 
     try {
-      const response = await api.post('/auth/register', { email, password, name });
-      const userData = response.data.user;
+  await api.post('/auth/register', { email, password, name });
 
       // After registration, automatically log them in
       await login(email, password);

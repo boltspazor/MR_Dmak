@@ -15,6 +15,7 @@ export interface AuthUser {
   email: string;
   name: string;
   role: string;
+  isMarketingManager?: boolean; // Flag to identify marketing managers
 }
 
 export interface CreateGroupForm {
