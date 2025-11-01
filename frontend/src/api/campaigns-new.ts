@@ -35,6 +35,8 @@ export interface Campaign {
     id: string;
     name: string;
     email: string;
+    role?: string;
+    isMarketingManager?: boolean;
   };
 }
 

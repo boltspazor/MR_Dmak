@@ -27,6 +27,13 @@ export interface CampaignRecord {
   failedCount: number;
   successRate: number;
   status: string;
+  createdBy?: {
+    id: string;
+    name: string;
+    email: string;
+    role?: string;
+    isMarketingManager?: boolean;
+  };
 }
 
 interface CampaignTableProps {
@@ -44,6 +51,7 @@ interface CampaignTableProps {
   statusFilter?: string; // Add status filter prop
   searchTerm?: string; // Add search term prop
   filteredTotal?: number; // number of campaigns matching current filters (server-provided total)
+  showCampaignOwner?: boolean; // Show campaign owner column (for super admins)
 }
 
 const CampaignTable: React.FC<CampaignTableProps> = ({
@@ -59,9 +67,9 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
   totalPages,
   onPageChange,
   statusFilter,
-  searchTerm
-  ,
-  filteredTotal
+  searchTerm,
+  filteredTotal,
+  showCampaignOwner = false
 }) => {
   // CSV Export functionality
   const { exportToCSV, canExport } = useCSVExportWithMapping({
@@ -213,6 +221,11 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
               <th className="text-left py-3 px-6 text-sm font-medium text-gray-700">
                 <SortButton field="campaignName">Campaign Name</SortButton>
               </th>
+              {showCampaignOwner && (
+                <th className="text-left py-3 px-6 text-sm font-medium text-gray-700">
+                  Campaign Owner
+                </th>
+              )}
               <th className="text-left py-3 px-6 text-sm font-medium text-gray-700">
                 Template
               </th>
@@ -236,6 +249,16 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
                 <td className="py-3 px-6 text-sm text-gray-900">
                   <div className="font-medium">{campaign.campaignName}</div>
                 </td>
+                {showCampaignOwner && (
+                  <td className="py-3 px-6 text-sm text-gray-900">
+                    <div>
+                      <div className="font-medium">{campaign.createdBy?.name || 'Unknown'}</div>
+                      <div className="text-xs text-gray-500">
+                        ({campaign.createdBy?.isMarketingManager ? 'Marketing Manager' : campaign.createdBy?.role === 'super_admin' ? 'Super Admin' : 'Admin'})
+                      </div>
+                    </div>
+                  </td>
+                )}
                 <td className="py-3 px-6 text-sm text-gray-900">
                   <div className="flex items-center space-x-2">
                     <button

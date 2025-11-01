@@ -12,7 +12,8 @@ import {
   UserCheck,
   ClipboardList,
   Shield,
-  Wand2
+  Wand2,
+  UserPlus
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -35,10 +36,10 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const { canAccess, isMarketingManager } = useAuth();
+  const { canAccess, isMarketingManager, isSuperAdmin } = useAuth();
 
-  // Display "Marketing Manager" role if user is a marketing manager
-  const displayRole = isMarketingManager && isMarketingManager() ? 'Marketing Manager' : userRole;
+  // Display "Marketing Manager" role if user is a marketing manager (but not super admin)
+  const displayRole = (isMarketingManager && isMarketingManager() && !isSuperAdmin()) ? 'Marketing Manager' : userRole;
 
   const navigationItems = [
     { name: 'Dashboard', route: '/dashboard', icon: Home },
@@ -47,14 +48,20 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
     { name: 'MR Management', route: '/mrs', icon: UserCheck },
     { name: 'Simple MR Tool', route: '/simple-mr-tool', icon: Users },
     { name: 'Consent Form', route: '/consent-form', icon: ClipboardList },
+    { name: 'Manage Managers', route: '/manage-managers', icon: UserPlus },
     { name: 'Super Admin', route: '/super-admin', icon: Shield },
   ];
 
-  // If the current user is a marketing manager, explicitly allow only dashboard and campaign-wizard
+  // If the current user is a marketing manager (and NOT super admin), explicitly allow only dashboard and campaign-wizard
   const MARKETING_MANAGER_ALLOWED_ROUTES = ['/dashboard', '/campaign-wizard'];
 
   const filteredItems = navigationItems.filter(item => {
-    // Check if user is a marketing manager
+    // Super admin gets full access - check this first!
+    if (isSuperAdmin && isSuperAdmin()) {
+      return canAccess(item.route);
+    }
+
+    // Check if user is a marketing manager (but not super admin)
     const isMM = isMarketingManager ? isMarketingManager() : false;
     
     if (isMM) {
@@ -62,7 +69,7 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
       return MARKETING_MANAGER_ALLOWED_ROUTES.includes(item.route);
     }
 
-    // For non-marketing managers, use normal canAccess check
+    // For regular users, use normal canAccess check
     return canAccess(item.route);
   });
 

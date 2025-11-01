@@ -15,6 +15,7 @@ import Templates from './pages/Templates';
 import SuperAdmin from './pages/SuperAdmin';
 import CampaignWizard from './pages/CampaignWizard';
 import ConsentFormPage from './pages/ConsentFormPage';
+import ManageManagers from './pages/ManageManagers';
 
 // Component to determine active page from route
 const RouteWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -27,6 +28,7 @@ const RouteWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       case '/mrs': return 'dmak';
       case '/campaigns': return 'campaigns';
       case '/templates': return 'templates';
+      case '/manage-managers': return 'manage-managers';
       case '/super-admin': return 'super-admin';
       case '/simple-tool': return 'dmak';
       case '/dmak': return 'dmak';
@@ -129,6 +131,16 @@ function App() {
             />
             
             {/* Super Admin only routes */}
+            <Route
+              path="/manage-managers"
+              element={
+                <RoleProtectedRoute requiredRoles={['super_admin']}>
+                  <RouteWrapper>
+                    <ManageManagers />
+                  </RouteWrapper>
+                </RoleProtectedRoute>
+              }
+            />
             <Route
               path="/super-admin"
               element={

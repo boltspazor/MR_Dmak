@@ -222,19 +222,34 @@ export class SuperAdminService {
     }
   }
 
-  async createMarketingManager(data: { name: string; email: string }) {
+  async createMarketingManager(data: { name: string; email: string; password: string }) {
     try {
       // Check if user already exists
       const existingUser = await User.findOne({ email: data.email });
       if (existingUser) {
-        throw new Error('User with this email already exists');
+        const error: any = new Error('A user with this email address already exists. Please use a different email.');
+        error.code = 'USER_EXISTS';
+        throw error;
       }
 
-      // Create new marketing manager
-      const hashedPassword = await bcrypt.hash('password123', 12);
+      // Validate input data
+      if (!data.name || data.name.trim().length === 0) {
+        throw new Error('Name cannot be empty');
+      }
+
+      if (!data.email || data.email.trim().length === 0) {
+        throw new Error('Email cannot be empty');
+      }
+
+      if (!data.password || data.password.length < 6) {
+        throw new Error('Password must be at least 6 characters long');
+      }
+
+      // Create new marketing manager with the provided password
+      const hashedPassword = await bcrypt.hash(data.password, 12);
       const manager = await User.create({
-        name: data.name,
-        email: data.email,
+        name: data.name.trim(),
+        email: data.email.trim().toLowerCase(),
         password: hashedPassword,
         isMarketingManager: true,
         role: 'admin'
@@ -251,8 +266,23 @@ export class SuperAdminService {
         email: manager.email,
         createdAt: manager.createdAt
       };
-    } catch (error) {
-      logger.error('Failed to create marketing manager', { error, data });
+    } catch (error: any) {
+      logger.error('Failed to create marketing manager', { 
+        error: error.message, 
+        code: error.code,
+        email: data.email 
+      });
+      
+      // Re-throw with more context if it's a database error
+      if (error.name === 'MongoError' || error.name === 'MongoServerError') {
+        if (error.code === 11000) {
+          const duplicateError: any = new Error('A user with this email address already exists');
+          duplicateError.code = 'DUPLICATE_EMAIL';
+          throw duplicateError;
+        }
+        throw new Error('Database error occurred while creating marketing manager');
+      }
+      
       throw error;
     }
   }

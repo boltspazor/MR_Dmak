@@ -46,6 +46,7 @@ export const PAGE_ROLES: Record<string, UserRole[]> = {
   '/templates': ['super_admin', 'admin'],
   '/dmak': ['super_admin', 'admin'],
   '/mrs': ['super_admin', 'admin'],
+  '/manage-managers': ['super_admin'],
   '/super-admin': ['super_admin'],
   '/consent-form': ['super_admin', 'admin', 'user'],
   '/simple-tool': ['super_admin', 'admin', 'user']
@@ -89,7 +90,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const userRole = getUserRole();
 
   const hasPermission = (page: string): boolean => {
-    // If this user is a marketing manager, restrict permissions to a small set
+    // Super admin has access to everything - check this first!
+    if (userRole === 'super_admin') {
+      const permissions = ROLE_PERMISSIONS[userRole] || [];
+      return permissions.includes(page);
+    }
+
+    // If this user is a marketing manager (and NOT super admin), restrict permissions
     const isMM = user?.isMarketingManager || false;
     const MARKETING_MANAGER_PERMISSIONS = ['dashboard', 'campaign-wizard'];
 
@@ -100,7 +107,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const canAccess = (page: string): boolean => {
-    // If this user is a marketing manager, allow only dashboard and campaign wizard routes
+    // Super admin has access to everything - check this first!
+    if (userRole === 'super_admin') {
+      const allowedRoles = PAGE_ROLES[page] || [];
+      return allowedRoles.includes(userRole);
+    }
+
+    // If this user is a marketing manager (and NOT super admin), restrict to specific pages
     const isMM = user?.isMarketingManager || false;
     const MARKETING_MANAGER_ALLOWED_PAGES = ['/dashboard', '/campaign-wizard'];
 

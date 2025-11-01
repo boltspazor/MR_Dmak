@@ -132,16 +132,36 @@ export class SuperAdminController {
 
   async createMarketingManager(req: Request, res: Response) {
     try {
-      const { name, email } = req.body;
+      const { name, email, password } = req.body;
       
-      if (!name || !email) {
+      if (!name || !email || !password) {
         return res.status(400).json({
           success: false,
-          error: 'Name and email are required'
+          message: 'Validation failed',
+          error: 'Name, email, and password are required'
         });
       }
 
-      const manager = await superAdminService.createMarketingManager({ name, email });
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid email format',
+          error: 'Please provide a valid email address'
+        });
+      }
+
+      // Validate password length
+      if (password.length < 6) {
+        return res.status(400).json({
+          success: false,
+          message: 'Password too short',
+          error: 'Password must be at least 6 characters long'
+        });
+      }
+
+      const manager = await superAdminService.createMarketingManager({ name, email, password });
       
       return res.json({
         success: true,
@@ -150,9 +170,27 @@ export class SuperAdminController {
       });
     } catch (error: any) {
       logger.error('Failed to create marketing manager', { error: error.message });
-      return res.status(500).json({ 
+      
+      // Provide specific error messages based on the error type
+      let statusCode = 500;
+      let errorMessage = error.message || 'Failed to create marketing manager';
+      
+      // Handle duplicate email error
+      if (error.message && error.message.includes('already exists')) {
+        statusCode = 409;
+        errorMessage = 'A user with this email address already exists';
+      }
+      
+      // Handle MongoDB duplicate key error
+      if (error.code === 11000) {
+        statusCode = 409;
+        errorMessage = 'A user with this email address already exists';
+      }
+      
+      return res.status(statusCode).json({ 
         success: false,
-        error: error.message 
+        message: 'Failed to create marketing manager',
+        error: errorMessage
       });
     }
   }

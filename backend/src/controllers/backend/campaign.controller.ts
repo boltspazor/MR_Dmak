@@ -84,7 +84,15 @@ export class CampaignController {
   static async getCampaignsTotalCount(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const userId = req.user?.userId;
-      const total = await Campaign.countDocuments({ createdBy: userId, isActive: true });
+      const userRole = req.user?.role;
+      
+      // Super admins see all campaigns, others only see their own
+      const query: any = { isActive: true };
+      if (userRole !== 'super_admin') {
+        query.createdBy = userId;
+      }
+      
+      const total = await Campaign.countDocuments(query);
       return res.json({ success: true, data: { total } });
     } catch (error) {
       logger.error('Error getting campaigns total count:', error);
@@ -170,6 +178,7 @@ export class CampaignController {
     try {
       logger.info('Getting campaigns');
       const userId = req.user?.userId;
+      const userRole = req.user?.role;
       const {
         page = 1,
         limit = 10,
@@ -194,8 +203,14 @@ export class CampaignController {
       const sortFieldStr = fieldMap[String(sortField)] || String(sortField) || 'createdAt';
       const sortDir = String(sortDirection) === 'asc' ? 1 : -1;
   
+      // Super admins can see ALL campaigns, others only see their own
       const userObjectId = new ObjectId(String(userId));
-      const baseMatch = { createdBy: userObjectId, isActive: true };
+      const baseMatch: any = { isActive: true };
+      
+      // Only filter by createdBy if user is NOT a super admin
+      if (userRole !== 'super_admin') {
+        baseMatch.createdBy = userObjectId;
+      }
   
       // Build search expression using $regexMatch to avoid $unwind by array-evaluating with $map + $anyElementTrue
       let searchExpr: any = null;
@@ -482,7 +497,7 @@ export class CampaignController {
             let: { uid: '$createdBy' },
             pipeline: [
               { $match: { $expr: { $eq: ['$_id', '$$uid'] } } },
-              { $project: { name: 1, email: 1 } }
+              { $project: { name: 1, email: 1, role: 1, isMarketingManager: 1 } }
             ],
             as: 'creator'
           }
@@ -533,7 +548,9 @@ export class CampaignController {
                   createdBy: {
                     id: '$createdByObj._id',
                     name: '$createdByObj.name',
-                    email: '$createdByObj.email'
+                    email: '$createdByObj.email',
+                    role: '$createdByObj.role',
+                    isMarketingManager: '$createdByObj.isMarketingManager'
                   }
                 }
               }

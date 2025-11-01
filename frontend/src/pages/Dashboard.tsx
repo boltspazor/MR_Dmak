@@ -5,30 +5,16 @@ import TemplatePreviewManager, { useTemplatePreview } from '../components/templa
 import RecipientListModal from '../components/ui/RecipientListModal';
 import StandardHeader from '../components/StandardHeader';
 import CampaignStats from '../components/dashboard/CampaignStats';
-import CampaignTable from '../components/dashboard/CampaignTable';
+import CampaignTable, { CampaignRecord } from '../components/dashboard/CampaignTable';
 import AdvancedCampaignSearch from '../components/dashboard/AdvancedCampaignSearch';
 import { campaignsAPI, Campaign } from '../api/campaigns-new';
 import { templateApi } from '../api/templates';
 import { useCampaigns } from '../hooks/useCampaigns';
 import { CampaignFilterParams } from '../types/campaign.types';
 import { Template } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
 type SendStatus = 'pending' | 'in-progress' | 'completed' | 'failed';
-
-interface CampaignRecord {
-  id: string;
-  campaignName: string;
-  campaignId: string;
-  template: { id: string; name: string; metaTemplateName?: string; isMetaTemplate: boolean; metaStatus?: string };
-  recipientList: { name: string; recipientCount: number } | null;
-  date: string;
-  sendStatus: SendStatus;
-  totalRecipients: number;
-  sentCount: number;
-  failedCount: number;
-  successRate: number;
-  status: string;
-}
 
 interface GroupMember {
   id: string; mrId: string; firstName: string; lastName: string; name: string; phone: string; email?: string;
@@ -40,6 +26,7 @@ const Dashboard: React.FC = () => {
   // URL params
   const [searchParams, setSearchParams] = useSearchParams();
   const [hydrated, setHydrated] = useState(false);
+  const { isSuperAdmin } = useAuth();
 
   // Filters/sort/pagination
   const [searchTerm, setSearchTerm] = useState('');
@@ -118,7 +105,8 @@ const Dashboard: React.FC = () => {
       sentCount: c.progress?.sent || 0,
       failedCount: c.progress?.failed || 0,
       successRate: c.progress?.successRate || 0,
-      status: c.status
+      status: c.status,
+      createdBy: c.createdBy
     }));
   }, [apiCampaigns]);
 
@@ -153,7 +141,7 @@ const Dashboard: React.FC = () => {
         return;
       }
       const response = await templateApi.getById(templateId);
-      openPreview((response.data ?? response) as Template);
+      openPreview((response.data ?? response) as any as Template);
     } catch {
       openPreview({
         name: campaign.template.name,
@@ -170,7 +158,7 @@ const Dashboard: React.FC = () => {
     try {
       setSelectedCampaign(campaign);
       const campaignData = await campaignsAPI.getCampaignById(campaign.id);
-      const recs = (campaignData?.data?.recipients ?? campaignData?.recipients ?? []) as any[];
+      const recs = ((campaignData as any)?.data?.recipients ?? campaignData?.recipients ?? []) as any[];
       const groupMembers: GroupMember[] = recs.map((r) => ({
         id: r.id, mrId: r.mrId, firstName: r.firstName, lastName: r.lastName,
         name: `${r.firstName || ''} ${r.lastName || ''}`.trim() || 'Unknown',
@@ -229,6 +217,7 @@ const Dashboard: React.FC = () => {
           statusFilter={statusFilter}
           searchTerm={searchTerm}
           filteredTotal={total}
+          showCampaignOwner={isSuperAdmin()}
         />
         <TemplatePreviewManager
           isOpen={showPreview}
