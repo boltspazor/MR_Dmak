@@ -205,16 +205,18 @@ export class SuperAdminService {
 
   async getMarketingManagers() {
     try {
-      const managers = await User.find({ isMarketingManager: true })
-        .select('name email createdAt lastLoginAt')
+      const managers = await User.find({ 
+        isMarketingManager: true,
+        role: { $ne: 'super_admin' } // Exclude super admins from the list
+      })
+        .select('name email createdAt')
         .sort({ createdAt: -1 });
 
       return managers.map(manager => ({
         id: manager._id,
         name: manager.name,
         email: manager.email,
-        createdAt: manager.createdAt,
-        lastLoginAt: (manager as any).lastLoginAt
+        createdAt: manager.createdAt
       }));
     } catch (error) {
       logger.error('Failed to get marketing managers', { error });

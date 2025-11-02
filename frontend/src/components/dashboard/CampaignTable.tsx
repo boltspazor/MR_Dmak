@@ -254,7 +254,13 @@ const CampaignTable: React.FC<CampaignTableProps> = ({
                     <div>
                       <div className="font-medium">{campaign.createdBy?.name || 'Unknown'}</div>
                       <div className="text-xs text-gray-500">
-                        ({campaign.createdBy?.isMarketingManager ? 'Marketing Manager' : campaign.createdBy?.role === 'super_admin' ? 'Super Admin' : 'Admin'})
+                        ({
+                          campaign.createdBy?.role === 'super_admin' 
+                            ? 'Super Admin' 
+                            : campaign.createdBy?.isMarketingManager 
+                              ? 'Marketing Manager' 
+                              : 'Admin'
+                        })
                       </div>
                     </div>
                   </td>
