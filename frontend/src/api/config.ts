@@ -24,35 +24,20 @@ const cleanErrorMessage = (message: string): string => {
   return cleanedMessage;
 };
 
-// Determine the API base URL based on environment
 const getApiBaseUrl = () => {
-  // Check if we're in production (Railway)
-  if (window.location.hostname.includes('railway.app')) {
-    // For Railway production, try different possible service names
-    const possibleUrls = [
-      'https://mrbackend-production-2ce3.up.railway.app/api'
-    ];
-    
-    // Return the first one for now, but log all options
-    console.log('🚀 Production environment detected, trying service URLs:', possibleUrls);
-    return possibleUrls[0];
-  }
-  
-  // Check for environment variable
-  const envUrl = (import.meta as any).env?.VITE_API_BASE_URL;
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+
   if (envUrl) {
     console.log('📝 Using environment variable URL:', envUrl);
     return envUrl;
   }
-  
-  // Default to localhost for development (backend listens on port 5000 by default)
+
   console.log('🏠 Using localhost for development');
   return 'http://localhost:5000/api';
 };
 
 export const API_BASE_URL = getApiBaseUrl();
 
-// Debug logging
 console.log('🌐 API Configuration:', {
   hostname: window.location.hostname,
   isRailway: window.location.hostname.includes('railway.app'),
