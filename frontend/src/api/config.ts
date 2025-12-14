@@ -25,7 +25,7 @@ const cleanErrorMessage = (message: string): string => {
 };
 
 const getApiBaseUrl = () => {
-  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  const envUrl = "https://mrdmak-production.up.railway.app/";
 
   if (envUrl) {
     console.log('📝 Using environment variable URL:', envUrl);
