@@ -25,7 +25,7 @@ const cleanErrorMessage = (message: string): string => {
 };
 
 const getApiBaseUrl = () => {
-  const envUrl = "https://mrdmak-production.up.railway.app/";
+  const envUrl = "https://mrdmak-production.up.railway.app/api/";
 
   if (envUrl) {
     console.log('📝 Using environment variable URL:', envUrl);
