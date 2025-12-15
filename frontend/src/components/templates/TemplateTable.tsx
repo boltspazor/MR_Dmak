@@ -37,10 +37,20 @@ const TemplateTable: React.FC<TemplateTableProps> = ({
             <h3 className="text-xl font-semibold mb-2 text-gray-900">
               No Templates Found
             </h3>
-            <p className="text-gray-600 max-w-md">
+            <p className="text-gray-600 max-w-md mb-8">
               No templates match your current filters. Try adjusting your search
-              criteria or create a new template.
+              criteria or sync to fetch the latest data.
             </p>
+            
+            {onSync && (
+              <button
+                onClick={onSync}
+                className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+              >
+                <RefreshCw className="h-4 w-4" />
+                <span>Sync Templates</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
